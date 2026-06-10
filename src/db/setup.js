@@ -250,10 +250,9 @@ async function setupDatabase() {
     console.log('\n🎉 Setup დასრულდა! სერვერი გაშვებისთვის: npm run dev\n');
   } catch (err) {
     console.error('❌ Setup შეცდომა:', err.message);
-    console.error(err);
   } finally {
     client.release();
-    await pool.end();
+    // pool.end() — არ ვხურავთ, index.js-ი გამოიყენებს
   }
 }
 
