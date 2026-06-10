@@ -131,6 +131,14 @@ async function start() {
     process.exit(1);
   }
 
+  // ცხრილების შექმნა (თუ პირველად ეშვება)
+  try {
+    const { setupDatabase } = require('./db/setup');
+    await setupDatabase();
+  } catch(e) {
+    console.log('ℹ️  DB setup:', e.message);
+  }
+
   server.listen(PORT, () => {
     console.log(`\n✅ API: http://localhost:${PORT}/api`);
     console.log(`✅ Health: http://localhost:${PORT}/health`);

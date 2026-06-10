@@ -49,24 +49,35 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'invalid_username', message: 'username: 3-30 ლათ. სიმბ.' });
     }
 
-    // დუბლიკატის შემოწ.
-    const { rows: ex } = await db.query(
-      'SELECT id FROM users WHERE email=$1 OR username=$2',
-      [email.toLowerCase(), username.toLowerCase()]
+    const emailClean    = email.toLowerCase().trim();
+    const usernameClean = username.toLowerCase().trim();
+
+    // email ცალკე შემოწმება
+    const { rows: byEmail } = await db.query(
+      'SELECT id FROM users WHERE email=$1', [emailClean]
     );
-    if (ex.length) {
-      return res.status(409).json({ error: 'already_exists', message: 'ეს email ან username უკვე გამოყენებულია' });
+    if (byEmail.length) {
+      return res.status(409).json({ error: 'email_exists', message: 'ეს email უკვე რეგისტრირებულია' });
+    }
+
+    // username ცალკე შემოწმება
+    const { rows: byUser } = await db.query(
+      'SELECT id FROM users WHERE username=$1', [usernameClean]
+    );
+    if (byUser.length) {
+      return res.status(409).json({ error: 'username_exists', message: 'ეს username უკვე გამოყენებულია, სცადე სხვა' });
     }
 
     // პაროლის ჰეში
     const hash = await bcrypt.hash(password, 12);
 
     // შექმნა
-    const { rows } = await db.query(`
-      INSERT INTO users (email, username, display_name, password_hash, auth_provider, email_verified)
-      VALUES ($1, $2, $3, $4, 'email', FALSE)
-      RETURNING id, email, username, display_name, role, created_at
-    `, [email.toLowerCase(), username.toLowerCase(), display_name || username, hash]);
+    const { rows } = await db.query(
+      `INSERT INTO users (email, username, display_name, password_hash, auth_provider, email_verified)
+       VALUES ($1, $2, $3, $4, 'email', FALSE)
+       RETURNING id, email, username, display_name, role, created_at`,
+      [emailClean, usernameClean, display_name || username, hash]
+    );
 
     const user  = rows[0];
     const token = makeToken(user.id);
@@ -74,7 +85,14 @@ router.post('/register', async (req, res) => {
     res.status(201).json({ token, user });
   } catch (err) {
     console.error('register error:', err.message);
-    res.status(500).json({ error: 'server_error' });
+    // PostgreSQL unique violation
+    if (err.code === '23505') {
+      const col = (err.constraint || '');
+      if (col.includes('email'))    return res.status(409).json({ error: 'email_exists',    message: 'ეს email უკვე რეგისტრირებულია' });
+      if (col.includes('username')) return res.status(409).json({ error: 'username_exists', message: 'ეს username უკვე გამოყენებულია' });
+      return res.status(409).json({ error: 'already_exists', message: 'ეს email ან username უკვე გამოყენებულია' });
+    }
+    res.status(500).json({ error: 'server_error', message: err.message });
   }
 });
 

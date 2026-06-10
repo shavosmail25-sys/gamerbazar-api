@@ -257,4 +257,9 @@ async function setupDatabase() {
   }
 }
 
-setupDatabase();
+// ← ამ ფაილს პირდაპირ არ ვუშვებთ production-ში
+// index.js-ის start()-ი ამოწმებს ცხრილებს
+if (require.main === module) {
+  setupDatabase();
+}
+module.exports = { setupDatabase };
