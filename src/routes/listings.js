@@ -151,12 +151,19 @@ router.post('/', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'invalid_category' });
     }
 
+    // listing_type ვალიდაცია — service → boosting alias
+    const VALID_TYPES = ['account', 'boosting', 'currency', 'service'];
+    const normalizedType = listing_type === 'service' ? 'boosting' : listing_type;
+    if (!VALID_TYPES.includes(listing_type)) {
+      return res.status(400).json({ error: 'invalid_listing_type' });
+    }
+
     const { rows } = await db.query(`
       INSERT INTO listings
         (seller_id, category, game, listing_type, title, description, tags, price_gel)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
       RETURNING *
-    `, [req.user.id, category, game, listing_type, title,
+    `, [req.user.id, category, game, normalizedType, title,
         description || '', tags || [], Number(price_gel)]);
 
     res.status(201).json(rows[0]);
