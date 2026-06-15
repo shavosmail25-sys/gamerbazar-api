@@ -18,21 +18,31 @@ router.get('/', optionalAuth, async (req, res) => {
       category, game, listing_type, vip,
       min_price, max_price,
       search, sort = 'newest',
-      page = 1, limit = 20
+      page = 1, limit = 20,
+      seller_id,
+      include_sold
     } = req.query;
 
-    const conditions = ["l.status = 'active'"];
+    // პროფ. გვ-ზე seller_id-ით ვფილტრავთ — status-ს გავაფართოვოთ
+    const statusFilter = seller_id
+      ? (include_sold === 'true'
+          ? "l.status IN ('active','sold')"
+          : "l.status IN ('active','sold','pending')")
+      : "l.status = 'active'";
+
+    const conditions = [statusFilter];
     const params     = [];
     let   p          = 1;
 
-    if (category)     { conditions.push(`l.category = $${p++}`);      params.push(category); }
-    if (game)         { conditions.push(`l.game ILIKE $${p++}`);       params.push(`%${game}%`); }
-    if (listing_type) { conditions.push(`l.listing_type = $${p++}`);   params.push(listing_type); }
+    if (seller_id)    { conditions.push(`l.seller_id = $${p++}`);      params.push(seller_id); }
+    if (category)     { conditions.push(`l.category = $${p++}`);       params.push(category); }
+    if (game)         { conditions.push(`l.game ILIKE $${p++}`);        params.push(`%${game}%`); }
+    if (listing_type) { conditions.push(`l.listing_type = $${p++}`);    params.push(listing_type); }
     if (vip === 'true') {
       conditions.push(`l.is_vip = TRUE AND (l.vip_expires_at IS NULL OR l.vip_expires_at > NOW())`);
     }
-    if (min_price)    { conditions.push(`l.price_gel >= $${p++}`);     params.push(min_price); }
-    if (max_price)    { conditions.push(`l.price_gel <= $${p++}`);     params.push(max_price); }
+    if (min_price)    { conditions.push(`l.price_gel >= $${p++}`);      params.push(min_price); }
+    if (max_price)    { conditions.push(`l.price_gel <= $${p++}`);      params.push(max_price); }
     if (search)       {
       conditions.push(`(l.title ILIKE $${p} OR l.description ILIKE $${p})`);
       params.push(`%${search}%`); p++;
@@ -217,8 +227,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
 // ══════════════════════════════════════════════════════════════
 router.post('/:id/vip', requireAuth, async (req, res) => {
   try {
-    const { duration_days = 7 } = req.body;
-    const price = duration_days <= 7 ? 15 : 45;
+    const { duration_days = 30, price: clientPrice } = req.body;
 
     const { rows: listing } = await db.query(
       'SELECT * FROM listings WHERE id=$1', [req.params.id]
@@ -226,6 +235,15 @@ router.post('/:id/vip', requireAuth, async (req, res) => {
     if (!listing.length || listing[0].seller_id !== req.user.id) {
       return res.status(403).json({ error: 'forbidden' });
     }
+
+    // ფასის გამოთვლა: 10% განცხ. ფასიდან, მინ. ₾1
+    // Frontend-იდან მოდის clientPrice (pre-calculated), backend ამოწმებს
+    const computed = Math.max(1, Math.round(Number(listing[0].price_gel) * 0.10 * 100) / 100);
+    // clientPrice-ს ვიყენებთ თუ გამოგზავნა, მაგ. frontend-ის მიერ დათვლილი
+    // გადამოწმება: უნდა ემთხვეოდეს computed-ს ±₾0.05 (rounding margin)
+    const price = clientPrice && Math.abs(Number(clientPrice) - computed) < 0.06
+      ? Number(clientPrice)
+      : computed;
 
     // ბალანსის შემოწ.
     const { rows: u } = await db.query(
@@ -248,7 +266,7 @@ router.post('/:id/vip', requireAuth, async (req, res) => {
       );
       await client.query(
         "INSERT INTO transactions(user_id,type,amount_gel,description) VALUES($1,'vip_purchase',$2,$3)",
-        [req.user.id, -price, `VIP ${duration_days} დღე`]
+        [req.user.id, -price, `VIP ${duration_days} დღე (10%)`]
       );
       await client.query(
         'INSERT INTO vip_purchases(listing_id,user_id,duration_days,price_gel,expires_at) VALUES($1,$2,$3,$4,$5)',
@@ -256,7 +274,7 @@ router.post('/:id/vip', requireAuth, async (req, res) => {
       );
     });
 
-    res.json({ ok: true, vip_until: new Date(Date.now() + duration_days * 86400000) });
+    res.json({ ok: true, vip_until: new Date(Date.now() + duration_days * 86400000), price_paid: price });
   } catch (err) {
     res.status(500).json({ error: 'server_error' });
   }
