@@ -287,4 +287,104 @@ router.post('/:id/vip', requireAuth, async (req, res) => {
   }
 });
 
+// ══════════════════════════════════════════════════════════════
+// POST /api/listings/:id/images  — სურათების ატვირთვა
+// მაქს. 5 სურათი, თითო 3MB, jpeg/png/webp
+// ══════════════════════════════════════════════════════════════
+const multer = require('multer');
+const path   = require('path');
+const fs     = require('fs');
+
+const imgStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = path.resolve(process.env.UPLOAD_DIR || './uploads', 'listings');
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `listing_${req.params.id}_${Date.now()}_${Math.random().toString(36).slice(2,7)}${ext}`);
+  },
+});
+
+const imgUpload = multer({
+  storage: imgStorage,
+  limits: {
+    fileSize: (Number(process.env.MAX_FILE_SIZE_MB) || 3) * 1024 * 1024,
+    files: 5,
+  },
+  fileFilter: (req, file, cb) => {
+    const ok = /image\/(jpeg|png|webp)/.test(file.mimetype);
+    cb(ok ? null : new Error('only_images'), ok);
+  },
+});
+
+router.post('/:id/images', requireAuth, imgUpload.array('images', 5), async (req, res) => {
+  try {
+    if (!req.files || !req.files.length)
+      return res.status(400).json({ error: 'no_files' });
+
+    // ownership check
+    const { rows } = await db.query(
+      'SELECT seller_id, images FROM listings WHERE id=$1', [req.params.id]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'not_found' });
+    if (rows[0].seller_id !== req.user.id && req.user.role !== 'admin')
+      return res.status(403).json({ error: 'forbidden' });
+
+    // ახალი URL-ები
+    const newUrls = req.files.map(f => `/uploads/listings/${f.filename}`);
+
+    // არსებულ სურ-ებს ვამატებთ (მაქს. 5 სულ)
+    const existing = rows[0].images || [];
+    const combined = [...existing, ...newUrls].slice(0, 5);
+
+    await db.query(
+      'UPDATE listings SET images=$1, updated_at=NOW() WHERE id=$2',
+      [combined, req.params.id]
+    );
+
+    res.json({ ok: true, images: combined });
+  } catch (err) {
+    if (err.message === 'only_images')
+      return res.status(400).json({ error: 'only_images_allowed' });
+    if (err.code === 'LIMIT_FILE_SIZE')
+      return res.status(400).json({ error: 'file_too_large', max_mb: process.env.MAX_FILE_SIZE_MB || 3 });
+    console.error('image upload:', err.message);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// DELETE /api/listings/:id/images  — სურათის წაშლა
+router.delete('/:id/images', requireAuth, async (req, res) => {
+  try {
+    const { url } = req.body;
+    if (!url) return res.status(400).json({ error: 'url required' });
+
+    const { rows } = await db.query(
+      'SELECT seller_id, images FROM listings WHERE id=$1', [req.params.id]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'not_found' });
+    if (rows[0].seller_id !== req.user.id && req.user.role !== 'admin')
+      return res.status(403).json({ error: 'forbidden' });
+
+    const updated = (rows[0].images || []).filter(u => u !== url);
+    await db.query(
+      'UPDATE listings SET images=$1, updated_at=NOW() WHERE id=$2',
+      [updated, req.params.id]
+    );
+
+    // disk-დანაც წავშალოთ
+    try {
+      const diskPath = path.resolve('.' + url);
+      if (fs.existsSync(diskPath)) fs.unlinkSync(diskPath);
+    } catch(e) { /* silent */ }
+
+    res.json({ ok: true, images: updated });
+  } catch (err) {
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
 module.exports = router;
+

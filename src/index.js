@@ -3,11 +3,11 @@
 
 require('dotenv').config();
 
-const express    = require('express');
-const cors       = require('cors');
+const express      = require('express');
+const cors         = require('cors');
 const cookieParser = require('cookie-parser');
-const path       = require('path');
-const http       = require('http');
+const path         = require('path');
+const http         = require('http');
 
 const db              = require('./db');
 const authRoutes      = require('./routes/auth');
@@ -19,6 +19,7 @@ const { setupWebSocket } = require('./routes/chat');
 const reviewRoutes    = require('./routes/reviews');
 const disputeRoutes   = require('./routes/disputes');
 const userRoutes      = require('./routes/users');
+const statsRoutes     = require('./routes/stats');       // ← ახალი
 
 const app    = express();
 const server = http.createServer(app);
@@ -34,13 +35,9 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// ── Static (ავატ. სურ.) ──────────────────────────────────────
+// ── Static (ავატ. / listing სურ.) ───────────────────────────
 const uploadDir = process.env.UPLOAD_DIR || './uploads';
 app.use('/uploads', express.static(path.resolve(uploadDir)));
-
-// Frontend HTML (production-ში) ──────────────────────────────
-// თუ api და frontend ერთ სერვერზეა:
-// app.use(express.static(path.join(__dirname, '../../web/dist')));
 
 // ── Routes ───────────────────────────────────────────────────
 app.use('/api/auth',     authRoutes);
@@ -51,6 +48,7 @@ app.use('/api/chat',     chatRoutes);
 app.use('/api/reviews',  reviewRoutes);
 app.use('/api/disputes', disputeRoutes);
 app.use('/api/users',    userRoutes);
+app.use('/api/stats',    statsRoutes);                  // ← ახალი
 
 // ── Health check ─────────────────────────────────────────────
 app.get('/health', (req, res) => {
@@ -73,7 +71,7 @@ if (process.env.NODE_ENV !== 'production') {
         'GET    /api/auth/google/callback',
         'GET    /api/auth/me',
         'PUT    /api/auth/me',
-        'GET    /api/listings?category=&game=&search=&sort=&page=',
+        'GET    /api/listings?category=&game=&seller_id=&search=&sort=&page=',
         'GET    /api/listings/:id',
         'POST   /api/listings',
         'PUT    /api/listings/:id',
@@ -100,6 +98,8 @@ if (process.env.NODE_ENV !== 'production') {
         'PUT    /api/disputes/:id/resolve  (admin)',
         'GET    /api/users/:id',
         'POST   /api/users/me/avatar',
+        'GET    /api/stats',                            // ← ახალი
+        'POST   /api/listings/:id/images (multipart)',  // ← ახალი
       ]
     });
   });
@@ -119,11 +119,70 @@ app.use((err, req, res, next) => {
 // ── WebSocket ─────────────────────────────────────────────────
 setupWebSocket(server);
 
+// ══════════════════════════════════════════════════════════════
+// ⏰ CRON — Order-ების ავტო-გაუქმება (48სთ deadline)
+// ══════════════════════════════════════════════════════════════
+async function expireOrders() {
+  try {
+    const { rows } = await db.query(`
+      SELECT o.id, o.buyer_id, o.amount_gel, o.escrow_status
+      FROM orders o
+      WHERE o.status = 'active'
+        AND o.escrow_status = 'held'
+        AND o.confirm_deadline IS NOT NULL
+        AND o.confirm_deadline < NOW()
+    `);
+
+    if (!rows.length) return;
+
+    console.log(`⏰ Expiring ${rows.length} order(s)...`);
+
+    for (const order of rows) {
+      try {
+        await db.transaction(async (client) => {
+          // Escrow დაბრუნება მყიდველს
+          if (order.escrow_status === 'held') {
+            await client.query(
+              'UPDATE users SET balance_gel=balance_gel+$1, escrow_hold_gel=escrow_hold_gel-$1 WHERE id=$2',
+              [order.amount_gel, order.buyer_id]
+            );
+            await client.query(
+              `INSERT INTO transactions(user_id, order_id, type, amount_gel, description)
+               VALUES($1, $2, 'escrow_refund', $3, 'ავტო-გაუქმება: 48სთ გავიდა')`,
+              [order.buyer_id, order.id, order.amount_gel]
+            );
+          }
+
+          await client.query(`
+            UPDATE orders SET
+              status       = 'cancelled',
+              escrow_status = 'refunded',
+              cancelled_at = NOW(),
+              cancel_reason = 'ავტომ. გაუქმება — მყიდვ. 48სთ-ში არ დაადასტ.'
+            WHERE id = $1
+          `, [order.id]);
+
+          // listing → active (ისევ გამოჩნდეს)
+          await client.query(
+            "UPDATE listings SET status='active' WHERE id=(SELECT listing_id FROM orders WHERE id=$1)",
+            [order.id]
+          );
+        });
+
+        console.log(`  ✅ Order ${order.id} expired + refunded ₾${order.amount_gel}`);
+      } catch (e) {
+        console.error(`  ❌ Order ${order.id} expire failed:`, e.message);
+      }
+    }
+  } catch (err) {
+    console.error('expireOrders error:', err.message);
+  }
+}
+
 // ── Start ─────────────────────────────────────────────────────
 async function start() {
   console.log('\n🎮 GamerBazar.ge Backend\n');
 
-  // DB კავშირი
   const dbOk = await db.testConnection();
   if (!dbOk) {
     console.error('❌ DB-ს გარეშე სერვერი ვერ გაეშვება.');
@@ -131,7 +190,6 @@ async function start() {
     process.exit(1);
   }
 
-  // ცხრილების შექმნა (თუ პირველად ეშვება)
   try {
     const { setupDatabase } = require('./db/setup');
     await setupDatabase();
@@ -140,15 +198,20 @@ async function start() {
   }
 
   server.listen(PORT, () => {
-    console.log(`\n✅ API: http://localhost:${PORT}/api`);
-    console.log(`✅ Health: http://localhost:${PORT}/health`);
+    console.log(`\n✅ API:       http://localhost:${PORT}/api`);
+    console.log(`✅ Health:    http://localhost:${PORT}/health`);
+    console.log(`✅ Stats:     http://localhost:${PORT}/api/stats`);
     console.log(`✅ WebSocket: ws://localhost:${PORT}/ws/chat`);
     if (process.env.NODE_ENV !== 'production') {
       console.log(`\n📋 Endpoints: http://localhost:${PORT}/api`);
-      console.log(`🧪 Deposit sim: http://localhost:${PORT}/api/wallet/deposit/simulate`);
+      console.log(`🧪 Deposit:   http://localhost:${PORT}/api/wallet/deposit/simulate`);
     }
-    console.log('\n👉 Frontend-ი გახსენი: gamer-market-ge.html');
-    console.log(`   FRONTEND_URL=${process.env.FRONTEND_URL || 'http://localhost:3000'}\n`);
+    console.log('\n👉 Frontend: gamer-market-ge.html\n');
+
+    // ── Cron: ყოველ 15 წუთში expired orders-ის შემოწ. ──────
+    expireOrders(); // გაშვებისთანავე ერთხელ
+    setInterval(expireOrders, 15 * 60 * 1000);
+    console.log('⏰ Order expiry cron: ყოველ 15 წუთში');
   });
 }
 
