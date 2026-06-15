@@ -125,6 +125,17 @@ const rooms = new Map();
 function setupWebSocket(server) {
   const wss = new WebSocketServer({ server, path: '/ws/chat' });
 
+  // Ping/Pong — კავშირი ცოცხალი დარჩეს
+  const pingInterval = setInterval(() => {
+    wss.clients.forEach(ws => {
+      if (ws.readyState === ws.OPEN) {
+        ws.ping();
+      }
+    });
+  }, 25000); // 25 წამში ერთხელ
+
+  wss.on('close', () => clearInterval(pingInterval));
+
   wss.on('connection', async (ws, req) => {
     const url    = new URL(req.url, `http://localhost`);
     const token  = url.searchParams.get('token');
@@ -183,6 +194,10 @@ function setupWebSocket(server) {
     ws.on('close', () => {
       rooms.get(roomId)?.delete(conn);
       if (rooms.get(roomId)?.size === 0) rooms.delete(roomId);
+    });
+
+    ws.on('pong', () => {
+      // კავშირი ცოცხალია
     });
 
     ws.send(JSON.stringify({ type: 'connected', room: roomId }));
