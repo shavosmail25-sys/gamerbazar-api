@@ -10,6 +10,37 @@ const { requireAuth, optionalAuth } = require('../middleware/auth');
 const router = express.Router();
 
 // ══════════════════════════════════════════════════════════════
+// GET /api/listings/suggest  — search autocomplete (game/title)
+// ══════════════════════════════════════════════════════════════
+router.get('/suggest', async (req, res) => {
+  try {
+    const q = (req.query.q || '').trim();
+    if (!q || q.length < 2) return res.json({ games: [], titles: [] });
+
+    const [gamesRes, titlesRes] = await Promise.all([
+      db.query(`
+        SELECT DISTINCT game FROM listings
+        WHERE status='active' AND game ILIKE $1
+        ORDER BY game LIMIT 5
+      `, [`%${q}%`]),
+      db.query(`
+        SELECT id, title, game, price_gel FROM listings
+        WHERE status='active' AND title ILIKE $1
+        ORDER BY is_vip DESC, created_at DESC LIMIT 5
+      `, [`%${q}%`]),
+    ]);
+
+    res.json({
+      games: gamesRes.rows.map(r => r.game),
+      titles: titlesRes.rows,
+    });
+  } catch (err) {
+    console.error('listings suggest error:', err.message);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
 // GET /api/listings  — სია (ფილტრი + pagination)
 // ══════════════════════════════════════════════════════════════
 router.get('/', optionalAuth, async (req, res) => {

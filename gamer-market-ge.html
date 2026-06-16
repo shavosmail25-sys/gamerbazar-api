@@ -93,7 +93,7 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
 /* SEARCH */
 .sbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 20px;position:sticky;top:56px;z-index:100}
 .sbar-inner{max-width:1120px;margin:0 auto;display:flex;gap:7px;align-items:center;flex-wrap:wrap}
-.sbox{display:flex;align-items:center;gap:7px;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:0 11px;flex:1;min-width:180px;transition:border-color .15s}
+.sbox{display:flex;align-items:center;gap:7px;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:0 11px;flex:1;min-width:180px;transition:border-color .15s;position:relative}
 .sbox:focus-within{border-color:var(--ad2)}
 .sbox input{flex:1;background:none;border:none;outline:none;color:var(--text);font-size:12px;padding:8px 0}
 .sbox input::placeholder{color:var(--muted)}
@@ -103,6 +103,18 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
 .ct{padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;background:none;border:none;color:var(--muted);transition:all .15s;font-family:var(--mono)}
 .ct.on{background:var(--accent);color:#08090d}
 
+/* SEARCH AUTOCOMPLETE */
+.search-suggest{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;box-shadow:0 10px 30px #00000060;z-index:200;overflow:hidden;display:none;max-height:340px;overflow-y:auto}
+.search-suggest.show{display:block}
+.ss-group-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:9px 14px 5px}
+.ss-item{display:flex;align-items:center;gap:10px;padding:8px 14px;cursor:pointer;transition:background .12s}
+.ss-item:hover,.ss-item.hi{background:var(--bg3)}
+.ss-item-ico{font-size:14px;width:18px;text-align:center;flex-shrink:0;color:var(--muted)}
+.ss-item-text{flex:1;font-size:12.5px}
+.ss-item-sub{font-size:10.5px;color:var(--muted)}
+.ss-item-price{font-family:var(--mono);font-size:11.5px;color:var(--accent);font-weight:600}
+.ss-empty{padding:14px;text-align:center;font-size:11.5px;color:var(--muted)}
+
 /* GRID */
 .wrap{max-width:1120px;margin:0 auto;padding:20px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
@@ -110,6 +122,14 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
 .sec-title{font-size:17px;font-weight:700;letter-spacing:-.3px}
 .sec-count{font-size:11px;color:var(--muted);font-family:var(--mono)}
 .sort-sel{background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:4px 8px;border-radius:6px;font-size:11px;cursor:pointer;outline:none;font-family:var(--mono)}
+
+/* PAGINATION */
+.pagination{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:24px;flex-wrap:wrap}
+.page-btn{min-width:32px;height:32px;padding:0 9px;border-radius:7px;background:var(--bg3);border:1px solid var(--border2);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center}
+.page-btn:hover:not(:disabled){border-color:var(--border3);color:var(--text)}
+.page-btn.on{background:var(--ad);border-color:var(--ad2);color:var(--accent)}
+.page-btn:disabled{opacity:.35;cursor:not-allowed}
+.page-dots{color:var(--muted);font-size:12px;padding:0 3px}
 
 /* CAT CARDS */
 .cat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:16px 12px;text-align:center;cursor:pointer;transition:all .18s;font-size:24px}
@@ -495,7 +515,7 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
 <div id="page-listings" class="page main">
   <div class="sbar">
     <div class="sbar-inner">
-      <div class="sbox"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input type="text" placeholder="მოძებნე..." oninput="filterL(this.value)" id="s-input"></div>
+      <div class="sbox"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input type="text" placeholder="მოძებნე..." oninput="handleSearchInput(this.value)" onfocus="if(this.value.length>=2)showSearchSuggest()" id="s-input" autocomplete="off"><div class="search-suggest" id="search-suggest"></div></div>
       <button class="fbtn on" onclick="filt(this,'ყველა')">ყველა</button>
       <button class="fbtn" onclick="filt(this,'mobile')">📱 მობ.</button>
       <button class="fbtn" onclick="filt(this,'pc')">🖥️ PC</button>
@@ -508,9 +528,10 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
   <div class="wrap">
     <div class="sec-head">
       <div class="sec-title" id="l-title">ყველა განცხადება</div>
-      <div style="display:flex;align-items:center;gap:8px"><span class="sec-count" id="l-count">0 განცხ.</span><select class="sort-sel"><option>უახლესი</option><option>ფასი ↑</option><option>ფასი ↓</option></select></div>
+      <div style="display:flex;align-items:center;gap:8px"><span class="sec-count" id="l-count">0 განცხ.</span><select class="sort-sel" id="l-sort" onchange="handleSortChange(this.value)"><option value="newest">უახლესი</option><option value="price_asc">ფასი ↑</option><option value="price_desc">ფასი ↓</option></select></div>
     </div>
     <div class="grid" id="l-grid"></div>
+    <div class="pagination" id="l-pagination"></div>
   </div>
 </div>
 
@@ -1139,6 +1160,11 @@ let CUR          = 'GEL';
 let FILT         = 'ყველა';
 let curGame      = null;
 let curGameTab   = 0;
+let L_PAGE       = 1;
+let L_SORT       = 'newest';
+let L_SEARCH     = '';
+let searchSuggestTimer = null;
+let suggestActiveIndex = -1;
 // postImgFile replaced by postImgFiles array (multi-upload)
 
 // ══════════════════════════════════════════════════════════
@@ -1713,10 +1739,10 @@ async function loadListingsFromAPI(gridId, params = {}) {
       renderGrid(gridId, data.listings.map(mapApiListing), true);
       const cnt = document.getElementById('l-count');
       if (cnt) cnt.textContent = data.total + ' განცხ.';
-      return true;
+      return data;
     }
   } catch (e) { console.error('listings error:', e); }
-  return false;
+  return null;
 }
 
 // ── Listing Detail (page navigation) ────────────────────────────
@@ -2046,16 +2072,21 @@ async function openSellerProfile() {
   }
 }
 
-function filterL(q) {
-  const params = { limit: 20 };
-  if (q) params.search = q;
+function filterL(q, page = 1) {
+  L_PAGE = page;
+  L_SEARCH = q || '';
+  const params = { limit: 12, page: L_PAGE, sort: L_SORT };
+  if (L_SEARCH) params.search = L_SEARCH;
   if (FILT && FILT !== 'ყველა' && FILT !== 'VIP') params.category = FILT;
   if (FILT === 'VIP') params.vip = 'true';
-  loadListingsFromAPI('l-grid', params).then(ok => {
-    if (!ok) {
+  loadListingsFromAPI('l-grid', params).then(data => {
+    if (!data) {
       const el = document.getElementById('l-grid');
       if (el) el.innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="empty-ico">🔍</div><div class="empty-t">განცხადებები ვერ მოიძებნა</div></div>';
+      renderPagination(0, 1);
+      return;
     }
+    renderPagination(data.pages || 1, data.page || 1);
   });
 }
 
@@ -2069,16 +2100,131 @@ function filt(btn, cat) {
   };
   const title = document.getElementById('l-title');
   if (title) title.textContent = catLabels[cat] || cat;
-  filterL(document.getElementById('s-input')?.value || '');
+  filterL(document.getElementById('s-input')?.value || '', 1);
 }
 
 function setCur(btn, cur) {
   document.querySelectorAll('.ct').forEach(b => b.classList.remove('on'));
   btn.classList.add('on');
   CUR = cur;
-  filterL(document.getElementById('s-input')?.value || '');
+  filterL(document.getElementById('s-input')?.value || '', L_PAGE);
   showToast(cur === 'GEL' ? '₾ GEL' : '$ USD', 'ok');
 }
+
+function handleSortChange(sort) {
+  L_SORT = sort;
+  filterL(document.getElementById('s-input')?.value || '', 1);
+}
+
+// ── PAGINATION ──────────────────────────────────────────────
+function renderPagination(totalPages, current) {
+  const el = document.getElementById('l-pagination');
+  if (!el) return;
+  if (!totalPages || totalPages <= 1) { el.innerHTML = ''; return; }
+
+  let html = `<button class="page-btn" ${current<=1?'disabled':''} onclick="goToPage(${current-1})">‹</button>`;
+
+  const pages = [];
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === 1 || i === totalPages || Math.abs(i - current) <= 1) pages.push(i);
+    else if (pages[pages.length-1] !== '...') pages.push('...');
+  }
+
+  html += pages.map(p => p === '...'
+    ? `<span class="page-dots">…</span>`
+    : `<button class="page-btn${p===current?' on':''}" onclick="goToPage(${p})">${p}</button>`
+  ).join('');
+
+  html += `<button class="page-btn" ${current>=totalPages?'disabled':''} onclick="goToPage(${current+1})">›</button>`;
+  el.innerHTML = html;
+}
+
+function goToPage(p) {
+  if (p < 1) return;
+  filterL(document.getElementById('s-input')?.value || '', p);
+  document.querySelector('#page-listings .wrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── SEARCH AUTOCOMPLETE ─────────────────────────────────────
+function handleSearchInput(q) {
+  clearTimeout(searchSuggestTimer);
+  suggestActiveIndex = -1;
+
+  // ჩვეული ფილტრაცია (debounce-ით)
+  searchSuggestTimer = setTimeout(() => filterL(q, 1), 350);
+
+  // suggest dropdown
+  if (q.length < 2) { hideSearchSuggest(); return; }
+  clearTimeout(window._suggestFetchTimer);
+  window._suggestFetchTimer = setTimeout(() => fetchSearchSuggest(q), 200);
+}
+
+async function fetchSearchSuggest(q) {
+  try {
+    const data = await api('/api/listings/suggest?q=' + encodeURIComponent(q));
+    renderSearchSuggest(data, q);
+  } catch (e) { hideSearchSuggest(); }
+}
+
+function renderSearchSuggest(data, q) {
+  const el = document.getElementById('search-suggest');
+  if (!el) return;
+  const games = data.games || [];
+  const titles = data.titles || [];
+
+  if (!games.length && !titles.length) {
+    el.innerHTML = `<div class="ss-empty">"${esc(q)}"-ზე შედეგი არ მოიძებნა</div>`;
+    el.classList.add('show');
+    return;
+  }
+
+  let html = '';
+  if (games.length) {
+    html += `<div class="ss-group-label">თამაშები</div>`;
+    html += games.map(g => `
+      <div class="ss-item" onclick="selectSuggestGame('${esc(g).replace(/'/g,"\\'")}')">
+        <span class="ss-item-ico">🎮</span><span class="ss-item-text">${esc(g)}</span>
+      </div>`).join('');
+  }
+  if (titles.length) {
+    html += `<div class="ss-group-label">განცხადებები</div>`;
+    html += titles.map(t => `
+      <div class="ss-item" onclick="selectSuggestListing('${t.id}')">
+        <span class="ss-item-ico">🛒</span>
+        <span class="ss-item-text">${esc(t.title)}<div class="ss-item-sub">${esc(t.game)}</div></span>
+        <span class="ss-item-price">₾${Number(t.price_gel).toFixed(0)}</span>
+      </div>`).join('');
+  }
+  el.innerHTML = html;
+  el.classList.add('show');
+}
+
+function showSearchSuggest() {
+  const el = document.getElementById('search-suggest');
+  if (el && el.innerHTML.trim()) el.classList.add('show');
+}
+
+function hideSearchSuggest() {
+  const el = document.getElementById('search-suggest');
+  if (el) el.classList.remove('show');
+}
+
+function selectSuggestGame(gameName) {
+  const input = document.getElementById('s-input');
+  if (input) input.value = gameName;
+  hideSearchSuggest();
+  filterL(gameName, 1);
+}
+
+function selectSuggestListing(id) {
+  hideSearchSuggest();
+  openListingDetail(id);
+}
+
+document.addEventListener('click', (e) => {
+  const sbox = e.target.closest('.sbox');
+  if (!sbox) hideSearchSuggest();
+});
 
 function goCategory(cat) {
   pg('listings'); act(document.querySelectorAll('.nl')[1]);
