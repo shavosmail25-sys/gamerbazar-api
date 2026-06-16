@@ -373,7 +373,12 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
 <div id="page-listings" class="page main">
   <div class="sbar">
     <div class="sbar-inner">
-      <div class="sbox"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input type="text" placeholder="მოძებნე..." oninput="filterL(this.value)" id="s-input"></div>
+      <div class="sbox" style="position:relative">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" placeholder="მოძებნე..." oninput="filterL(this.value);searchAC(this.value)" id="s-input"
+               autocomplete="off" onblur="setTimeout(()=>closeAC(),180)" onfocus="if(this.value)searchAC(this.value)">
+        <div id="s-ac" style="display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:9px;z-index:999;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.4);max-height:260px;overflow-y:auto"></div>
+      </div>
       <button class="fbtn on" onclick="filt(this,'ყველა')">ყველა</button>
       <button class="fbtn" onclick="filt(this,'mobile')">📱 მობ.</button>
       <button class="fbtn" onclick="filt(this,'pc')">🖥️ PC</button>
@@ -813,53 +818,100 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
 
 <!-- LISTING DETAIL MODAL -->
 <div class="modal-bg" id="listingModal" onclick="if(event.target===this)closeM('listingModal')">
-  <div class="modal" style="max-width:520px">
-    <!-- header -->
-    <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:18px">
-      <div id="lm-img" style="width:70px;height:70px;border-radius:12px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:32px;flex-shrink:0">🎮</div>
-      <div style="flex:1">
-        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em" id="lm-game">—</div>
-        <div style="font-size:17px;font-weight:700;margin:3px 0;line-height:1.3" id="lm-title">—</div>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px">
-          <span id="lm-price" style="font-family:var(--mono);font-size:22px;font-weight:700;color:var(--accent)">₾0</span>
-          <span id="lm-vip-badge" style="display:none" class="badge bv">⭐ VIP</span>
+  <div class="modal" style="max-width:560px;padding:0;overflow:hidden">
+
+    <!-- ── IMAGE GALLERY ───────────────────────────────────── -->
+    <div id="lm-gallery" style="position:relative;background:var(--bg3);border-radius:16px 16px 0 0;overflow:hidden;height:220px;display:flex;align-items:center;justify-content:center">
+      <!-- slides -->
+      <div id="lm-slides" style="display:flex;width:100%;height:100%;transition:transform .3s ease;will-change:transform"></div>
+      <!-- no-image fallback -->
+      <div id="lm-gallery-icon" style="font-size:56px;position:absolute;pointer-events:none">🎮</div>
+      <!-- prev/next -->
+      <button id="lm-prev" onclick="galleryNav(-1)" style="display:none;position:absolute;left:10px;background:rgba(0,0,0,.55);border:none;color:#fff;border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;z-index:2">‹</button>
+      <button id="lm-next" onclick="galleryNav(1)"  style="display:none;position:absolute;right:10px;background:rgba(0,0,0,.55);border:none;color:#fff;border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;z-index:2">›</button>
+      <!-- dots -->
+      <div id="lm-dots" style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);display:flex;gap:5px"></div>
+      <!-- VIP badge -->
+      <span id="lm-vip-badge" style="display:none;position:absolute;top:10px;right:10px" class="badge bv">⭐ VIP</span>
+      <!-- close btn -->
+      <button onclick="closeM('listingModal')" style="position:absolute;top:10px;left:10px;background:rgba(0,0,0,.55);border:none;color:#fff;border-radius:50%;width:30px;height:30px;font-size:16px;cursor:pointer;z-index:2">✕</button>
+    </div>
+
+    <!-- ── CONTENT ──────────────────────────────────────────── -->
+    <div style="padding:18px 20px 20px">
+
+      <!-- game + type chip -->
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+        <span id="lm-game" style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">—</span>
+        <span id="lm-type-chip" style="font-size:10px;background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:1px 6px;color:var(--muted)"></span>
+      </div>
+
+      <!-- title + price row -->
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px">
+        <div style="font-size:17px;font-weight:700;line-height:1.35;flex:1" id="lm-title">—</div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-family:var(--mono);font-size:22px;font-weight:700;color:var(--accent)" id="lm-price">₾0</div>
+          <div style="font-size:10px;color:var(--muted)" id="lm-price-usd"></div>
         </div>
       </div>
-    </div>
-    <!-- tags -->
-    <div id="lm-tags" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px"></div>
-    <!-- description -->
-    <div id="lm-desc-wrap" style="display:none;background:var(--bg3);border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px;color:var(--muted2);line-height:1.6" id="lm-desc"></div>
-    <!-- seller -->
-    <div style="display:flex;align-items:center;gap:12px;background:var(--bg3);border-radius:10px;padding:12px 14px;margin-bottom:16px;cursor:pointer" id="lm-seller-row" onclick="openSellerProfile()">
-      <div id="lm-seller-ava" style="width:40px;height:40px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--accent);flex-shrink:0">?</div>
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:600" id="lm-seller-name">—</div>
-        <div style="font-size:11px;color:var(--muted)" id="lm-seller-stats">—</div>
+
+      <!-- tags -->
+      <div id="lm-tags" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px"></div>
+
+      <!-- description -->
+      <div id="lm-desc-wrap" style="display:none;background:var(--bg3);border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px;color:var(--muted2);line-height:1.6;max-height:120px;overflow-y:auto">
+        <div id="lm-desc"></div>
       </div>
-      <div style="font-size:11px;color:var(--muted)">პროფ. →</div>
-    </div>
-    <!-- escrow info -->
-    <div style="background:var(--ad);border:1px solid var(--ad2);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--accent)">
-      🔒 <strong>Escrow დაცვა</strong> — ფული გაიყინება სანამ ექაუნთს მიიღებ. მხოლოდ შემდეგ ჩაირიცხება გამყიდველს.
-    </div>
-    <!-- actions -->
-    <div id="lm-actions">
-      <div class="m-acts" style="margin-top:0">
-        <button class="btn btn-g" onclick="closeM('listingModal')">დახურვა</button>
-        <button class="btn btn-a" id="lm-buy-btn" onclick="buyListing()" style="font-size:14px;padding:9px 20px">
-          🛒 ყიდვა — <span id="lm-buy-price">₾0</span>
-        </button>
+
+      <!-- ── SELLER PANEL ──────────────────────────────────── -->
+      <div style="background:var(--bg3);border-radius:10px;padding:13px 14px;margin-bottom:13px;cursor:pointer" id="lm-seller-row" onclick="openSellerProfile()">
+        <div style="display:flex;align-items:center;gap:11px">
+          <div id="lm-seller-ava" style="width:42px;height:42px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--accent);flex-shrink:0;overflow:hidden">?</div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:5px">
+              <span style="font-size:13px;font-weight:600" id="lm-seller-name">—</span>
+              <span id="lm-seller-verified" style="display:none;font-size:10px;color:var(--accent)" title="Verified Seller">✓</span>
+            </div>
+            <div style="font-size:11px;color:var(--muted)" id="lm-seller-stats">—</div>
+          </div>
+          <div style="font-size:18px" id="lm-seller-rating-star">⭐</div>
+          <div style="font-size:11px;color:var(--muted)">→</div>
+        </div>
       </div>
-    </div>
-    <!-- logged out -->
-    <div id="lm-guest-msg" style="display:none;text-align:center;padding:8px">
-      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">შეძენისთვის საჭიროა ავტ.</div>
-      <button class="btn btn-a" onclick="closeM('listingModal');openM('loginModal')">შესვლა / რეგისტრაცია</button>
-    </div>
+
+      <!-- escrow info -->
+      <div style="background:var(--ad);border:1px solid var(--ad2);border-radius:8px;padding:9px 13px;margin-bottom:14px;font-size:12px;color:var(--accent)">
+        🔒 <strong>Escrow დაცვა</strong> — ფული გაიყინება სანამ ექ. მიიღებ. მხოლოდ შემდეგ ჩაირიცხება გამყ-ს.
+      </div>
+
+      <!-- actions -->
+      <div id="lm-actions">
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-g" style="flex:1" onclick="closeM('listingModal')">დახურვა</button>
+          <button class="btn btn-a" id="lm-buy-btn" onclick="buyListing()" style="flex:2;font-size:14px">
+            🛒 ყიდვა — <span id="lm-buy-price">₾0</span>
+          </button>
+        </div>
+        <div id="lm-own-msg" style="display:none;margin-top:8px;text-align:center;font-size:12px;color:var(--muted)">ეს შენი განცხადებაა</div>
+      </div>
+      <div id="lm-guest-msg" style="display:none;text-align:center;padding:8px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">შეძენისთვის საჭიროა ავტ.</div>
+        <button class="btn btn-a" onclick="closeM('listingModal');openM('loginModal')">შესვლა / რეგ.</button>
+      </div>
+
+      <!-- ── REVIEWS ──────────────────────────────────────── -->
+      <div id="lm-reviews-section" style="display:none;margin-top:18px;border-top:1px solid var(--border2);padding-top:14px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:6px">
+          ⭐ გამყიდვლის შეფასებები
+          <span id="lm-reviews-count" style="font-size:11px;color:var(--muted);font-weight:400"></span>
+        </div>
+        <div id="lm-reviews-list" style="display:flex;flex-direction:column;gap:8px;max-height:200px;overflow-y:auto"></div>
+        <div id="lm-reviews-empty" style="display:none;font-size:12px;color:var(--muted);text-align:center;padding:10px">შეფასებები ჯერ არ არის</div>
+      </div>
+
+    </div><!-- /content -->
   </div>
 </div>
-
 <!-- SELLER PROFILE MODAL -->
 <div class="modal-bg" id="sellerModal" onclick="if(event.target===this)closeM('sellerModal')">
   <div class="modal" style="max-width:460px">
@@ -1510,19 +1562,77 @@ async function loadListingsFromAPI(gridId, params = {}) {
 // ── Listing Detail ────────────────────────────────────────────
 let currentListing = null;
 
+// ── Gallery state ──────────────────────────────────────────────
+let galleryIdx = 0;
+let galleryImgs = [];
+
+function galleryNav(dir) {
+  if (!galleryImgs.length) return;
+  galleryIdx = (galleryIdx + dir + galleryImgs.length) % galleryImgs.length;
+  updateGallery();
+}
+
+function updateGallery() {
+  const slides = document.getElementById('lm-slides');
+  const dots   = document.getElementById('lm-dots');
+  const prev   = document.getElementById('lm-prev');
+  const next   = document.getElementById('lm-next');
+  const icon   = document.getElementById('lm-gallery-icon');
+  if (!slides) return;
+
+  if (!galleryImgs.length) {
+    slides.innerHTML = '';
+    if (icon) icon.style.display = 'flex';
+    if (prev) prev.style.display = 'none';
+    if (next) next.style.display = 'none';
+    if (dots) dots.innerHTML = '';
+    return;
+  }
+
+  if (icon) icon.style.display = 'none';
+  slides.innerHTML = galleryImgs.map((url, i) =>
+    `<img src="${url.startsWith('http') ? url : API_URL + url}"
+      style="min-width:100%;height:220px;object-fit:cover;flex-shrink:0"
+      onerror="this.style.display='none'">`
+  ).join('');
+  slides.style.transform = `translateX(-${galleryIdx * 100}%)`;
+
+  if (galleryImgs.length > 1) {
+    if (prev) prev.style.display = 'flex';
+    if (next) next.style.display = 'flex';
+    if (dots) dots.innerHTML = galleryImgs.map((_, i) =>
+      `<div onclick="galleryIdx=${i};updateGallery()" style="width:${i===galleryIdx?'16':'6'}px;height:6px;border-radius:3px;background:${i===galleryIdx?'#fff':'rgba(255,255,255,.4)'};cursor:pointer;transition:all .2s"></div>`
+    ).join('');
+  } else {
+    if (prev) prev.style.display = 'none';
+    if (next) next.style.display = 'none';
+    if (dots) dots.innerHTML = '';
+  }
+}
+
 async function openListing(id, title, price) {
-  // ჯერ basic info ვაჩვენოთ
   currentListing = { id, title, price };
-  document.getElementById('lm-title').textContent    = title;
-  document.getElementById('lm-price').textContent    = '₾' + price;
-  document.getElementById('lm-buy-price').textContent= '₾' + price;
-  document.getElementById('lm-game').textContent     = '';
-  document.getElementById('lm-tags').innerHTML       = '';
+  galleryIdx  = 0;
+  galleryImgs = [];
+
+  // skeleton — basic info
+  document.getElementById('lm-title').textContent     = title;
+  document.getElementById('lm-price').textContent     = '₾' + price;
+  document.getElementById('lm-buy-price').textContent = '₾' + price;
+  document.getElementById('lm-game').textContent      = '⏳ იტვირთება...';
+  document.getElementById('lm-type-chip').textContent = '';
+  document.getElementById('lm-tags').innerHTML        = '';
   document.getElementById('lm-seller-name').textContent = '...';
+  document.getElementById('lm-seller-stats').textContent= '';
+  document.getElementById('lm-price-usd').textContent = '';
+  const descWrap = document.getElementById('lm-desc-wrap');
+  if (descWrap) descWrap.style.display = 'none';
+  updateGallery();
 
   // auth state
   const guestMsg = document.getElementById('lm-guest-msg');
   const actions  = document.getElementById('lm-actions');
+  const ownMsg   = document.getElementById('lm-own-msg');
   if (currentUser) {
     if (guestMsg) guestMsg.style.display = 'none';
     if (actions)  actions.style.display  = 'block';
@@ -1530,17 +1640,34 @@ async function openListing(id, title, price) {
     if (guestMsg) guestMsg.style.display = 'block';
     if (actions)  actions.style.display  = 'none';
   }
+  if (ownMsg) ownMsg.style.display = 'none';
 
   openM('listingModal');
 
-  // API-დან სრული ინფო
   try {
     const l = await api('/api/listings/' + id);
     currentListing = l;
-    document.getElementById('lm-game').textContent  = (l.game || '') + ' · ' + (l.listing_type || '');
+
+    // gallery
+    if (l.images && l.images.length) {
+      galleryImgs = l.images;
+    }
+    updateGallery();
+
+    // header
+    document.getElementById('lm-game').textContent  = l.game || '';
     document.getElementById('lm-title').textContent = l.title;
-    document.getElementById('lm-price').textContent = '₾' + Number(l.price_gel).toFixed(2);
-    document.getElementById('lm-buy-price').textContent = '₾' + Number(l.price_gel).toFixed(2);
+
+    const typeLabels = { account:'ექაუნთი', boosting:'ბუსტინგი', currency:'ვალუტა', service:'სერვისი' };
+    const typeChip = document.getElementById('lm-type-chip');
+    if (typeChip) typeChip.textContent = typeLabels[l.listing_type] || l.listing_type || '';
+
+    const priceGel = Number(l.price_gel);
+    document.getElementById('lm-price').textContent     = '₾' + priceGel.toFixed(2);
+    document.getElementById('lm-buy-price').textContent = '₾' + priceGel.toFixed(2);
+
+    const usdEl = document.getElementById('lm-price-usd');
+    if (usdEl && l.price_usd) usdEl.textContent = '$' + Number(l.price_usd).toFixed(2);
 
     // VIP badge
     const vipBadge = document.getElementById('lm-vip-badge');
@@ -1553,33 +1680,101 @@ async function openListing(id, title, price) {
     }
 
     // description
-    const descWrap = document.getElementById('lm-desc-wrap');
-    const descEl   = document.getElementById('lm-desc');
-    if (descWrap && descEl && l.description) {
-      descWrap.style.display = 'block';
+    const descEl = document.getElementById('lm-desc');
+    if (descWrap && descEl && l.description && l.description.trim()) {
       descEl.textContent = l.description;
+      descWrap.style.display = 'block';
     }
 
-    // seller
-    const sellerName  = document.getElementById('lm-seller-name');
-    const sellerStats = document.getElementById('lm-seller-stats');
-    const sellerAva   = document.getElementById('lm-seller-ava');
-    if (sellerName)  sellerName.textContent  = l.seller_name || l.seller_username || '?';
+    // seller panel
+    const sellerName     = document.getElementById('lm-seller-name');
+    const sellerStats    = document.getElementById('lm-seller-stats');
+    const sellerAva      = document.getElementById('lm-seller-ava');
+    const sellerVerified = document.getElementById('lm-seller-verified');
+    const ratingStar     = document.getElementById('lm-seller-rating-star');
+
+    const sName  = l.display_name || l.seller_name || l.username || l.seller_username || '?';
+    const sRat   = Number(l.seller_rating || l.avg_rating) || 0;
+    const sRevs  = l.seller_review_count || l.review_count || 0;
+    const sCompl = l.seller_completed || l.completed_orders || 0;
+
+    if (sellerName)  sellerName.textContent  = sName;
     if (sellerStats) sellerStats.textContent =
-      '★ ' + (Number(l.seller_rating) || 0).toFixed(1) +
-      ' · ' + (l.seller_review_count || 0) + ' შეფ.' +
-      ' · ' + (l.seller_completed || 0) + ' გაყ.';
+      '★ ' + sRat.toFixed(1) + ' · ' + sRevs + ' შეფ. · ' + sCompl + ' გარ.';
+    if (sellerVerified) sellerVerified.style.display = l.is_verified_seller ? 'inline' : 'none';
+    if (ratingStar) ratingStar.textContent = sRat >= 4.5 ? '🌟' : sRat >= 3 ? '⭐' : '☆';
+
     if (sellerAva) {
-      if (l.seller_avatar) {
-        sellerAva.innerHTML = `<img src="${API_URL + l.seller_avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+      const avaUrl = l.seller_avatar || l.avatar_url;
+      if (avaUrl) {
+        sellerAva.innerHTML = `<img src="${avaUrl.startsWith('http') ? avaUrl : API_URL + avaUrl}"
+          style="width:100%;height:100%;object-fit:cover">`;
       } else {
-        sellerAva.textContent = (l.seller_name || '?').slice(0,2).toUpperCase();
+        sellerAva.textContent = sName.slice(0,2).toUpperCase();
       }
     }
+
+    // own listing check
+    if (currentUser && l.seller_id === currentUser.id) {
+      const buyBtn = document.getElementById('lm-buy-btn');
+      if (buyBtn) { buyBtn.disabled = true; buyBtn.style.opacity = '.4'; }
+      if (ownMsg) ownMsg.style.display = 'block';
+    }
+
+    // reviews — async, ვუშვებ ბოლოს
+    loadListingReviews(l.seller_id);
+
   } catch(e) {
     console.error('listing detail:', e);
+    document.getElementById('lm-game').textContent = '⚠️ ვერ ჩაიტვირთა';
   }
 }
+
+// ── Listing Reviews ────────────────────────────────────────────
+async function loadListingReviews(sellerId) {
+  const section = document.getElementById('lm-reviews-section');
+  const list    = document.getElementById('lm-reviews-list');
+  const empty   = document.getElementById('lm-reviews-empty');
+  const countEl = document.getElementById('lm-reviews-count');
+  if (!section || !list) return;
+
+  try {
+    const reviews = await api('/api/reviews/seller/' + sellerId);
+    if (!reviews || !reviews.length) {
+      section.style.display = 'block';
+      list.innerHTML = '';
+      if (empty) empty.style.display = 'block';
+      if (countEl) countEl.textContent = '';
+      return;
+    }
+
+    section.style.display = 'block';
+    if (empty) empty.style.display = 'none';
+    if (countEl) countEl.textContent = '(' + reviews.length + ')';
+
+    list.innerHTML = reviews.slice(0, 10).map(r => {
+      const stars = '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
+      const date  = new Date(r.created_at).toLocaleDateString('ka-GE', { day:'numeric', month:'short' });
+      const ava   = r.reviewer_avatar
+        ? `<img src="${r.reviewer_avatar.startsWith('http') ? r.reviewer_avatar : API_URL + r.reviewer_avatar}"
+             style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
+        : `<span style="font-size:11px;font-weight:700;color:var(--accent)">${(r.reviewer_username||'?').slice(0,2).toUpperCase()}</span>`;
+      return `<div style="background:var(--bg3);border-radius:8px;padding:10px 12px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+          <div style="width:28px;height:28px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">${ava}</div>
+          <span style="font-size:12px;font-weight:600">${r.reviewer_username || '?'}</span>
+          <span style="font-size:12px;color:var(--gold,#f5c518)">${stars}</span>
+          <span style="font-size:10px;color:var(--muted);margin-left:auto">${date}</span>
+        </div>
+        ${r.comment ? `<div style="font-size:12px;color:var(--muted2);line-height:1.5">${r.comment}</div>` : ''}
+      </div>`;
+    }).join('');
+  } catch(e) {
+    // reviews ვერ ჩაიტვ. — section ვმალავთ
+    if (section) section.style.display = 'none';
+  }
+}
+
 
 // ── Buy Listing ────────────────────────────────────────────────
 async function buyListing() {
@@ -2648,7 +2843,130 @@ async function sendMsg() {
 }
 
 // ══════════════════════════════════════════════════════════
-// HOME STATS — API-დან რეალური მონაც.
+// 🔍 SEARCH AUTOCOMPLETE
+// ══════════════════════════════════════════════════════════
+
+// ყველა თამაშის სახელი — postModal-ის select-დან + hardcoded popular
+const AC_GAMES = [
+  'PUBG Mobile','Arena Breakout','CoD Mobile','Mobile Legends','Brawl Stars',
+  'Clash of Clans','Genshin Impact','Roblox','Free Fire','Clash Royale',
+  'CS2','Valorant','Dota 2','League of Legends','Apex Legends',
+  'GTA V','Fortnite','Minecraft','FIFA','NBA 2K',
+  'Instagram','TikTok','YouTube','Facebook','Twitter',
+];
+
+const AC_TYPES = ['ექაუნთი','ბუსტინგი','ვალუტა','სერვისი'];
+
+let acTimer = null;
+
+function searchAC(q) {
+  clearTimeout(acTimer);
+  const ac = document.getElementById('s-ac');
+  if (!ac) return;
+
+  if (!q || q.length < 1) { closeAC(); return; }
+
+  // debounce 200ms
+  acTimer = setTimeout(async () => {
+    const lower = q.toLowerCase();
+
+    // 1. local game name matches
+    const gameMatches = AC_GAMES.filter(g => g.toLowerCase().includes(lower)).slice(0, 5);
+
+    // 2. API search — სათაურებიდან
+    let apiMatches = [];
+    try {
+      const res = await api('/api/listings?search=' + encodeURIComponent(q) + '&limit=5');
+      apiMatches = (res.listings || []).map(l => ({
+        id: l.id, title: l.title, price: l.price_gel, game: l.game,
+        type: l.listing_type, vip: l.is_vip,
+      }));
+    } catch(e) { /* silent */ }
+
+    // render
+    let html = '';
+
+    // განცხადებები
+    if (apiMatches.length) {
+      html += `<div style="font-size:10px;color:var(--muted);padding:8px 12px 4px;text-transform:uppercase;letter-spacing:.06em">განცხადებები</div>`;
+      html += apiMatches.map(l =>
+        `<div class="ac-item" onclick="closeAC();openListing('${l.id}','${(l.title||'').replace(/'/g,"\\'")}',${l.price})"
+          style="display:flex;align-items:center;gap:9px;padding:9px 13px;cursor:pointer">
+          <span style="font-size:18px">${l.vip ? '⭐' : '🎮'}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${l.title}</div>
+            <div style="font-size:10px;color:var(--muted)">${l.game || ''}</div>
+          </div>
+          <span style="font-family:var(--mono);font-size:12px;color:var(--accent);flex-shrink:0">₾${Number(l.price).toFixed(0)}</span>
+        </div>`
+      ).join('');
+    }
+
+    // თამაშები
+    if (gameMatches.length) {
+      html += `<div style="font-size:10px;color:var(--muted);padding:8px 12px 4px;text-transform:uppercase;letter-spacing:.06em">თამაშები</div>`;
+      html += gameMatches.map(g =>
+        `<div class="ac-item" onclick="acSelectGame('${g}')"
+          style="display:flex;align-items:center;gap:9px;padding:8px 13px;cursor:pointer">
+          <span style="font-size:16px">🎯</span>
+          <span style="font-size:12px">${g}</span>
+        </div>`
+      ).join('');
+    }
+
+    if (!html) {
+      html = `<div style="padding:12px 13px;font-size:12px;color:var(--muted)">ვერ მოიძებნა</div>`;
+    }
+
+    ac.innerHTML = html;
+    ac.style.display = 'block';
+
+    // hover effect
+    ac.querySelectorAll('.ac-item').forEach(el => {
+      el.addEventListener('mouseenter', () => el.style.background = 'var(--bg3)');
+      el.addEventListener('mouseleave', () => el.style.background = '');
+    });
+  }, 200);
+}
+
+function closeAC() {
+  const ac = document.getElementById('s-ac');
+  if (ac) ac.style.display = 'none';
+}
+
+function acSelectGame(game) {
+  const inp = document.getElementById('s-input');
+  if (inp) { inp.value = game; filterL(game); }
+  closeAC();
+}
+
+// ↑↓ keyboard navigation
+document.addEventListener('keydown', (e) => {
+  const ac = document.getElementById('s-ac');
+  if (!ac || ac.style.display === 'none') return;
+  const items = [...ac.querySelectorAll('.ac-item')];
+  const cur   = ac.querySelector('.ac-item.ac-sel');
+  const idx   = cur ? items.indexOf(cur) : -1;
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    items.forEach(i => i.classList.remove('ac-sel'));
+    const next = items[(idx + 1) % items.length];
+    if (next) { next.classList.add('ac-sel'); next.style.background = 'var(--bg3)'; }
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    items.forEach(i => i.classList.remove('ac-sel'));
+    const prev = items[(idx - 1 + items.length) % items.length];
+    if (prev) { prev.classList.add('ac-sel'); prev.style.background = 'var(--bg3)'; }
+  } else if (e.key === 'Enter' && cur) {
+    e.preventDefault();
+    cur.click();
+  } else if (e.key === 'Escape') {
+    closeAC();
+  }
+});
+
+// ══════════════════════════════════════════════════════════
 // ══════════════════════════════════════════════════════════
 async function loadHomeStats() {
   try {
