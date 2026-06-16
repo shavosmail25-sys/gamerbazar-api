@@ -4,6 +4,7 @@
 const express = require('express');
 const db      = require('../db');
 const { requireAuth } = require('../middleware/auth');
+const push    = require('../utils/push');
 const router  = express.Router();
 
 // ══════════════════════════════════════════════════════════════
@@ -103,6 +104,10 @@ router.post('/rooms/:id/messages', requireAuth, async (req, res) => {
       RETURNING *
     `, [req.params.id, req.user.id, content.trim()]);
 
+    // push შეტყობ. — მეორე მონაწილეს, თუ ოთახში online არაა
+    const recipientId = r.participant_a === req.user.id ? r.participant_b : r.participant_a;
+    notifyChatMessage(req.params.id, recipientId, req.user, content.trim()).catch(() => {});
+
     res.status(201).json(rows[0]);
   } catch (err) {
     res.status(500).json({ error: 'server_error' });
@@ -121,6 +126,23 @@ const { WebSocketServer } = require('ws');
 
 // roomId → Set of {ws, userId}
 const rooms = new Map();
+
+// ── გამოწერების შემოწ. — push მხოლოდ მაშინ, თუ მიმღები ამ ოთახში online არაა ──
+async function notifyChatMessage(roomId, recipientId, sender, content) {
+  const conns = rooms.get(roomId);
+  const recipientOnline = conns && [...conns].some(c => c.userId === recipientId && c.ws.readyState === 1);
+  if (recipientOnline) return; // chat ღია აქვს — toast საჭირო არაა
+
+  const senderName = sender.display_name || sender.username || 'მომხმარებელი';
+  const preview = content.length > 80 ? content.slice(0, 80) + '…' : content;
+
+  await push.sendToUser(recipientId, {
+    title: `💬 ${senderName}`,
+    body: preview,
+    url: `/?chat=${roomId}`,
+    tag: `chat-${roomId}`,
+  });
+}
 
 function setupWebSocket(server) {
   const wss = new WebSocketServer({ server, path: '/ws/chat' });
@@ -186,6 +208,17 @@ function setupWebSocket(server) {
         rooms.get(roomId)?.forEach(c => {
           if (c.ws.readyState === 1) c.ws.send(payload);
         });
+
+        // push შეტყობ. — მეორე მონაწ-ს, თუ ის ოთახში online არაა
+        try {
+          const { rows: roomRows } = await db.query('SELECT * FROM chat_rooms WHERE id=$1', [roomId]);
+          if (roomRows.length) {
+            const rr = roomRows[0];
+            const recipientId = rr.participant_a === userId ? rr.participant_b : rr.participant_a;
+            const { rows: senderRows } = await db.query('SELECT username, display_name FROM users WHERE id=$1', [userId]);
+            await notifyChatMessage(roomId, recipientId, senderRows[0] || {}, msg.content);
+          }
+        } catch (e) { /* push შეცდომა — chat-ს არ ვაჩერებთ */ }
       } catch (err) {
         console.error('ws message error:', err.message);
       }

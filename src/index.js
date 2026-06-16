@@ -10,6 +10,8 @@ const path         = require('path');
 const http         = require('http');
 
 const db              = require('./db');
+const mailer          = require('./utils/mailer');       // ← ახალი
+const push            = require('./utils/push');          // ← ახალი
 const authRoutes      = require('./routes/auth');
 const listingRoutes   = require('./routes/listings');
 const orderRoutes     = require('./routes/orders');
@@ -20,6 +22,8 @@ const reviewRoutes    = require('./routes/reviews');
 const disputeRoutes   = require('./routes/disputes');
 const userRoutes      = require('./routes/users');
 const statsRoutes     = require('./routes/stats');       // ← ახალი
+const pushRoutes      = require('./routes/push');        // ← ახალი
+const adminRoutes     = require('./routes/admin');       // ← ახალი
 
 const app    = express();
 const server = http.createServer(app);
@@ -49,6 +53,8 @@ app.use('/api/reviews',  reviewRoutes);
 app.use('/api/disputes', disputeRoutes);
 app.use('/api/users',    userRoutes);
 app.use('/api/stats',    statsRoutes);                  // ← ახალი
+app.use('/api/push',     pushRoutes);                   // ← ახალი
+app.use('/api/admin',    adminRoutes);                  // ← ახალი
 
 // ── Health check ─────────────────────────────────────────────
 app.get('/health', (req, res) => {
@@ -100,6 +106,18 @@ if (process.env.NODE_ENV !== 'production') {
         'POST   /api/users/me/avatar',
         'GET    /api/stats',                            // ← ახალი
         'POST   /api/listings/:id/images (multipart)',  // ← ახალი
+        'GET    /api/push/vapid-key',                   // ← ახალი
+        'POST   /api/push/subscribe',                   // ← ახალი
+        'POST   /api/push/unsubscribe',                 // ← ახალი
+        'GET    /api/admin/disputes',                   // ← ახალი
+        'PUT    /api/admin/disputes/:id/resolve',       // ← ახალი
+        'GET    /api/admin/users',                      // ← ახალი
+        'PUT    /api/admin/users/:id/ban',              // ← ახალი
+        'PUT    /api/admin/users/:id/unban',            // ← ახალი
+        'GET    /api/admin/listings',                   // ← ახალი
+        'PUT    /api/admin/listings/:id/moderate',      // ← ახალი
+        'DELETE /api/admin/listings/:id',               // ← ახალი
+        'GET    /api/admin/overview',                   // ← ახალი
       ]
     });
   });
@@ -125,8 +143,9 @@ setupWebSocket(server);
 async function expireOrders() {
   try {
     const { rows } = await db.query(`
-      SELECT o.id, o.buyer_id, o.amount_gel, o.escrow_status
+      SELECT o.id, o.buyer_id, o.listing_id, o.amount_gel, o.escrow_status, l.title AS listing_title
       FROM orders o
+      JOIN listings l ON l.id = o.listing_id
       WHERE o.status = 'active'
         AND o.escrow_status = 'held'
         AND o.confirm_deadline IS NOT NULL
@@ -170,6 +189,23 @@ async function expireOrders() {
         });
 
         console.log(`  ✅ Order ${order.id} expired + refunded ₾${order.amount_gel}`);
+
+        // შეტყობ. მყიდველს — email + push
+        try {
+          const { rows: buyerRows } = await db.query(
+            'SELECT id, email, notif_email FROM users WHERE id=$1', [order.buyer_id]
+          );
+          const listing = { title: order.listing_title };
+          if (buyerRows.length) {
+            await mailer.sendOrderExpiredEmail(buyerRows[0], order, listing);
+          }
+          await push.sendToUser(order.buyer_id, {
+            title: '⏰ შეკვეთის ვადა გავიდა',
+            body: `${listing.title} — ₾${Number(order.amount_gel).toFixed(2)} დაბრუნდა`,
+            url: `/?page=wallet`,
+            tag: `order-${order.id}-expired`,
+          });
+        } catch (e) { console.error(`  ⚠️ notify failed for ${order.id}:`, e.message); }
       } catch (e) {
         console.error(`  ❌ Order ${order.id} expire failed:`, e.message);
       }

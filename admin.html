@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GamerBazar.ge — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07080c;--bg2:#0d0f15;--bg3:#13151e;--bg4:#1a1d27;
+  --border:#ffffff0d;--border2:#ffffff18;--border3:#ffffff28;
+  --text:#e8eaf2;--muted:#6b6e85;--muted2:#9295aa;
+  --accent:#00ffb3;--accent2:#00d496;--ad:#00ffb310;--ad2:#00ffb325;
+  --gold:#ffcc00;--gd:#ffcc0012;--gd2:#ffcc0028;
+  --blue:#5b9cf6;--bd:#5b9cf610;
+  --red:#ff5f6d;--rd:#ff5f6d10;--rd2:#ff5f6d28;
+  --purple:#b57bee;--pd:#b57bee10;
+  --font:'Lexend',sans-serif;--mono:'JetBrains Mono',monospace;
+  --r:8px;--r2:14px;
+}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);color:var(--text);font-family:var(--font);
+  font-size:14px;line-height:1.6;min-height:100vh;
+  background-image:
+    radial-gradient(ellipse 60% 40% at 85% -10%, #ff5f6d08 0%, transparent 55%),
+    radial-gradient(ellipse 40% 40% at 5% 90%, #00ffb306 0%, transparent 50%);
+  background-attachment:fixed;
+}
+button{font-family:var(--font);cursor:pointer;border:none;outline:none}
+input,select,textarea{font-family:var(--font)}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
+
+/* ── TOP BAR ─────────────────────────────────────────────── */
+.topbar{position:sticky;top:0;z-index:100;height:56px;background:#08090de8;backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:16px}
+.logo{font-size:15px;font-weight:800;letter-spacing:-.3px;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.logo em{color:var(--red);font-style:normal;text-shadow:0 0 12px var(--red)60}
+.logo .tag{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--red);background:var(--rd);border:1px solid var(--rd2);padding:2px 7px;border-radius:5px;letter-spacing:1px}
+.tabs{display:flex;gap:2px;flex:1;overflow-x:auto}.tabs::-webkit-scrollbar{display:none}
+.tab{padding:7px 14px;border-radius:7px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.tab:hover{color:var(--text);background:var(--bg3)}
+.tab.on{color:var(--text);background:var(--bg4)}
+.tab .pill{font-family:var(--mono);font-size:10px;background:var(--rd);color:var(--red);border:1px solid var(--rd2);padding:1px 6px;border-radius:10px;min-width:18px;text-align:center}
+.who{display:flex;align-items:center;gap:9px;flex-shrink:0}
+.who-name{font-size:12px;font-weight:600}
+.who-sub{font-size:10px;color:var(--muted)}
+.logout-btn{background:transparent;border:1px solid var(--border2);color:var(--muted);padding:6px 12px;border-radius:7px;font-size:11px;font-weight:600;transition:all .15s}
+.logout-btn:hover{color:var(--red);border-color:var(--rd2)}
+
+/* ── LAYOUT ──────────────────────────────────────────────── */
+.wrap{max-width:1180px;margin:0 auto;padding:28px 20px 60px}
+.view{display:none;animation:fadeIn .25s ease}
+.view.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.page-title{font-size:20px;font-weight:800;margin-bottom:4px}
+.page-sub{font-size:12px;color:var(--muted);margin-bottom:22px}
+
+/* ── CARDS / STATS ───────────────────────────────────────── */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:26px}
+.stat-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:16px 18px;position:relative;overflow:hidden}
+.stat-card .ico{font-size:18px;margin-bottom:8px;opacity:.8}
+.stat-card .val{font-family:var(--mono);font-size:24px;font-weight:700;letter-spacing:-.5px}
+.stat-card .lbl{font-size:11px;color:var(--muted);margin-top:2px}
+.stat-card .sub{font-size:10px;margin-top:6px;font-weight:600}
+.stat-card.warn .val{color:var(--gold)}
+.stat-card.danger .val{color:var(--red)}
+.stat-card.ok .val{color:var(--accent)}
+
+/* ── FILTER BAR ──────────────────────────────────────────── */
+.filter-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.seg{display:flex;gap:2px;background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:3px}
+.seg-btn{padding:6px 13px;border-radius:6px;font-size:11.5px;font-weight:600;color:var(--muted);background:transparent;transition:all .15s}
+.seg-btn.on{background:var(--bg4);color:var(--text)}
+.search-i{flex:1;min-width:180px;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:8px 13px;color:var(--text);font-size:12.5px}
+.search-i:focus{border-color:var(--border3)}
+.search-i::placeholder{color:var(--muted)}
+
+/* ── TABLE / LIST ────────────────────────────────────────── */
+.list{display:flex;flex-direction:column;gap:8px}
+.row-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.row-main{flex:1;min-width:200px}
+.row-title{font-size:13px;font-weight:700;margin-bottom:3px}
+.row-sub{font-size:11px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap}
+.row-sub b{color:var(--muted2);font-weight:600}
+.badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:5px;letter-spacing:.3px;text-transform:uppercase}
+.b-open{background:var(--rd);color:var(--red);border:1px solid var(--rd2)}
+.b-resolved{background:var(--ad);color:var(--accent);border:1px solid var(--ad2)}
+.b-active{background:var(--ad);color:var(--accent);border:1px solid var(--ad2)}
+.b-banned{background:var(--rd);color:var(--red);border:1px solid var(--rd2)}
+.b-user{background:var(--bd);color:var(--blue);border:1px solid #5b9cf628}
+.b-admin{background:var(--gd);color:var(--gold);border:1px solid var(--gd2)}
+.b-blocked{background:var(--rd);color:var(--red);border:1px solid var(--rd2)}
+.b-sold{background:var(--pd);color:var(--purple);border:1px solid #b57bee28}
+.b-deleted{background:var(--bg4);color:var(--muted);border:1px solid var(--border2)}
+.b-pending{background:var(--gd);color:var(--gold);border:1px solid var(--gd2)}
+.row-actions{display:flex;gap:7px;flex-shrink:0}
+
+.btn{padding:6px 13px;border-radius:7px;font-size:11.5px;font-weight:700;transition:all .15s;border:1px solid transparent}
+.btn-ghost{background:transparent;color:var(--muted);border-color:var(--border2)}
+.btn-ghost:hover{color:var(--text);border-color:var(--border3)}
+.btn-green{background:var(--ad);color:var(--accent);border-color:var(--ad2)}
+.btn-green:hover{background:var(--ad2)}
+.btn-red{background:var(--rd);color:var(--red);border-color:var(--rd2)}
+.btn-red:hover{background:var(--rd2)}
+.btn-gold{background:var(--gd);color:var(--gold);border-color:var(--gd2)}
+.btn-gold:hover{background:var(--gd2)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+.empty{text-align:center;padding:50px 20px;color:var(--muted)}
+.empty .ico{font-size:34px;margin-bottom:10px;opacity:.5}
+.loading{text-align:center;padding:50px;color:var(--muted);font-size:12px}
+
+/* ── MODAL ───────────────────────────────────────────────── */
+.modal-bg{position:fixed;inset:0;background:#000000a0;backdrop-filter:blur(4px);z-index:500;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-bg.show{display:flex}
+.modal{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r2);padding:22px;max-width:440px;width:100%;max-height:85vh;overflow-y:auto}
+.modal h3{font-size:15px;font-weight:700;margin-bottom:14px}
+.modal .field{margin-bottom:12px}
+.modal label{font-size:11px;color:var(--muted);display:block;margin-bottom:5px;font-weight:600}
+.modal textarea,.modal select,.modal input{width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:7px;padding:9px 11px;color:var(--text);font-size:12.5px;resize:vertical}
+.modal-info{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:11.5px;color:var(--muted2);margin-bottom:14px;line-height:1.7}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+
+/* ── LOGIN GATE ──────────────────────────────────────────── */
+.gate{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.gate-card{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r2);padding:32px;max-width:360px;width:100%;text-align:center}
+.gate-ico{font-size:36px;margin-bottom:10px}
+.gate h2{font-size:17px;font-weight:800;margin-bottom:6px}
+.gate p{font-size:12px;color:var(--muted);margin-bottom:20px;line-height:1.6}
+.gate input{width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;margin-bottom:10px}
+.gate-err{color:var(--red);font-size:11.5px;margin-top:8px;display:none}
+
+/* ── TOAST ───────────────────────────────────────────────── */
+.toast-wrap{position:fixed;bottom:20px;right:20px;z-index:600;display:flex;flex-direction:column;gap:8px}
+.toast{background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:11px 16px;font-size:12.5px;font-weight:600;box-shadow:0 8px 24px #00000060;animation:toastIn .25s ease}
+.toast.ok{border-color:var(--ad2);color:var(--accent)}
+.toast.err{border-color:var(--rd2);color:var(--red)}
+@keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+@media(max-width:640px){
+  .topbar{padding:0 12px;gap:10px}
+  .who-sub{display:none}
+  .wrap{padding:18px 12px 50px}
+  .row-card{flex-direction:column;align-items:stretch}
+  .row-actions{justify-content:flex-end}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════ LOGIN GATE ══════════════════════════ -->
+<div class="gate" id="gate">
+  <div class="gate-card">
+    <div class="gate-ico">🛡️</div>
+    <h2>GamerBazar <em style="color:var(--red)">Admin</em></h2>
+    <p>ეს პანელი ხელმისაწვდომია მხოლოდ ადმინისტრატორი როლის მქონე მომხმარებლებისთვის. შედი შენი ანგარიშით.</p>
+    <input type="email" id="gate-email" placeholder="ელ-ფოსტა">
+    <input type="password" id="gate-pass" placeholder="პაროლი">
+    <button class="btn btn-red" style="width:100%;padding:11px;font-size:13px" onclick="adminLogin()">შესვლა</button>
+    <div class="gate-err" id="gate-err"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════ ADMIN APP ══════════════════════════ -->
+<div id="app" style="display:none">
+  <div class="topbar">
+    <div class="logo">Gamer<em>Bazar</em><span class="tag">ADMIN</span></div>
+    <div class="tabs">
+      <div class="tab on" data-view="overview" onclick="switchView('overview')">📊 მთავარი</div>
+      <div class="tab" data-view="disputes" onclick="switchView('disputes')">⚠️ დავები <span class="pill" id="pill-disputes">0</span></div>
+      <div class="tab" data-view="users" onclick="switchView('users')">👤 მომხმარებლები</div>
+      <div class="tab" data-view="listings" onclick="switchView('listings')">📦 განცხადებები</div>
+    </div>
+    <div class="who">
+      <div style="text-align:right">
+        <div class="who-name" id="who-name">—</div>
+        <div class="who-sub" id="who-sub">—</div>
+      </div>
+      <button class="logout-btn" onclick="adminLogout()">გასვლა</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+
+    <!-- ── OVERVIEW ── -->
+    <div class="view active" id="view-overview">
+      <div class="page-title">პლატფორმის მიმოხილვა</div>
+      <div class="page-sub">ზოგადი სტატისტიკა — მომხმარებლები, განცხადებები, შეკვეთები, დავები</div>
+      <div class="stat-grid" id="overview-stats">
+        <div class="loading">იტვირთება...</div>
+      </div>
+      <div class="row-card" style="background:var(--rd);border-color:var(--rd2)">
+        <div class="row-main">
+          <div class="row-title" style="color:var(--red)">⚠️ ღია დავების მართვა</div>
+          <div class="row-sub">დავები, რომლებიც საჭიროებენ ადმინის გადაწყვეტილებას — release ან refund.</div>
+        </div>
+        <div class="row-actions">
+          <button class="btn btn-red" onclick="switchView('disputes')">დავების ნახვა →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── DISPUTES ── -->
+    <div class="view" id="view-disputes">
+      <div class="page-title">დავების მართვა</div>
+      <div class="page-sub">გადასინჯე დეტალები და გადაწყვიტე — თანხის გათავისუფლება გამყიდველზე, ან დაბრუნება მყიდველზე</div>
+      <div class="filter-bar">
+        <div class="seg" id="disputes-filter">
+          <button class="seg-btn on" data-status="open" onclick="setDisputeFilter('open')">ღია</button>
+          <button class="seg-btn" data-status="resolved" onclick="setDisputeFilter('resolved')">გადაწყვეტილი</button>
+          <button class="seg-btn" data-status="all" onclick="setDisputeFilter('all')">ყველა</button>
+        </div>
+      </div>
+      <div class="list" id="disputes-list"><div class="loading">იტვირთება...</div></div>
+    </div>
+
+    <!-- ── USERS ── -->
+    <div class="view" id="view-users">
+      <div class="page-title">მომხმარებლები</div>
+      <div class="page-sub">ძებნა username/email-ით, როლის ფილტრი, ban / unban</div>
+      <div class="filter-bar">
+        <input class="search-i" id="users-search" placeholder="🔍 ძებნა username, email, სახელი..." oninput="debounceUsersSearch()">
+        <div class="seg" id="users-filter">
+          <button class="seg-btn on" data-role="all" onclick="setUsersFilter('all')">ყველა</button>
+          <button class="seg-btn" data-role="user" onclick="setUsersFilter('user')">User</button>
+          <button class="seg-btn" data-role="banned" onclick="setUsersFilter('banned')">დაბლოკილი</button>
+          <button class="seg-btn" data-role="admin" onclick="setUsersFilter('admin')">Admin</button>
+        </div>
+      </div>
+      <div class="list" id="users-list"><div class="loading">იტვირთება...</div></div>
+    </div>
+
+    <!-- ── LISTINGS ── -->
+    <div class="view" id="view-listings">
+      <div class="page-title">განცხადებების მოდერაცია</div>
+      <div class="page-sub">ძებნა სათაურით/თამაშით, სტატუსის ფილტრი, ბლოკვა ან წაშლა</div>
+      <div class="filter-bar">
+        <input class="search-i" id="listings-search" placeholder="🔍 ძებნა სათაურით, თამაშით..." oninput="debounceListingsSearch()">
+        <div class="seg" id="listings-filter">
+          <button class="seg-btn on" data-status="all" onclick="setListingsFilter('all')">ყველა</button>
+          <button class="seg-btn" data-status="active" onclick="setListingsFilter('active')">აქტიური</button>
+          <button class="seg-btn" data-status="blocked" onclick="setListingsFilter('blocked')">დაბლოკილი</button>
+          <button class="seg-btn" data-status="sold" onclick="setListingsFilter('sold')">გაყიდული</button>
+          <button class="seg-btn" data-status="deleted" onclick="setListingsFilter('deleted')">წაშლილი</button>
+        </div>
+      </div>
+      <div class="list" id="listings-list"><div class="loading">იტვირთება...</div></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════ MODALS ══════════════════════════ -->
+<div class="modal-bg" id="resolveModal">
+  <div class="modal">
+    <h3>⚠️ დავის გადაწყვეტა</h3>
+    <div class="modal-info" id="resolve-info"></div>
+    <div class="field">
+      <label>გადაწყვეტილება</label>
+      <select id="resolve-decision">
+        <option value="release">Release — თანხა გამყიდველზე</option>
+        <option value="refund">Refund — თანხა მყიდველზე</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>ადმინის შენიშვნა (არასავალდებულო)</label>
+      <textarea id="resolve-note" rows="3" placeholder="მაგ: ორივე მხარესთან საუბრის შემდეგ..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('resolveModal')">გაუქმება</button>
+      <button class="btn btn-red" id="resolve-confirm-btn" onclick="confirmResolve()">გადაწყვეტის დადასტურება</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="banModal">
+  <div class="modal">
+    <h3 id="ban-title">მომხმარებლის დაბლოკვა</h3>
+    <div class="modal-info" id="ban-info"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('banModal')">გაუქმება</button>
+      <button class="btn btn-red" id="ban-confirm-btn" onclick="confirmBanAction()">დადასტურება</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="moderateModal">
+  <div class="modal">
+    <h3>📦 განცხადების მოდერაცია</h3>
+    <div class="modal-info" id="moderate-info"></div>
+    <div class="field">
+      <label>ახალი სტატუსი</label>
+      <select id="moderate-status">
+        <option value="active">Active — აქტიური</option>
+        <option value="blocked">Blocked — დაბლოკილი</option>
+        <option value="deleted">Deleted — წაშლილი</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('moderateModal')">გაუქმება</button>
+      <button class="btn btn-red" id="moderate-confirm-btn" onclick="confirmModerate()">შენახვა</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════════════════════════
+const API_URL = 'https://gamerbazar-api.onrender.com';
+let currentAdmin = null;
+
+const getToken   = () => localStorage.getItem('gb_token');
+const setToken   = t  => localStorage.setItem('gb_token', t);
+const clearToken = () => localStorage.removeItem('gb_token');
+
+async function api(path, opts = {}) {
+  const headers = { 'Content-Type': 'application/json' };
+  const token = getToken();
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  const res  = await fetch(API_URL + path, { ...opts, headers: { ...headers, ...(opts.headers || {}) } });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw data;
+  return data;
+}
+
+function showToast(msg, type = 'ok') {
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+function fmtDate(d) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('ka-GE', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+function fmtMoney(n) { return '₾' + Number(n || 0).toFixed(2); }
+
+// ══════════════════════════════════════════════════════════
+// AUTH GATE
+// ══════════════════════════════════════════════════════════
+async function adminLogin() {
+  const email = document.getElementById('gate-email').value.trim();
+  const password = document.getElementById('gate-pass').value;
+  const errEl = document.getElementById('gate-err');
+  errEl.style.display = 'none';
+
+  if (!email || !password) {
+    errEl.textContent = 'შეავსე ელ-ფოსტა და პაროლი';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  try {
+    const data = await api('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+    if (data.user.role !== 'admin') {
+      errEl.textContent = 'ეს ანგარიში ადმინისტრატორი არ არის';
+      errEl.style.display = 'block';
+      return;
+    }
+    setToken(data.token);
+    currentAdmin = data.user;
+    enterApp();
+  } catch (e) {
+    errEl.textContent = e.message || 'არასწორი ელ-ფოსტა ან პაროლი';
+    errEl.style.display = 'block';
+  }
+}
+
+async function checkExistingSession() {
+  const token = getToken();
+  if (!token) return;
+  try {
+    const me = await api('/api/auth/me');
+    if (me.role !== 'admin') { clearToken(); return; }
+    currentAdmin = me;
+    enterApp();
+  } catch (e) {
+    clearToken();
+  }
+}
+
+function enterApp() {
+  document.getElementById('gate').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('who-name').textContent = currentAdmin.display_name || currentAdmin.username;
+  document.getElementById('who-sub').textContent = currentAdmin.email;
+  loadOverview();
+  loadDisputesPill();
+}
+
+function adminLogout() {
+  clearToken();
+  currentAdmin = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('gate').style.display = 'flex';
+  document.getElementById('gate-email').value = '';
+  document.getElementById('gate-pass').value = '';
+}
+
+// ══════════════════════════════════════════════════════════
+// NAV / VIEW SWITCH
+// ══════════════════════════════════════════════════════════
+function switchView(view) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+  document.getElementById('view-' + view).classList.add('active');
+  document.querySelector(`.tab[data-view="${view}"]`).classList.add('on');
+
+  if (view === 'overview') loadOverview();
+  if (view === 'disputes') loadDisputes();
+  if (view === 'users')    loadUsers();
+  if (view === 'listings') loadListings();
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+}
+
+// ══════════════════════════════════════════════════════════
+// OVERVIEW
+// ══════════════════════════════════════════════════════════
+async function loadOverview() {
+  const grid = document.getElementById('overview-stats');
+  try {
+    const d = await api('/api/admin/overview');
+    grid.innerHTML = `
+      <div class="stat-card">
+        <div class="ico">👤</div>
+        <div class="val">${d.users.total}</div>
+        <div class="lbl">მომხმარებელი</div>
+        <div class="sub" style="color:var(--red)">${d.users.banned} დაბლოკილი</div>
+      </div>
+      <div class="stat-card ok">
+        <div class="ico">📦</div>
+        <div class="val">${d.listings.active}</div>
+        <div class="lbl">აქტიური განცხ.</div>
+        <div class="sub" style="color:var(--muted)">სულ ${d.listings.total}</div>
+      </div>
+      <div class="stat-card">
+        <div class="ico">🛒</div>
+        <div class="val">${d.orders.active}</div>
+        <div class="lbl">აქტ. შეკვეთა</div>
+        <div class="sub" style="color:var(--accent)">${d.orders.completed} დასრულდა</div>
+      </div>
+      <div class="stat-card ${d.disputes.open > 0 ? 'danger' : 'ok'}">
+        <div class="ico">⚠️</div>
+        <div class="val">${d.disputes.open}</div>
+        <div class="lbl">ღია დავა</div>
+        <div class="sub" style="color:var(--muted)">სულ ${d.disputes.total}</div>
+      </div>
+      <div class="stat-card ok">
+        <div class="ico">💰</div>
+        <div class="val">${fmtMoney(d.volume_gel)}</div>
+        <div class="lbl">სრული ბრუნვა</div>
+        <div class="sub" style="color:var(--muted)">დასრულ. შეკვეთები</div>
+      </div>
+    `;
+  } catch (e) {
+    grid.innerHTML = '<div class="empty"><div class="ico">⚠️</div>მონაცემების ჩატვირთვა ვერ მოხერხდა</div>';
+  }
+}
+
+async function loadDisputesPill() {
+  try {
+    const list = await api('/api/admin/disputes?status=open&limit=99');
+    document.getElementById('pill-disputes').textContent = list.length;
+  } catch (e) { /* silent */ }
+}
+
+// ══════════════════════════════════════════════════════════
+// DISPUTES
+// ══════════════════════════════════════════════════════════
+let disputeFilter = 'open';
+let disputesData = [];
+
+function setDisputeFilter(status) {
+  disputeFilter = status;
+  document.querySelectorAll('#disputes-filter .seg-btn').forEach(b => b.classList.toggle('on', b.dataset.status === status));
+  loadDisputes();
+}
+
+async function loadDisputes() {
+  const list = document.getElementById('disputes-list');
+  list.innerHTML = '<div class="loading">იტვირთება...</div>';
+  try {
+    disputesData = await api(`/api/admin/disputes?status=${disputeFilter}&limit=50`);
+    if (!disputesData.length) {
+      list.innerHTML = '<div class="empty"><div class="ico">✅</div>დავები არ მოიძებნა</div>';
+      return;
+    }
+    list.innerHTML = disputesData.map(d => `
+      <div class="row-card">
+        <div class="row-main">
+          <div class="row-title">${esc(d.listing_title)} <span class="badge b-${d.status === 'open' ? 'open' : 'resolved'}">${d.status === 'open' ? 'ღია' : 'გადაწყვეტილი'}</span></div>
+          <div class="row-sub">
+            <span><b>თანხა:</b> ${fmtMoney(d.amount_gel)}</span>
+            <span><b>მიზეზი:</b> ${esc(d.reason)}</span>
+            <span><b>გახსნა:</b> ${esc(d.opened_by_username)}</span>
+          </div>
+          <div class="row-sub" style="margin-top:4px">
+            <span><b>მყიდველი:</b> ${esc(d.buyer_username)}</span>
+            <span><b>გამყიდველი:</b> ${esc(d.seller_username)}</span>
+            <span><b>თარიღი:</b> ${fmtDate(d.created_at)}</span>
+          </div>
+          <div style="font-size:11.5px;color:var(--muted2);margin-top:6px;max-width:600px">${esc(d.description)}</div>
+          ${d.status === 'resolved' ? `<div style="font-size:11px;color:var(--accent);margin-top:6px">✓ გადაწყვეტილება: ${d.resolution === 'release' ? 'Release (გამყიდველზე)' : 'Refund (მყიდველზე)'}${d.admin_note ? ' — ' + esc(d.admin_note) : ''}</div>` : ''}
+        </div>
+        <div class="row-actions">
+          ${d.status === 'open' ? `<button class="btn btn-red" onclick="openResolveModal('${d.id}')">გადაწყვეტა</button>` : ''}
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    list.innerHTML = '<div class="empty"><div class="ico">⚠️</div>ჩატვირთვის შეცდომა</div>';
+  }
+}
+
+let resolveTargetId = null;
+function openResolveModal(disputeId) {
+  const d = disputesData.find(x => x.id === disputeId);
+  if (!d) return;
+  resolveTargetId = disputeId;
+  document.getElementById('resolve-info').innerHTML = `
+    <b>${esc(d.listing_title)}</b> — ${fmtMoney(d.amount_gel)}<br>
+    მყიდველი: ${esc(d.buyer_username)} · გამყიდველი: ${esc(d.seller_username)}<br>
+    მიზეზი: ${esc(d.reason)}<br>${esc(d.description)}
+  `;
+  document.getElementById('resolve-decision').value = 'release';
+  document.getElementById('resolve-note').value = '';
+  document.getElementById('resolveModal').classList.add('show');
+}
+
+async function confirmResolve() {
+  const resolution = document.getElementById('resolve-decision').value;
+  const admin_note = document.getElementById('resolve-note').value.trim();
+  const btn = document.getElementById('resolve-confirm-btn');
+  btn.disabled = true; btn.textContent = 'მუშავდება...';
+  try {
+    await api(`/api/admin/disputes/${resolveTargetId}/resolve`, {
+      method: 'PUT',
+      body: JSON.stringify({ resolution, admin_note }),
+    });
+    showToast('✅ დავა გადაწყდა', 'ok');
+    closeModal('resolveModal');
+    loadDisputes();
+    loadDisputesPill();
+    loadOverview();
+  } catch (e) {
+    showToast(e.error === 'already_resolved' ? 'ეს დავა უკვე გადაწყვეტილია' : 'შეცდომა გადაწყვეტისას', 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = 'გადაწყვეტის დადასტურება';
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// USERS
+// ══════════════════════════════════════════════════════════
+let usersFilter = 'all';
+let usersSearchTimer = null;
+let usersData = [];
+
+function setUsersFilter(role) {
+  usersFilter = role;
+  document.querySelectorAll('#users-filter .seg-btn').forEach(b => b.classList.toggle('on', b.dataset.role === role));
+  loadUsers();
+}
+function debounceUsersSearch() {
+  clearTimeout(usersSearchTimer);
+  usersSearchTimer = setTimeout(loadUsers, 350);
+}
+
+async function loadUsers() {
+  const list = document.getElementById('users-list');
+  list.innerHTML = '<div class="loading">იტვირთება...</div>';
+  const search = document.getElementById('users-search').value.trim();
+  try {
+    const params = new URLSearchParams({ role: usersFilter, limit: 50 });
+    if (search) params.set('search', search);
+    const data = await api(`/api/admin/users?${params}`);
+    usersData = data.users;
+    if (!usersData.length) {
+      list.innerHTML = '<div class="empty"><div class="ico">🔍</div>მომხმარებელი არ მოიძებნა</div>';
+      return;
+    }
+    list.innerHTML = usersData.map(u => `
+      <div class="row-card">
+        <div class="row-main">
+          <div class="row-title">${esc(u.display_name || u.username)} <span class="badge b-${u.role === 'banned' ? 'banned' : (u.role === 'admin' ? 'admin' : 'user')}">${u.role}</span> ${u.is_verified_seller ? '<span class="badge b-active">✓ ვერიფ.</span>' : ''}</div>
+          <div class="row-sub">
+            <span><b>@${esc(u.username)}</b></span>
+            <span>${esc(u.email)}</span>
+            <span><b>ბალანსი:</b> ${fmtMoney(u.balance_gel)}</span>
+            <span><b>Escrow:</b> ${fmtMoney(u.escrow_hold_gel)}</span>
+          </div>
+          <div class="row-sub" style="margin-top:4px">
+            <span><b>რეგ.:</b> ${fmtDate(u.created_at)}</span>
+            <span><b>ბოლო აქტ.:</b> ${fmtDate(u.last_seen_at)}</span>
+            <span><b>auth:</b> ${esc(u.auth_provider)}</span>
+          </div>
+        </div>
+        <div class="row-actions">
+          ${u.role === 'admin' ? '' : (u.role === 'banned'
+            ? `<button class="btn btn-green" onclick="openBanModal('${u.id}','unban')">განბლოკვა</button>`
+            : `<button class="btn btn-red" onclick="openBanModal('${u.id}','ban')">დაბლოკვა</button>`)}
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    list.innerHTML = '<div class="empty"><div class="ico">⚠️</div>ჩატვირთვის შეცდომა</div>';
+  }
+}
+
+let banTarget = null;
+function openBanModal(userId, action) {
+  const u = usersData.find(x => x.id === userId);
+  if (!u) return;
+  banTarget = { userId, action };
+  const title = document.getElementById('ban-title');
+  const info  = document.getElementById('ban-info');
+  const btn   = document.getElementById('ban-confirm-btn');
+  if (action === 'ban') {
+    title.textContent = '🚫 მომხმარებლის დაბლოკვა';
+    info.innerHTML = `<b>${esc(u.display_name || u.username)}</b> (@${esc(u.username)}) დაბლოკილი იქნება — ვერ შეძლებს სისტემაში შესვლას.`;
+    btn.className = 'btn btn-red';
+    btn.textContent = 'დაბლოკვა';
+  } else {
+    title.textContent = '✅ მომხმარებლის განბლოკვა';
+    info.innerHTML = `<b>${esc(u.display_name || u.username)}</b> (@${esc(u.username)}) განბლოკილი იქნება და შეძლებს სისტემაში შესვლას.`;
+    btn.className = 'btn btn-green';
+    btn.textContent = 'განბლოკვა';
+  }
+  document.getElementById('banModal').classList.add('show');
+}
+
+async function confirmBanAction() {
+  const btn = document.getElementById('ban-confirm-btn');
+  btn.disabled = true;
+  try {
+    await api(`/api/admin/users/${banTarget.userId}/${banTarget.action}`, { method: 'PUT' });
+    showToast(banTarget.action === 'ban' ? '🚫 დაბლოკილია' : '✅ განბლოკილია', 'ok');
+    closeModal('banModal');
+    loadUsers();
+    loadOverview();
+  } catch (e) {
+    showToast('შეცდომა', 'err');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// LISTINGS
+// ══════════════════════════════════════════════════════════
+let listingsFilter = 'all';
+let listingsSearchTimer = null;
+let listingsData = [];
+
+function setListingsFilter(status) {
+  listingsFilter = status;
+  document.querySelectorAll('#listings-filter .seg-btn').forEach(b => b.classList.toggle('on', b.dataset.status === status));
+  loadListings();
+}
+function debounceListingsSearch() {
+  clearTimeout(listingsSearchTimer);
+  listingsSearchTimer = setTimeout(loadListings, 350);
+}
+
+async function loadListings() {
+  const list = document.getElementById('listings-list');
+  list.innerHTML = '<div class="loading">იტვირთება...</div>';
+  const search = document.getElementById('listings-search').value.trim();
+  try {
+    const params = new URLSearchParams({ status: listingsFilter, limit: 50 });
+    if (search) params.set('search', search);
+    const data = await api(`/api/admin/listings?${params}`);
+    listingsData = data.listings;
+    if (!listingsData.length) {
+      list.innerHTML = '<div class="empty"><div class="ico">🔍</div>განცხადება არ მოიძებნა</div>';
+      return;
+    }
+    list.innerHTML = listingsData.map(l => `
+      <div class="row-card">
+        <div class="row-main">
+          <div class="row-title">${esc(l.title)} <span class="badge b-${l.status}">${l.status}</span> ${l.is_vip ? '<span class="badge b-pending">VIP</span>' : ''}</div>
+          <div class="row-sub">
+            <span><b>${esc(l.game)}</b></span>
+            <span>${esc(l.category)} / ${esc(l.listing_type)}</span>
+            <span><b>ფასი:</b> ${fmtMoney(l.price_gel)}</span>
+            <span><b>გამყიდველი:</b> ${esc(l.seller_username)}</span>
+          </div>
+          <div class="row-sub" style="margin-top:4px">
+            <span><b>ნახვები:</b> ${l.views_count}</span>
+            <span><b>შეკვ.:</b> ${l.orders_count}</span>
+            <span><b>თარიღი:</b> ${fmtDate(l.created_at)}</span>
+          </div>
+        </div>
+        <div class="row-actions">
+          <button class="btn btn-gold" onclick="openModerateModal('${l.id}')">სტატუსი</button>
+          ${l.status !== 'deleted' ? `<button class="btn btn-red" onclick="deleteListing('${l.id}')">წაშლა</button>` : ''}
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    list.innerHTML = '<div class="empty"><div class="ico">⚠️</div>ჩატვირთვის შეცდომა</div>';
+  }
+}
+
+let moderateTargetId = null;
+function openModerateModal(listingId) {
+  const l = listingsData.find(x => x.id === listingId);
+  if (!l) return;
+  moderateTargetId = listingId;
+  document.getElementById('moderate-info').innerHTML = `<b>${esc(l.title)}</b> — ${esc(l.game)} (${fmtMoney(l.price_gel)})`;
+  document.getElementById('moderate-status').value = ['active','blocked','deleted'].includes(l.status) ? l.status : 'active';
+  document.getElementById('moderateModal').classList.add('show');
+}
+
+async function confirmModerate() {
+  const status = document.getElementById('moderate-status').value;
+  const btn = document.getElementById('moderate-confirm-btn');
+  btn.disabled = true;
+  try {
+    await api(`/api/admin/listings/${moderateTargetId}/moderate`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    });
+    showToast('✅ სტატუსი განახლდა', 'ok');
+    closeModal('moderateModal');
+    loadListings();
+  } catch (e) {
+    showToast('შეცდომა', 'err');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function deleteListing(listingId) {
+  if (!confirm('დარწმუნებული ხარ, რომ წაშლი ამ განცხადებას?')) return;
+  try {
+    await api(`/api/admin/listings/${listingId}`, { method: 'DELETE' });
+    showToast('🗑️ წაშლილია', 'ok');
+    loadListings();
+  } catch (e) {
+    showToast('შეცდომა', 'err');
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// UTIL
+// ══════════════════════════════════════════════════════════
+function esc(str) {
+  if (str == null) return '';
+  return String(str).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+// ══════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════
+checkExistingSession();
+</script>
+</body>
+</html>

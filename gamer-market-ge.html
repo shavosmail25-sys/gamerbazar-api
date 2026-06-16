@@ -1,0 +1,2804 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GamerBazar.ge</title>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+50%{opacity:1}}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07080c;--bg2:#0d0f15;--bg3:#13151e;--bg4:#1a1d27;--bg5:#21253200;
+  --border:#ffffff0d;--border2:#ffffff18;--border3:#ffffff28;
+  --text:#e8eaf2;--muted:#6b6e85;--muted2:#9295aa;
+  --accent:#00ffb3;--accent2:#00d496;--ad:#00ffb310;--ad2:#00ffb325;
+  --gold:#ffcc00;--gd:#ffcc0012;--gd2:#ffcc0028;
+  --blue:#5b9cf6;--bd:#5b9cf610;
+  --red:#ff5f6d;--rd:#ff5f6d10;
+  --purple:#b57bee;--pd:#b57bee10;
+  --neon-green:0 0 8px #00ffb3,0 0 20px #00ffb360;
+  --neon-blue:0 0 8px #5b9cf6,0 0 20px #5b9cf660;
+  --neon-gold:0 0 8px #ffcc00,0 0 20px #ffcc0060;
+  --font:'Lexend',sans-serif;--mono:'JetBrains Mono',monospace;
+  --r:8px;--r2:14px;
+}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);color:var(--text);font-family:var(--font);
+  font-size:14px;line-height:1.6;overflow-x:hidden;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -10%, #00ffb308 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 90% 20%, #5b9cf608 0%, transparent 50%),
+    radial-gradient(ellipse 30% 30% at 10% 80%, #b57bee06 0%, transparent 50%);
+  background-attachment:fixed;
+}
+button{font-family:var(--font);cursor:pointer;border:none;outline:none}
+input,select,textarea{font-family:var(--font)}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--bg5);border-radius:3px}
+.page{display:none;animation:pageFadeIn .3s ease}
+.page.active{display:block}
+@keyframes pageFadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:200;height:56px;background:#08090de8;backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:0}
+.nav-logo{font-size:16px;font-weight:800;letter-spacing:-.5px;margin-right:28px;cursor:pointer;flex-shrink:0;transition:all .2s}
+.nav-logo:hover{text-shadow:var(--neon-green)}
+.nav-logo em{color:var(--accent);font-style:normal;text-shadow:0 0 12px var(--accent)}
+.nav-links{display:flex;gap:1px;flex:1;overflow-x:auto}.nav-links::-webkit-scrollbar{display:none}
+.nl{padding:5px 11px;border-radius:6px;font-size:12px;font-weight:500;color:var(--muted);cursor:pointer;transition:all .15s;white-space:nowrap;flex-shrink:0}
+.nl:hover,.nl.on{color:var(--text);background:var(--bg3)}
+.nl.on{color:var(--accent);text-shadow:0 0 8px var(--accent)60}
+.nav-r{display:flex;align-items:center;gap:7px;flex-shrink:0}
+.bal-chip{display:flex;align-items:center;gap:5px;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:4px 10px;font-size:11px;cursor:pointer}
+.bal-chip .v{color:var(--accent);font-weight:700;font-family:var(--mono);font-size:12px}
+.btn{padding:5px 14px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;border:none}
+.btn-g{background:transparent;color:var(--muted);border:1px solid var(--border2)}.btn-g:hover{color:var(--text);border-color:var(--border3)}
+.btn-a{background:var(--accent);color:#08090d;box-shadow:0 0 12px var(--accent)40}
+.btn-a:hover{background:var(--accent2);box-shadow:var(--neon-green);transform:translateY(-1px)}
+.btn-sm{padding:3px 9px;font-size:11px}
+.ava{width:30px;height:30px;border-radius:50%;background:var(--bg4);border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--accent);cursor:pointer;overflow:hidden}
+.ava img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+
+/* MAIN */
+.main{padding-top:56px}
+
+/* HERO */
+.hero{position:relative;overflow:hidden;padding:56px 20px 48px;border-bottom:1px solid var(--border)}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 50% 70% at 65% 40%,#00e5a009 0%,transparent 60%),radial-gradient(ellipse 35% 50% at 10% 80%,#4d9de008 0%,transparent 55%);pointer-events:none}
+.hero-inner{max-width:1120px;margin:0 auto;display:grid;grid-template-columns:1fr 400px;gap:40px;align-items:center}
+.hero-tag{display:inline-flex;align-items:center;gap:6px;background:var(--ad);border:1px solid var(--ad2);color:var(--accent);padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;margin-bottom:16px;box-shadow:0 0 16px #00ffb320;animation:tagPulse 3s ease-in-out infinite}
+@keyframes tagPulse{0%,100%{box-shadow:0 0 10px #00ffb315}50%{box-shadow:0 0 24px #00ffb340}}
+.hero-tag::before{content:'●';font-size:7px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+h1{font-size:40px;font-weight:800;line-height:1.07;letter-spacing:-1.5px;margin-bottom:14px}
+h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
+.hero-sub{color:var(--muted2);font-size:14px;line-height:1.7;margin-bottom:24px;max-width:440px}
+.hero-cta{display:flex;gap:8px;flex-wrap:wrap}
+.hero-stats{display:flex;gap:24px;margin-top:32px}
+.hs-n{font-family:var(--mono);font-size:20px;font-weight:700}.hs-l{font-size:10px;color:var(--muted)}
+.preview-stack{display:flex;flex-direction:column;gap:7px}
+.pcard{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:11px 13px;display:flex;align-items:center;gap:11px;animation:rise .5s ease both}
+.pcard:nth-child(2){animation-delay:.08s}.pcard:nth-child(3){animation-delay:.16s}
+@keyframes rise{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
+.pc-ico{width:38px;height:38px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.pc-game{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.pc-title{font-size:12px;font-weight:600;margin:1px 0}
+.pc-meta{display:flex;align-items:center;gap:7px;margin-top:3px}
+.pc-price{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--accent)}
+.badge{font-size:9px;padding:1px 6px;border-radius:3px;font-weight:600}
+.bv{background:var(--gd);color:var(--gold);border:1px solid var(--gd2)}.ba{background:var(--ad);color:var(--accent);border:1px solid var(--ad2)}.bb{background:var(--bd);color:var(--blue);border:1px solid #4d9de020}
+
+/* SEARCH */
+.sbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 20px;position:sticky;top:56px;z-index:100}
+.sbar-inner{max-width:1120px;margin:0 auto;display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.sbox{display:flex;align-items:center;gap:7px;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:0 11px;flex:1;min-width:180px;transition:border-color .15s}
+.sbox:focus-within{border-color:var(--ad2)}
+.sbox input{flex:1;background:none;border:none;outline:none;color:var(--text);font-size:12px;padding:8px 0}
+.sbox input::placeholder{color:var(--muted)}
+.fbtn{padding:5px 10px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;font-size:11px;color:var(--muted);cursor:pointer;transition:all .15s;white-space:nowrap;font-weight:500}
+.fbtn:hover,.fbtn.on{color:var(--text);border-color:var(--border3)}.fbtn.on{color:var(--accent);border-color:var(--ad2);background:var(--ad)}
+.cur-tog{display:flex;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;overflow:hidden}
+.ct{padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;background:none;border:none;color:var(--muted);transition:all .15s;font-family:var(--mono)}
+.ct.on{background:var(--accent);color:#08090d}
+
+/* GRID */
+.wrap{max-width:1120px;margin:0 auto;padding:20px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.sec-title{font-size:17px;font-weight:700;letter-spacing:-.3px}
+.sec-count{font-size:11px;color:var(--muted);font-family:var(--mono)}
+.sort-sel{background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:4px 8px;border-radius:6px;font-size:11px;cursor:pointer;outline:none;font-family:var(--mono)}
+
+/* CAT CARDS */
+.cat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:16px 12px;text-align:center;cursor:pointer;transition:all .18s;font-size:24px}
+.cat-card div:first-of-type{font-size:12px;font-weight:600;margin-top:5px}
+.cat-card:hover{border-color:var(--accent)50;transform:translateY(-2px);box-shadow:0 0 18px #00ffb312}
+
+/* GAME MINI */
+.game-mini{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px;text-align:center;cursor:pointer;transition:all .18s}
+.game-mini:hover{border-color:var(--accent)50;transform:translateY(-2px);
+  box-shadow:0 0 18px #00ffb312}
+.game-mini .ico{font-size:26px;margin-bottom:5px}
+.game-mini .gname{font-size:11px;font-weight:700;line-height:1.3}
+.game-mini .gcnt{font-size:9px;color:var(--muted);margin-top:2px}
+
+/* GAME HUB */
+.game-hero{background:var(--bg2);border-bottom:1px solid var(--border);padding:24px 20px}
+.game-hero-inner{max-width:1120px;margin:0 auto;display:flex;align-items:center;gap:16px}
+.game-icon-big{width:64px;height:64px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:32px;flex-shrink:0;border:1px solid var(--border2)}
+.game-title{font-size:22px;font-weight:800;letter-spacing:-.4px}
+.game-desc{font-size:12px;color:var(--muted2);margin-top:3px}
+.game-badges{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.game-badge{font-size:10px;padding:2px 9px;border-radius:4px;font-weight:500}
+.gb-a{background:var(--ad);color:var(--accent);border:1px solid var(--ad2)}
+.gb-b{background:var(--bd);color:var(--blue);border:1px solid #4d9de020}
+.gb-c{background:var(--gd);color:var(--gold);border:1px solid var(--gd2)}
+.game-tabs{display:flex;gap:3px;margin-bottom:18px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;padding:3px;width:fit-content}
+.gtab{padding:5px 14px;border-radius:6px;font-size:12px;font-weight:500;color:var(--muted);cursor:pointer;transition:all .15s}
+.gtab.on{background:var(--bg4);color:var(--text)}
+
+/* LISTING CARD */
+.lcard{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;cursor:pointer;transition:all .2s;position:relative}
+.lcard:hover{border-color:var(--accent)40;transform:translateY(-3px);box-shadow:0 8px 32px #00000060,0 0 20px #00ffb315}
+.lcard.vip{border-color:#f0b42930}
+.lcard.vip::after{content:'VIP';position:absolute;top:9px;right:9px;background:linear-gradient(135deg,#f0b429,#e07d29);color:#08090d;font-size:8px;font-weight:800;padding:2px 6px;border-radius:3px;letter-spacing:.04em}
+.lcard-img{height:100px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:38px;position:relative;overflow:hidden}
+.lcard-img-bg{position:absolute;inset:0;font-size:90px;display:flex;align-items:center;justify-content:center;opacity:.1;filter:blur(3px)}
+.lcard-body{padding:13px}
+.lcard-game{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
+.lcard-title{font-size:13px;font-weight:600;line-height:1.3;margin-bottom:7px}
+.lcard-tags{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:9px}
+.tag{font-size:9px;padding:1px 5px;border-radius:3px;background:var(--bg4);color:var(--muted);border:1px solid var(--border)}
+.lcard-foot{display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border);padding-top:9px}
+.lcard-seller{display:flex;align-items:center;gap:5px}
+.s-ava{width:22px;height:22px;border-radius:50%;background:var(--bg4);border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700}
+.s-name{font-size:10px;color:var(--muted)}.s-rat{font-size:9px;color:var(--gold)}
+.lcard-price{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--accent)}
+.lcard-price-s{font-size:9px;color:var(--muted);text-align:right}
+
+/* VIP BANNER */
+.vip-banner{background:linear-gradient(135deg,var(--gd),var(--bg2));border:1px solid var(--gd2);border-radius:var(--r2);padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.vb-t{font-size:13px;font-weight:700;color:var(--gold)}.vb-s{font-size:11px;color:var(--muted);margin-top:1px}
+
+/* WALLET */
+.wallet-wrap{max-width:820px;margin:0 auto;padding:24px 20px}
+.w-header{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:22px 26px;margin-bottom:14px;position:relative;overflow:hidden}
+.w-header::before{content:'';position:absolute;right:-70px;top:-70px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,var(--ad2) 0%,transparent 70%)}
+.w-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px}
+.w-bal{font-family:var(--mono);font-size:36px;font-weight:700;letter-spacing:-1px}
+.w-sub{color:var(--muted);font-size:12px;margin-top:2px}
+.w-acts{display:flex;gap:7px;margin-top:16px}
+.wbtn{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;border:none}
+.wd{background:var(--accent);color:#08090d}.wd:hover{background:var(--accent2)}
+.ww{background:var(--bg3);color:var(--text);border:1px solid var(--border)}.ww:hover{border-color:var(--border2)}
+.w-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:14px}
+.wst{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:13px 16px}
+.wst-l{font-size:10px;color:var(--muted);margin-bottom:2px}.wst-v{font-family:var(--mono);font-size:17px;font-weight:700}
+.wst-v.g{color:var(--accent)}.wst-v.r{color:var(--red)}.wst-v.b{color:var(--blue)}
+.tx-list{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden}
+.tx-h{padding:12px 16px;border-bottom:1px solid var(--border);font-weight:600;font-size:13px}
+.tx-row{display:flex;align-items:center;gap:11px;padding:11px 16px;border-bottom:1px solid var(--border);transition:background .12s}
+.tx-row:last-child{border-bottom:none}.tx-row:hover{background:var(--bg3)}
+.tx-ico{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.tx-ico.in{background:var(--ad)}.tx-ico.out{background:var(--rd)}.tx-ico.hold{background:var(--gd)}
+.tx-info{flex:1}.tx-t{font-size:12px;font-weight:500}.tx-d{font-size:10px;color:var(--muted);margin-top:1px}
+.tx-s{font-size:9px;padding:1px 6px;border-radius:3px;margin-top:2px;display:inline-block}
+.sd{background:var(--ad);color:var(--accent)}.sp{background:var(--gd);color:var(--gold)}.sf{background:var(--rd);color:var(--red)}
+.tx-amt{font-family:var(--mono);font-size:14px;font-weight:700}
+.tx-amt.in{color:var(--accent)}.tx-amt.out{color:var(--red)}.tx-amt.hold{color:var(--gold)}
+
+/* CHAT */
+.chat-layout{display:grid;grid-template-columns:260px 1fr;height:calc(100vh - 56px);overflow:hidden}
+.chat-sb{background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.chat-sb-h{padding:13px 15px;border-bottom:1px solid var(--border);font-weight:600;font-size:13px}
+.chat-list{flex:1;overflow-y:auto}
+.ci{padding:9px 13px;display:flex;align-items:center;gap:9px;cursor:pointer;transition:background .12s;border-bottom:1px solid var(--border)}
+.ci:hover,.ci.on{background:var(--bg3)}.ci.on{border-left:2px solid var(--accent)}
+.ci-av{width:36px;height:36px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+.ci-inf{flex:1;min-width:0}.ci-n{font-size:12px;font-weight:600}.ci-l{font-size:10px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ci-m{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0}.ci-t{font-size:9px;color:var(--muted)}
+.ci-u{width:16px;height:16px;border-radius:50%;background:var(--accent);color:#08090d;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.chat-main{display:flex;flex-direction:column;overflow:hidden}
+.chat-h{padding:11px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--bg2);flex-shrink:0}
+.chat-h-l{display:flex;align-items:center;gap:9px}
+.odot{width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;margin-right:3px}
+.order-pill{display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px 9px;font-size:11px}
+.opill-dot{width:6px;height:6px;border-radius:50%;background:var(--gold)}
+.chat-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:7px}
+.msg{max-width:64%;display:flex;flex-direction:column}
+.msg.me{align-self:flex-end;align-items:flex-end}.msg.u{align-self:flex-start;align-items:flex-start}
+.msg-b{padding:8px 12px;border-radius:12px;font-size:12px;line-height:1.5}
+.msg.me .msg-b{background:var(--accent);color:#08090d;border-radius:12px 12px 3px 12px}
+.msg.u .msg-b{background:var(--bg3);border:1px solid var(--border);border-radius:12px 12px 12px 3px}
+.msg-t{font-size:9px;color:var(--muted);margin-top:2px;padding:0 2px}
+.escrow-pill{background:var(--gd);border:1px solid var(--gd2);border-radius:8px;padding:9px 13px;font-size:11px;color:var(--gold);text-align:center;margin:4px 0}
+.chat-in{padding:9px 13px;border-top:1px solid var(--border);background:var(--bg2);flex-shrink:0}
+.chat-in-row{display:flex;gap:7px;align-items:flex-end;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:6px 9px;transition:border-color .15s}
+.chat-in-row:focus-within{border-color:var(--ad2)}
+.chat-in-row textarea{flex:1;background:none;border:none;outline:none;color:var(--text);font-size:12px;resize:none;max-height:80px;line-height:1.5;padding:1px 0}
+.send-btn{width:30px;height:30px;border-radius:6px;background:var(--accent);color:#08090d;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;flex-shrink:0}
+.send-btn:hover{background:var(--accent2)}
+
+/* PROFILE */
+.prof-wrap{max-width:880px;margin:0 auto;padding:24px 20px}
+.prof-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:22px 26px;margin-bottom:14px;display:flex;align-items:flex-start;gap:18px;position:relative;overflow:hidden}
+.prof-card::after{content:'';position:absolute;left:-50px;bottom:-50px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle,var(--bd) 0%,transparent 70%)}
+.prof-av-wrap{position:relative;flex-shrink:0}
+.prof-av{width:70px;height:70px;border-radius:14px;background:var(--bg4);border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;color:var(--blue);overflow:hidden}
+.prof-av img{width:100%;height:100%;object-fit:cover}
+.prof-av-edit{position:absolute;bottom:-5px;right:-5px;width:20px;height:20px;background:var(--accent);border-radius:50%;border:2px solid var(--bg2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:9px;color:#08090d}
+.prof-inf{flex:1}.prof-name{font-size:20px;font-weight:800;letter-spacing:-.4px}
+.prof-handle{font-size:11px;color:var(--muted);margin-bottom:5px}
+.prof-bio{font-size:12px;color:var(--muted2);margin-bottom:9px;line-height:1.5}
+.prof-bs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.pb{font-size:9px;padding:2px 8px;border-radius:4px;font-weight:600;display:flex;align-items:center;gap:4px}
+.pb-v{background:var(--bd);color:var(--blue);border:1px solid #4d9de020}
+.pb-t{background:var(--gd);color:var(--gold);border:1px solid var(--gd2)}
+.pb-tr{background:var(--ad);color:var(--accent);border:1px solid var(--ad2)}
+.prof-stats{display:flex;gap:18px}
+.pstat-v{font-family:var(--mono);font-size:17px;font-weight:700}.pstat-l{font-size:9px;color:var(--muted)}
+.prof-tabs{display:flex;gap:1px;margin-bottom:12px}
+.ptab{padding:5px 13px;border-radius:6px;font-size:12px;font-weight:500;color:var(--muted);cursor:pointer;transition:all .15s}
+.ptab:hover,.ptab.on{color:var(--text);background:var(--bg3)}.ptab.on{color:var(--accent)}
+.rv-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:13px 15px;margin-bottom:7px}
+.rv-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+.rv-u{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600}
+.rv-stars{color:var(--gold);font-size:11px}.rv-txt{font-size:12px;color:var(--muted2);line-height:1.6}.rv-date{font-size:9px;color:var(--muted);margin-top:2px}
+
+/* PROFILE EDIT */
+.edit-section{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:20px 22px;margin-bottom:12px}
+.edit-sec-title{font-size:13px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:7px}
+.edit-sec-title span{color:var(--muted);font-size:11px;font-weight:400}
+.form-g{margin-bottom:12px}
+.form-l{font-size:11px;color:var(--muted);margin-bottom:4px;display:block}
+.form-i{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:8px 12px;color:var(--text);font-size:12px;outline:none;transition:border-color .15s}
+.form-i:focus{border-color:var(--ad2)}.form-i::placeholder{color:var(--muted)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ava-upload-area{border:2px dashed var(--border2);border-radius:var(--r2);padding:20px;text-align:center;cursor:pointer;transition:all .18s;position:relative}
+.ava-upload-area:hover{border-color:var(--ad2);background:var(--ad)}
+.ava-preview{width:70px;height:70px;border-radius:14px;margin:0 auto 10px;background:var(--bg4);border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:28px;overflow:hidden}
+.ava-preview img{width:100%;height:100%;object-fit:cover}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border)}
+.toggle-row:last-child{border-bottom:none}
+.tl{font-size:12px;font-weight:500}.ts-s{font-size:10px;color:var(--muted);margin-top:1px}
+.toggle{width:34px;height:19px;border-radius:10px;background:var(--bg4);position:relative;cursor:pointer;transition:background .2s;border:1px solid var(--border2);flex-shrink:0}
+.toggle.on{background:var(--accent)}.toggle::after{content:'';position:absolute;width:13px;height:13px;border-radius:50%;background:#fff;top:2px;left:2px;transition:left .2s}.toggle.on::after{left:17px}
+
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:#00000090;backdrop-filter:blur(8px);z-index:300;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-bg.open{opacity:1;pointer-events:all}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:22px;width:100%;max-width:380px;transform:translateY(12px);transition:transform .2s;max-height:90vh;overflow-y:auto}
+.modal-bg.open .modal{transform:none}
+.modal-title{font-size:18px;font-weight:700;letter-spacing:-.3px;margin-bottom:16px}
+.m-acts{display:flex;gap:7px;margin-top:16px}.m-acts button{flex:1}
+.divider{display:flex;align-items:center;gap:9px;margin:12px 0;color:var(--muted);font-size:11px}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.btn-google{width:100%;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:8px;border-radius:7px;font-size:12px;cursor:pointer;transition:border-color .15s;display:flex;align-items:center;justify-content:center;gap:7px;font-family:var(--font)}
+.btn-google:hover{border-color:var(--border3)}
+.star-pick{display:flex;gap:5px;justify-content:center;margin:12px 0}
+.star-b{font-size:26px;cursor:pointer;opacity:.2;transition:all .1s;background:none;border:none;color:var(--gold)}
+.star-b.on{opacity:1}
+.confirm-ico{text-align:center;font-size:44px;margin:8px 0 16px}
+.confirm-amt{text-align:center;font-family:var(--mono);font-size:24px;font-weight:700;color:var(--accent);margin:5px 0}
+.confirm-txt{text-align:center;color:var(--muted);font-size:12px}
+
+/* TOAST */
+.toast{position:fixed;bottom:18px;right:18px;z-index:400;background:var(--bg2);border:1px solid var(--border2);border-radius:9px;padding:9px 14px;font-size:12px;box-shadow:0 8px 24px #00000060;transform:translateY(60px);opacity:0;transition:all .25s;display:flex;align-items:center;gap:8px}
+.toast.show{transform:none;opacity:1}.toast.ok{border-color:#00e5a035}.toast.err{border-color:#e05d5d35}
+.empty{text-align:center;padding:48px 20px}.empty-ico{font-size:40px;opacity:.22;margin-bottom:9px}.empty-t{color:var(--muted);font-size:12px}
+
+@media(max-width:800px){
+  .hero-inner{grid-template-columns:1fr}.preview-stack{display:none}
+  h1{font-size:30px}.chat-layout{grid-template-columns:1fr}.chat-sb{display:none}
+  .w-stats{grid-template-columns:1fr 1fr}.wrap{padding:14px}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo" onclick="pg('home')">Gamer<em>Bazar</em>.ge</div>
+  <div class="nav-links">
+    <div class="nl on" onclick="pg('home');act(this)">მთავარი</div>
+    <div class="nl" onclick="pg('listings');act(this)">განცხადებები</div>
+    <div class="nl" onclick="pg('chat');act(this)">ჩატი</div>
+    <div class="nl" onclick="pg('wallet');act(this)">საფულე</div>
+    <div class="nl" onclick="pg('profile');act(this)">პროფილი</div>
+    <div class="nl" onclick="pg('edit');act(this)">⚙️ პარამეტრები</div>
+  </div>
+  <div class="nav-r">
+    <div class="bal-chip" onclick="pg('wallet')" id="nav-bal-chip" style="display:none">
+      <span style="font-size:10px;color:var(--muted)">ბალანსი</span>
+      <span class="v" id="nav-bal">₾0.00</span>
+    </div>
+    <button class="btn btn-a btn-sm" id="nav-login-btn" onclick="openM('loginModal')" style="display:flex">შესვლა</button>
+    <div class="ava" onclick="openM('loginModal')" id="nav-ava" style="display:none">?</div>
+  </div>
+</nav>
+
+<!-- HOME -->
+<div id="page-home" class="page active main">
+  <section class="hero">
+    <div class="hero-inner">
+      <div>
+        <div class="hero-tag">🇬🇪 ქართული გეიმინგ ბაზარი</div>
+        <h1>ყიდე და გაყიდე<br><span class="hl">სათამაშო</span> ექაუნთები</h1>
+        <p class="hero-sub">საქართველოს პირველი დაცული მარკეტფლეისი — Escrow, ვერიფიცირებული გამყიდველები, GEL/USD ბილინგი.</p>
+        <div class="hero-cta">
+          <button class="btn btn-a" style="padding:9px 20px;font-size:13px" onclick="pg('listings');act(document.querySelectorAll('.nl')[1])">განცხადებები →</button>
+          <button class="btn btn-g" style="padding:9px 16px;font-size:13px" onclick="openM('loginModal')">უფასო რეგისტრაცია</button>
+        </div>
+        <div class="hero-stats">
+          <div><div class="hs-n" id="stat-listings">─</div><div class="hs-l">განცხადება</div></div>
+          <div><div class="hs-n" id="stat-sellers">─</div><div class="hs-l">გამყიდველი</div></div>
+          <div><div class="hs-n" id="stat-volume">─</div><div class="hs-l">გარიგება</div></div>
+        </div>
+      </div>
+      <div class="preview-stack" id="hero-preview">
+        <div class="pcard" style="opacity:.4"><div class="pc-ico" style="background:var(--ad)">🎮</div><div><div class="pc-game">განცხადებები</div><div class="pc-title">პირველი განცხ. გამოქვეყნდება აქ</div><div class="pc-meta"><span class="pc-price" style="color:var(--muted)">─</span></div></div></div>
+        <div class="pcard" style="opacity:.25"><div class="pc-ico" style="background:var(--bd)">⚡</div><div><div class="pc-game">ბუსტინგი</div><div class="pc-title">სერვისები და ბუსტი</div><div class="pc-meta"><span class="pc-price" style="color:var(--muted)">─</span></div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap">
+    <div class="sec-head"><div class="sec-title">კატეგორიები</div></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:9px;margin-bottom:24px">
+      <div class="cat-card" onclick="goCategory('mobile')">📱<div>მობილური</div><div style="font-size:10px;color:var(--muted)" id="cnt-mobile">─</div></div>
+      <div class="cat-card" onclick="goCategory('pc')">🖥️<div>PC / Console</div><div style="font-size:10px;color:var(--muted)" id="cnt-pc">─</div></div>
+      <div class="cat-card" onclick="goCategory('social')">📲<div>სოციალური</div><div style="font-size:10px;color:var(--muted)" id="cnt-social">─</div></div>
+      <div class="cat-card" onclick="goCategory('boosting')">⚡<div>ბუსტინგი</div><div style="font-size:10px;color:var(--muted)" id="cnt-boosting">─</div></div>
+      <div class="cat-card" onclick="goCategory('currency')">💎<div>ვალუტა</div><div style="font-size:10px;color:var(--muted)" id="cnt-currency">─</div></div>
+      <div class="cat-card" onclick="openM('postModal')" style="border-color:var(--ad2);background:var(--ad)">➕<div style="color:var(--accent)">განცხ. დამატება</div><div style="font-size:10px;color:var(--muted)">გამოქვეყნება</div></div>
+    </div>
+
+    <div class="sec-head"><div class="sec-title">📱 მობილური თამაშების ჰაბი</div></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-bottom:24px" id="mobile-games-grid"></div>
+
+    <div class="vip-banner">
+      <div><div class="vb-t">⭐ VIP განცხადებები</div><div class="vb-s">პრემიუმ გამყიდველები · Escrow დაცული</div></div>
+      <button class="btn btn-a btn-sm" onclick="openM('vipModal')">VIP ყიდვა</button>
+    </div>
+    <div class="sec-head">
+      <div class="sec-title">ახალი განცხადებები</div>
+      <div style="display:flex;align-items:center;gap:8px"><span class="sec-count" id="home-count">24 განცხ.</span><select class="sort-sel"><option>უახლესი</option><option>ფასი ↑</option><option>ფასი ↓</option></select></div>
+    </div>
+    <div class="grid" id="home-grid"></div>
+  </div>
+</div>
+
+<!-- LISTINGS -->
+<div id="page-listings" class="page main">
+  <div class="sbar">
+    <div class="sbar-inner">
+      <div class="sbox"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input type="text" placeholder="მოძებნე..." oninput="filterL(this.value)" id="s-input"></div>
+      <button class="fbtn on" onclick="filt(this,'ყველა')">ყველა</button>
+      <button class="fbtn" onclick="filt(this,'mobile')">📱 მობ.</button>
+      <button class="fbtn" onclick="filt(this,'pc')">🖥️ PC</button>
+      <button class="fbtn" onclick="filt(this,'social')">📲 სოც.</button>
+      <button class="fbtn" onclick="filt(this,'boosting')">⚡ ბუსტი</button>
+      <button class="fbtn" onclick="filt(this,'VIP')">⭐ VIP</button>
+      <div class="cur-tog"><button class="ct on" onclick="setCur(this,'GEL')">₾</button><button class="ct" onclick="setCur(this,'USD')">$</button></div>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-title" id="l-title">ყველა განცხადება</div>
+      <div style="display:flex;align-items:center;gap:8px"><span class="sec-count" id="l-count">0 განცხ.</span><select class="sort-sel"><option>უახლესი</option><option>ფასი ↑</option><option>ფასი ↓</option></select></div>
+    </div>
+    <div class="grid" id="l-grid"></div>
+  </div>
+</div>
+
+<!-- GAME HUB -->
+<div id="page-game" class="page main">
+  <div class="game-hero">
+    <div class="game-hero-inner">
+      <div class="game-icon-big" id="gh-ico" style="background:var(--bg3)">📱</div>
+      <div>
+        <div class="game-title" id="gh-title">PUBG Mobile</div>
+        <div class="game-desc" id="gh-desc">ქართული ბაზარი</div>
+        <div class="game-badges"><span class="game-badge gb-a">🎮 ექაუნთები</span><span class="game-badge gb-b">⚡ ბუსტინგი</span><span class="game-badge gb-c">💎 ვალუტა</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="game-tabs" id="gh-tabs">
+      <div class="gtab on" onclick="ghTab(this,0)">🎮 ექაუნთები</div>
+      <div class="gtab" onclick="ghTab(this,1)">⚡ სერვისები / ბუსტინგი</div>
+      <div class="gtab" onclick="ghTab(this,2)">💎 ვალუტა / ნივთები</div>
+    </div>
+    <div class="grid" id="gh-grid"></div>
+  </div>
+</div>
+
+<!-- CHAT -->
+<div id="page-chat" class="page main">
+  <div class="chat-layout">
+    <!-- Sidebar -->
+    <div class="chat-sb">
+      <div class="chat-sb-h" style="display:flex;align-items:center;justify-content:space-between">
+        <span>💬 ჩატები</span>
+        <div style="display:flex;gap:5px">
+          <button class="btn btn-g btn-sm" onclick="openChatBot()" title="🤖 მხარდაჭერა" style="background:var(--ad);border-color:var(--ad2);color:var(--accent)">🤖</button>
+          <button class="btn btn-g btn-sm" onclick="loadChatRooms()" title="განახლება">↺</button>
+        </div>
+      </div>
+      <div class="chat-list" id="chat-list"></div>
+    </div>
+    <!-- Main -->
+    <div class="chat-main" id="chat-main-area">
+      <!-- Header -->
+      <div class="chat-h" id="chat-header">
+        <div class="chat-h-l">
+          <div class="ci-av" style="color:var(--muted)" id="chat-partner-ava">?</div>
+          <div>
+            <div style="font-size:13px;font-weight:600" id="chat-partner-name" style="color:var(--muted)">აირჩიე საუბარი</div>
+            <div style="font-size:10px;color:var(--muted)" id="chat-order-info">მარცხნივ ოთახი აირჩიე</div>
+          </div>
+        </div>
+        <div id="chat-escrow-pill" style="display:none">
+          <div class="order-pill">
+            <div class="opill-dot"></div>
+            <span id="chat-pill-text">Escrow · ₾0</span>
+            <button class="btn btn-a btn-sm" id="chat-confirm-btn" onclick="confirmCurrentOrder()" style="margin-left:4px">✅ დადასტ.</button>
+            <button class="btn btn-g btn-sm" onclick="disputeCurrentOrder()" style="margin-left:4px">⚑ დავა</button>
+          </div>
+        </div>
+      </div>
+      <!-- Messages -->
+      <div class="chat-msgs" id="chat-msgs">
+        <div class="empty" style="margin:auto;text-align:center;opacity:.4">
+          <div style="font-size:36px;margin-bottom:8px">💬</div>
+          <div style="font-size:13px">მარცხნივ ოთახი აირჩიე</div>
+        </div>
+      </div>
+      <!-- Input -->
+      <div class="chat-in" id="chat-input-area" style="display:none">
+        <div class="chat-in-row">
+          <textarea id="chat-ta" rows="1" placeholder="შეტყობინება..."
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg()}">
+          </textarea>
+          <button class="send-btn" onclick="sendMsg()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="m22 2-7 20-4-9-9-4 20-7z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- WALLET -->
+<div id="page-wallet" class="page main">
+  <div class="wallet-wrap" id="wallet-content">
+    <!-- Auth guard — JS-ით ჩაიტვირთება -->
+    <div class="empty" id="wallet-guest" style="display:none">
+      <div class="empty-ico">🔒</div>
+      <div style="font-size:16px;font-weight:600;margin-bottom:8px">საფულე დაცულია</div>
+      <div class="empty-t" style="margin-bottom:16px">ბალანსის სანახავად შედი სისტემაში</div>
+      <button class="btn btn-a" onclick="openM('loginModal')" style="padding:10px 24px">შესვლა / რეგისტრაცია</button>
+    </div>
+    <div id="wallet-logged">
+      <div class="w-header">
+        <div class="w-label">სულ ბალანსი</div>
+        <div class="w-bal" id="w-bal-display">₾0.00</div>
+        <div class="w-sub" id="w-sub-display">—</div>
+        <div class="w-acts">
+          <button class="wbtn wd" onclick="openM('depositModal')">⬇ შეტანა</button>
+          <button class="wbtn ww" onclick="openM('withdrawModal')">⬆ გამოტანა</button>
+        </div>
+      </div>
+      <div class="w-stats">
+        <div class="wst"><div class="wst-l">შემოსული</div><div class="wst-v g" id="w-income">₾0.00</div></div>
+        <div class="wst"><div class="wst-l">გამოხარჯული</div><div class="wst-v r" id="w-spent">₾0.00</div></div>
+        <div class="wst"><div class="wst-l">Escrow-ში</div><div class="wst-v b" id="w-escrow">₾0.00</div></div>
+      </div>
+      <div class="tx-list" id="tx-list-wrap">
+        <div class="tx-h">ტრანზაქციების ისტორია</div>
+        <div class="empty" style="padding:32px"><div class="empty-ico">📋</div><div class="empty-t">ტრანზაქციები არ არის</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PROFILE -->
+<div id="page-profile" class="page main">
+  <div class="prof-wrap">
+    <div id="profile-guest" style="display:none">
+      <div class="empty" style="padding:60px 20px">
+        <div class="empty-ico">🔒</div>
+        <div style="font-size:16px;font-weight:600;margin-bottom:8px">პროფილი დაცულია</div>
+        <div class="empty-t" style="margin-bottom:16px">სანახავად შედი სისტემაში</div>
+        <button class="btn btn-a" onclick="openM('loginModal')" style="padding:10px 24px">შესვლა / რეგისტრაცია</button>
+      </div>
+    </div>
+    <div id="profile-logged" style="display:none">
+      <div class="prof-card">
+        <div class="prof-av-wrap">
+          <div class="prof-av" id="prof-ava-display">?</div>
+          <div class="prof-av-edit" onclick="pg('edit');act(document.querySelectorAll('.nl')[5])">✏</div>
+        </div>
+        <div class="prof-inf">
+          <div class="prof-name" id="prof-name-display">—</div>
+          <div class="prof-handle" id="prof-handle-display">@—</div>
+          <div class="prof-bio" id="prof-bio-display"></div>
+          <div class="prof-bs" id="prof-badges"></div>
+          <div class="prof-stats">
+            <div><div class="pstat-v" id="prof-sales">0</div><div class="pstat-l">გაყიდვა</div></div>
+            <div><div class="pstat-v" style="color:var(--gold)" id="prof-rating">—</div><div class="pstat-l">რეიტინგი</div></div>
+            <div><div class="pstat-v" id="prof-reviews-count">0</div><div class="pstat-l">შეფ.</div></div>
+            <div><div class="pstat-v" id="prof-disputes">0</div><div class="pstat-l">დავა</div></div>
+          </div>
+        </div>
+        <button class="btn btn-g btn-sm" onclick="pg('edit');act(document.querySelectorAll('.nl')[5])">✏️ რედ.</button>
+      </div>
+      <div class="prof-tabs">
+        <div class="ptab on" onclick="ptab(this,'pl')">ჩემი განცხადებები</div>
+        <div class="ptab" onclick="ptab(this,'pr')">შეფასებები</div>
+        <div class="ptab" onclick="ptab(this,'po')">ორდერები</div>
+      </div>
+      <div id="pl"><div class="grid" id="prof-grid"><div class="empty"><div class="empty-ico">📦</div><div class="empty-t">განცხადებები ჯერ არ გაქვს</div></div></div></div>
+      <div id="pr" style="display:none"><div class="empty"><div class="empty-ico">⭐</div><div class="empty-t">შეფასებები ჯერ არ არის</div></div></div>
+      <div id="po" style="display:none">
+        <div id="orders-list">
+          <div class="empty"><div class="empty-ico">📋</div><div class="empty-t">ორდერები ჯერ არ არის</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="page-edit" class="page main">
+  <div class="prof-wrap">
+    <div style="font-size:18px;font-weight:800;letter-spacing:-.4px;margin-bottom:16px">⚙️ პროფილის პარამეტრები</div>
+    <div class="edit-section">
+      <div class="edit-sec-title">🖼 ავატარი <span>JPG, PNG · მაქ. 2MB</span></div>
+      <div class="ava-upload-area" onclick="document.getElementById('ava-file').click()">
+        <input type="file" id="ava-file" accept="image/*" style="display:none" onchange="previewAva(this)">
+        <div class="ava-preview" id="ava-prev">SH</div>
+        <div style="font-size:12px;font-weight:600;margin-bottom:3px">ფოტოს ატვირთვა</div>
+        <div style="font-size:10px;color:var(--muted)">დააწკაპუნე ან ჩაიტანე</div>
+      </div>
+    </div>
+    <div class="edit-section">
+      <div class="edit-sec-title">👤 ძირითადი ინფო</div>
+      <div class="form-row">
+        <div class="form-g"><label class="form-l">სახელი / ნიქნეიმი</label><input class="form-i" id="edit-name" placeholder="შენი სახელი"></div>
+        <div class="form-g"><label class="form-l">მომხ. სახელი (@)</label><input class="form-i" id="edit-handle" placeholder="username" readonly style="opacity:.55;cursor:default"></div>
+      </div>
+      <div class="form-g"><label class="form-l">ელ-ფოსტა</label>
+        <input class="form-i" id="edit-email" type="email" readonly style="opacity:.55;cursor:default" placeholder="თქვენი ელ-ფოსტა">
+      </div>
+      <div class="form-g"><label class="form-l">ბიო</label>
+        <textarea class="form-i" id="edit-bio" rows="2" placeholder="მოყვარული გეიმერი..."></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-g"><label class="form-l">Discord</label><input class="form-i" id="edit-discord" placeholder="username#1234"></div>
+        <div class="form-g"><label class="form-l">Steam ID</label><input class="form-i" id="edit-steam" placeholder="76561198..."></div>
+      </div>
+    </div>
+    <div class="edit-section">
+      <div class="edit-sec-title">🔔 შეტყობინებები</div>
+      <div class="toggle-row"><div class="toggle-info"><div class="tl">ელ-ფოსტა</div><div class="ts-s">ახ. ორდერები</div></div><div class="toggle on" id="tog-email" onclick="this.classList.toggle('on')"></div></div>
+      <div class="toggle-row"><div class="toggle-info"><div class="tl">Push</div><div class="ts-s">ბრაუზ. შეტყობ.</div></div><div class="toggle" id="tog-push" onclick="togglePushNotifications(this)"></div></div>
+      <div class="toggle-row"><div class="toggle-info"><div class="tl">ჩატი</div><div class="ts-s">ახ. შეტყობ.</div></div><div class="toggle on" id="tog-chat" onclick="this.classList.toggle('on')"></div></div>
+    </div>
+    <div class="edit-section">
+      <div class="edit-sec-title">🔒 კონფიდენც. &amp; უსაფრთხოება</div>
+      <div class="toggle-row"><div class="toggle-info"><div class="tl">საჯარო პროფილი</div><div class="ts-s">ყველა ნახვა</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+      <div class="toggle-row"><div class="toggle-info"><div class="tl">ონლაინ სტატუსი</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+      <div class="form-g" style="margin-top:12px"><label class="form-l">ავტ. მეთოდი</label>
+        <div style="display:flex;align-items:center;gap:9px;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:9px 12px">
+          <span style="font-size:16px">🔐</span>
+          <div>
+            <div style="font-size:12px;font-weight:600" id="edit-auth-method">ელ-ფოსტა</div>
+            <div style="font-size:10px;color:var(--muted)" id="edit-auth-email">—</div>
+          </div>
+          <span style="margin-left:auto;font-size:9px;padding:1px 7px;border-radius:3px;background:var(--ad);color:var(--accent);border:1px solid var(--ad2)">დაკავშ.</span>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-a" style="flex:1;padding:10px" onclick="saveProfile()">✓ შენახვა</button>
+      <button class="btn btn-g" style="padding:10px 16px" onclick="pg('profile');act(document.querySelectorAll('.nl')[4])">გაუქმება</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-bg" id="loginModal" onclick="if(event.target===this)closeM('loginModal')">
+  <div class="modal">
+    <div class="modal-title" id="login-modal-title">შესვლა</div>
+    <button class="btn-google" onclick="googleAuth()"><svg width="15" height="15" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>Google/Gmail-ით შესვლა</button>
+    <div class="divider">ან ელ-ფოსტით</div>
+    <!-- შესვლის ფორმა -->
+    <div id="login-form">
+      <div class="form-g"><label class="form-l">ელ-ფოსტა</label><input class="form-i" id="login-email" type="email" placeholder="your@email.com"></div>
+      <div class="form-g"><label class="form-l">პაროლი</label><input class="form-i" id="login-pass" type="password" placeholder="••••••••"></div>
+      <div class="m-acts">
+        <button class="btn btn-g" onclick="closeM('loginModal')">გაუქმება</button>
+        <button class="btn btn-a" onclick="doLogin()">შესვლა</button>
+      </div>
+      <div style="text-align:center;margin-top:12px;font-size:12px;color:var(--muted)">
+        ექაუნთი არ გაქვს? <span style="color:var(--accent);cursor:pointer;font-weight:600" onclick="showRegForm()">რეგისტრაცია →</span>
+      </div>
+    </div>
+    <!-- რეგისტრაციის ფორმა -->
+    <div id="reg-form" style="display:none">
+      <div class="form-g"><label class="form-l">ელ-ფოსტა</label><input class="form-i" id="reg-email" type="email" placeholder="your@email.com"></div>
+      <div class="form-g"><label class="form-l">მომხმარებლის სახელი</label><input class="form-i" id="reg-username" placeholder="shavo_ge (მხოლოდ ლათ. სიმბ.)"></div>
+      <div class="form-g"><label class="form-l">პაროლი</label><input class="form-i" id="reg-pass" type="password" placeholder="მინიმუმ 6 სიმბოლო"></div>
+      <div class="m-acts">
+        <button class="btn btn-g" onclick="showLoginForm()">← უკან</button>
+        <button class="btn btn-a" onclick="doRegister()">რეგისტრაცია</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-bg" id="depositModal" onclick="if(event.target===this)closeM('depositModal')">
+  <div class="modal">
+    <div class="modal-title">💰 თანხის შეტანა</div>
+    <div class="form-g"><label class="form-l">მეთოდი</label><select class="form-i"><option>🏦 BOG</option><option>🏦 TBC</option><option>💳 ბარათი</option><option>💵 Stripe</option></select></div>
+    <div class="form-g"><label class="form-l">თანხა (₾)</label><input class="form-i" type="number" placeholder="50"></div>
+    <div class="m-acts"><button class="btn btn-g" onclick="closeM('depositModal')">გაუქმება</button><button class="btn btn-a" onclick="doDeposit()">გადახდა</button></div>
+  </div>
+</div>
+<div class="modal-bg" id="withdrawModal" onclick="if(event.target===this)closeM('withdrawModal')">
+  <div class="modal">
+    <div class="modal-title">📤 გამოტანა</div>
+    <div class="form-g"><label class="form-l">IBAN</label><input class="form-i" placeholder="GE29TB0000000001234567"></div>
+    <div class="form-g"><label class="form-l">თანხა (₾)</label><input class="form-i" type="number" placeholder="100"></div>
+    <div class="m-acts"><button class="btn btn-g" onclick="closeM('withdrawModal')">გაუქმება</button><button class="btn btn-a" onclick="doWithdraw()">გამოტანა</button></div>
+  </div>
+</div>
+<div class="modal-bg" id="confirmModal" onclick="if(event.target===this)closeM('confirmModal')">
+  <div class="modal">
+    <div class="confirm-ico">🔐</div>
+    <div class="modal-title" style="text-align:center">ორდ. დადასტ.</div>
+    <div class="confirm-txt">მიიღე CS2 ექაუნთი?</div>
+    <div class="confirm-amt">₾89.00</div>
+    <div class="confirm-txt" style="margin-bottom:16px">დადასტ. შემდეგ გამყ. ჩაერ. · გაუქ. შეუძლ.</div>
+    <div class="m-acts"><button class="btn btn-g" onclick="closeM('confirmModal');openM('disputeModal')">⚑ დავა</button><button class="btn btn-a" onclick="closeM('confirmModal');openM('ratingModal')">✓ დადასტ.</button></div>
+  </div>
+</div>
+<div class="modal-bg" id="ratingModal" onclick="if(event.target===this)closeM('ratingModal')">
+  <div class="modal">
+    <div class="modal-title">⭐ შეფასება</div>
+    <div style="text-align:center;color:var(--muted);font-size:12px" id="rating-seller-name">—</div>
+    <div class="star-pick"><button class="star-b on" onclick="setStars(1)">★</button><button class="star-b on" onclick="setStars(2)">★</button><button class="star-b on" onclick="setStars(3)">★</button><button class="star-b on" onclick="setStars(4)">★</button><button class="star-b on" onclick="setStars(5)">★</button></div>
+    <div class="form-g"><label class="form-l">კომენტარი</label><textarea class="form-i" rows="2" placeholder="გამყ. კეთ. იყო..."></textarea></div>
+    <div class="m-acts"><button class="btn btn-g" onclick="closeM('ratingModal')">გამოტ.</button><button class="btn btn-a" onclick="closeM('ratingModal');showToast('✓ შეფ. გამოქ.!','ok')">გაგზ.</button></div>
+  </div>
+</div>
+<div class="modal-bg" id="disputeModal" onclick="if(event.target===this)closeM('disputeModal')">
+  <div class="modal">
+    <div class="modal-title">⚑ დავის გახსნა</div>
+    <div style="background:var(--rd);border:1px solid #e05d5d25;border-radius:6px;padding:9px;font-size:11px;color:var(--muted);margin-bottom:12px">ადმინი 24სთ-ში განიხ. Escrow დაბლ.</div>
+    <div class="form-g"><label class="form-l">პრობლემა</label><select class="form-i"><option>პაროლი არ მუშ.</option><option>ექ. არ გადმ.</option><option>განსხვ. განცხ.</option><option>სხვა</option></select></div>
+    <div class="form-g"><label class="form-l">აღწ.</label><textarea class="form-i" rows="2" placeholder="რა მოხდა..."></textarea></div>
+    <div class="m-acts"><button class="btn btn-g" onclick="closeM('disputeModal')">გაუქ.</button><button class="btn btn-a" style="background:var(--red)" onclick="submitDispute()">გახ.</button></div>
+  </div>
+</div>
+<div class="modal-bg" id="postModal" onclick="if(event.target===this)closeM('postModal')">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-title">➕ განცხადების დამატება</div>
+
+    <div class="form-g"><label class="form-l">კატეგორია / თამაში</label>
+      <select class="form-i" id="post-category" onchange="updatePostForm()">
+        <optgroup label="📱 მობილური თამაშები">
+          <option value="mobile|PUBG Mobile">📱 PUBG Mobile</option>
+          <option value="mobile|Arena Breakout">📱 Arena Breakout</option>
+          <option value="mobile|CoD Mobile">📱 CoD Mobile</option>
+          <option value="mobile|Mobile Legends">📱 Mobile Legends</option>
+          <option value="mobile|Brawl Stars">📱 Brawl Stars</option>
+          <option value="mobile|Clash of Clans">📱 Clash of Clans</option>
+          <option value="mobile|Genshin Impact">📱 Genshin Impact</option>
+          <option value="mobile|Roblox">📱 Roblox</option>
+        </optgroup>
+        <optgroup label="🖥️ PC / Console">
+          <option value="pc|CS2">🖥️ CS2</option>
+          <option value="pc|Valorant">🖥️ Valorant</option>
+          <option value="pc|Dota 2">🖥️ Dota 2</option>
+          <option value="pc|League of Legends">🖥️ League of Legends</option>
+        </optgroup>
+        <optgroup label="📲 სოციალური ქსელები">
+          <option value="social|Instagram">📲 Instagram</option>
+          <option value="social|TikTok">📲 TikTok</option>
+          <option value="social|YouTube">📲 YouTube</option>
+          <option value="social|Facebook">📲 Facebook</option>
+        </optgroup>
+        <optgroup label="⚡ ბუსტინგი / სერვისი">
+          <option value="boosting|PUBG Mobile">⚡ PUBG Mobile Boost</option>
+          <option value="boosting|CS2">⚡ CS2 Boost</option>
+          <option value="boosting|Valorant">⚡ Valorant Boost</option>
+          <option value="boosting|სხვა">⚡ სხვა თამაში</option>
+        </optgroup>
+        <optgroup label="💎 ვალუტა / ნივთები">
+          <option value="currency|PUBG Mobile">💎 PUBG UC</option>
+          <option value="currency|Mobile Legends">💎 ML Diamonds</option>
+          <option value="currency|Brawl Stars">💎 Brawl Stars Gems</option>
+          <option value="currency|CS2">💎 CS2 Credits/Skins</option>
+          <option value="currency|სხვა">💎 სხვა ვალუტა</option>
+        </optgroup>
+      </select>
+    </div>
+
+    <div class="form-g"><label class="form-l">ტიპი</label>
+      <select class="form-i" id="post-type">
+        <option value="account">🎮 ექაუნთი</option>
+        <option value="boosting">⚡ ბუსტინგი / სერვისი</option>
+        <option value="currency">💎 ვალუტა / ნივთი</option>
+      </select>
+    </div>
+
+    <div class="form-g"><label class="form-l">სათაური</label>
+      <input class="form-i" id="post-title" placeholder="მაგ.: Global Elite · 2500+ საათი">
+    </div>
+    <div class="form-g"><label class="form-l">აღწერა</label>
+      <textarea class="form-i" id="post-desc" rows="2" placeholder="დეტალური ინფო..."></textarea>
+    </div>
+
+    <div class="form-g"><label class="form-l">ფასი (₾)</label>
+      <input class="form-i" id="post-price" type="number" placeholder="50" min="1" oninput="updateVipPrice()">
+    </div>
+
+    <!-- VIP სისტემა -->
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:14px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;margin-bottom:10px">📢 განთავსების ტიპი</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <label id="post-free-label" style="cursor:pointer">
+          <input type="radio" name="post-vip-radio" value="no" checked onchange="updateVipPrice()" style="display:none">
+          <div id="post-free-box" style="border:2px solid var(--accent);border-radius:8px;padding:10px;text-align:center;transition:all .2s">
+            <div style="font-size:18px">📋</div>
+            <div style="font-size:12px;font-weight:600;margin-top:4px">უფასო</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px">სტანდარტული</div>
+          </div>
+        </label>
+        <label id="post-vip-label" style="cursor:pointer">
+          <input type="radio" name="post-vip-radio" value="yes" onchange="updateVipPrice()" style="display:none">
+          <div id="post-vip-box" style="border:2px solid var(--border2);border-radius:8px;padding:10px;text-align:center;transition:all .2s">
+            <div style="font-size:18px">⭐</div>
+            <div style="font-size:12px;font-weight:600;margin-top:4px">VIP</div>
+            <div style="font-size:10px;color:var(--gold);margin-top:2px" id="vip-price-label">ფასის 10%</div>
+          </div>
+        </label>
+      </div>
+      <div id="vip-info" style="display:none;margin-top:8px;font-size:11px;color:var(--gold);background:var(--gd);border-radius:6px;padding:8px;text-align:center">
+        ⭐ VIP — გამოჩნდება კატეგორიის სათავეში · ₾<span id="vip-cost">0</span> ჩამოიჭრება ბალანსიდან
+      </div>
+    </div>
+
+    <div class="form-g">
+      <label class="form-l">📸 ფოტო (სურვ. · JPG/PNG · მაქ. 2MB)</label>
+      <div id="post-img-area" style="border:2px dashed var(--border2);border-radius:10px;padding:14px;cursor:pointer;transition:all .2s;position:relative"
+           onclick="document.getElementById('post-img-input').click()"
+           ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
+           ondragleave="this.style.borderColor='var(--border2)'"
+           ondrop="handleImgDrop(event)">
+        <input type="file" id="post-img-input" accept="image/jpeg,image/png,image/webp"
+               multiple style="display:none" onchange="previewPostImgs(this)">
+
+        <!-- thumbnail strip -->
+        <div id="post-img-strip" style="display:none;display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
+
+        <div id="post-img-placeholder" style="text-align:center">
+          <div style="font-size:20px;margin-bottom:3px">📷</div>
+          <div style="font-size:11px;font-weight:600">ფოტოების ატვირთვა (მაქს. 5)</div>
+          <div style="font-size:10px;color:var(--muted)">jpeg · png · webp · 3MB თითო</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="m-acts" style="margin-top:12px">
+      <button class="btn btn-g" onclick="closeM('postModal')">გაუქმება</button>
+      <button class="btn btn-a" id="post-submit-btn" onclick="postListing()">გამოქვეყნება</button>
+    </div>
+  </div>
+</div>
+<div class="modal-bg" id="vipModal" onclick="if(event.target===this)closeM('vipModal')">
+  <div class="modal">
+    <div class="confirm-ico">⭐</div>
+    <div class="modal-title" style="text-align:center">VIP განცხ.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:12px">
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:11px;text-align:center"><div style="font-size:9px;color:var(--muted)">7 დღე</div><div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--gold)">₾15</div></div>
+      <div style="background:var(--gd);border:1px solid var(--gd2);border-radius:var(--r);padding:11px;text-align:center"><div style="font-size:9px;color:var(--gold)">30 დღე 🔥</div><div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--gold)">₾45</div></div>
+    </div>
+    <div class="m-acts"><button class="btn btn-g" onclick="closeM('vipModal')">გაუქ.</button><button class="btn btn-a" onclick="closeM('vipModal');showToast('⭐ VIP გააქტ.!','ok')">ყიდვა</button></div>
+  </div>
+</div>
+
+<!-- LISTING DETAIL MODAL -->
+<div class="modal-bg" id="listingModal" onclick="if(event.target===this)closeM('listingModal')">
+  <div class="modal" style="max-width:520px">
+    <!-- header -->
+    <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:18px">
+      <div id="lm-img" style="width:70px;height:70px;border-radius:12px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:32px;flex-shrink:0">🎮</div>
+      <div style="flex:1">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em" id="lm-game">—</div>
+        <div style="font-size:17px;font-weight:700;margin:3px 0;line-height:1.3" id="lm-title">—</div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px">
+          <span id="lm-price" style="font-family:var(--mono);font-size:22px;font-weight:700;color:var(--accent)">₾0</span>
+          <span id="lm-vip-badge" style="display:none" class="badge bv">⭐ VIP</span>
+        </div>
+      </div>
+    </div>
+    <!-- tags -->
+    <div id="lm-tags" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px"></div>
+    <!-- description -->
+    <div id="lm-desc-wrap" style="display:none;background:var(--bg3);border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px;color:var(--muted2);line-height:1.6" id="lm-desc"></div>
+    <!-- seller -->
+    <div style="display:flex;align-items:center;gap:12px;background:var(--bg3);border-radius:10px;padding:12px 14px;margin-bottom:16px;cursor:pointer" id="lm-seller-row" onclick="openSellerProfile()">
+      <div id="lm-seller-ava" style="width:40px;height:40px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--accent);flex-shrink:0">?</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600" id="lm-seller-name">—</div>
+        <div style="font-size:11px;color:var(--muted)" id="lm-seller-stats">—</div>
+      </div>
+      <div style="font-size:11px;color:var(--muted)">პროფ. →</div>
+    </div>
+    <!-- escrow info -->
+    <div style="background:var(--ad);border:1px solid var(--ad2);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--accent)">
+      🔒 <strong>Escrow დაცვა</strong> — ფული გაიყინება სანამ ექაუნთს მიიღებ. მხოლოდ შემდეგ ჩაირიცხება გამყიდველს.
+    </div>
+    <!-- actions -->
+    <div id="lm-actions">
+      <div class="m-acts" style="margin-top:0">
+        <button class="btn btn-g" onclick="closeM('listingModal')">დახურვა</button>
+        <button class="btn btn-a" id="lm-buy-btn" onclick="buyListing()" style="font-size:14px;padding:9px 20px">
+          🛒 ყიდვა — <span id="lm-buy-price">₾0</span>
+        </button>
+      </div>
+    </div>
+    <!-- logged out -->
+    <div id="lm-guest-msg" style="display:none;text-align:center;padding:8px">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">შეძენისთვის საჭიროა ავტ.</div>
+      <button class="btn btn-a" onclick="closeM('listingModal');openM('loginModal')">შესვლა / რეგისტრაცია</button>
+    </div>
+  </div>
+</div>
+
+<!-- SELLER PROFILE MODAL -->
+<div class="modal-bg" id="sellerModal" onclick="if(event.target===this)closeM('sellerModal')">
+  <div class="modal" style="max-width:460px">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+      <div id="sm-ava" style="width:56px;height:56px;border-radius:14px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:var(--blue);flex-shrink:0;overflow:hidden">?</div>
+      <div>
+        <div style="font-size:18px;font-weight:800" id="sm-name">—</div>
+        <div style="font-size:12px;color:var(--muted)" id="sm-handle">—</div>
+        <div style="font-size:12px;color:var(--muted2);margin-top:3px" id="sm-bio"></div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">
+      <div style="background:var(--bg3);border-radius:8px;padding:10px;text-align:center">
+        <div style="font-family:var(--mono);font-size:18px;font-weight:700" id="sm-sales">0</div>
+        <div style="font-size:10px;color:var(--muted)">გაყიდვა</div>
+      </div>
+      <div style="background:var(--bg3);border-radius:8px;padding:10px;text-align:center">
+        <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--gold)" id="sm-rating">—</div>
+        <div style="font-size:10px;color:var(--muted)">რეიტინგი</div>
+      </div>
+      <div style="background:var(--bg3);border-radius:8px;padding:10px;text-align:center">
+        <div style="font-family:var(--mono);font-size:18px;font-weight:700" id="sm-reviews">0</div>
+        <div style="font-size:10px;color:var(--muted)">შეფასება</div>
+      </div>
+    </div>
+    <!-- seller listings -->
+    <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">განცხადებები</div>
+    <div id="sm-listings" style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto"></div>
+    <!-- reviews -->
+    <div style="font-size:12px;font-weight:600;color:var(--muted);margin:12px 0 8px;text-transform:uppercase;letter-spacing:.05em">შეფასებები</div>
+    <div id="sm-reviews-list" style="max-height:180px;overflow-y:auto"></div>
+    <div class="m-acts" style="margin-top:14px">
+      <button class="btn btn-g" onclick="closeM('sellerModal')">დახურვა</button>
+    </div>
+  </div>
+</div>
+
+<!-- ORDER SUCCESS MODAL -->
+<div class="modal-bg" id="orderSuccessModal" onclick="if(event.target===this)closeM('orderSuccessModal')">
+  <div class="modal" style="text-align:center">
+    <div style="font-size:52px;margin:10px 0 16px">✅</div>
+    <div style="font-size:20px;font-weight:800;margin-bottom:8px">შეკვეთა შეიქმნა!</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:6px">ფული Escrow-ში გაყინულია</div>
+    <div style="font-family:var(--mono);font-size:24px;font-weight:700;color:var(--accent);margin:10px 0" id="order-success-amount">₾0</div>
+    <div style="background:var(--ad);border:1px solid var(--ad2);border-radius:8px;padding:10px;font-size:12px;color:var(--accent);margin-bottom:16px">
+      გამყიდველი მალე დაგიკავშირდება ჩატში.<br>
+      მიიღე ექაუნთი → დაადასტურე → ფული გამყიდველს ჩაერიცხება.
+    </div>
+    <div class="m-acts">
+      <button class="btn btn-g" onclick="closeM('orderSuccessModal')">დახურვა</button>
+      <button class="btn btn-a" onclick="closeM('orderSuccessModal');pg('chat');act(document.querySelectorAll('.nl')[2])">💬 ჩატი</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span id="t-txt"></span></div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════════════════════════
+const API_URL = 'https://gamerbazar-api.onrender.com';
+let currentUser  = null;
+let CUR          = 'GEL';
+let FILT         = 'ყველა';
+let curGame      = null;
+let curGameTab   = 0;
+// postImgFile replaced by postImgFiles array (multi-upload)
+
+// ══════════════════════════════════════════════════════════
+// TOKEN
+// ══════════════════════════════════════════════════════════
+const getToken  = () => localStorage.getItem('gb_token');
+const setToken  = t  => localStorage.setItem('gb_token', t);
+const clearToken= () => localStorage.removeItem('gb_token');
+
+// ══════════════════════════════════════════════════════════
+// API HELPER
+// ══════════════════════════════════════════════════════════
+async function api(path, opts = {}) {
+  const headers = { 'Content-Type': 'application/json' };
+  const token = getToken();
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  const res  = await fetch(API_URL + path, { ...opts, headers: { ...headers, ...(opts.headers || {}) } });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw data;
+  return data;
+}
+
+// ══════════════════════════════════════════════════════════
+// AUTH GUARD — გვერდების დაცვა
+// ══════════════════════════════════════════════════════════
+function showPageGuarded(id) {
+  const guarded = ['profile', 'edit', 'wallet', 'chat'];
+  if (guarded.includes(id) && !currentUser) {
+    openM('loginModal');
+    showToast('პირველ შედი სისტემაში', 'err');
+    return false;
+  }
+  return true;
+}
+
+// ══════════════════════════════════════════════════════════
+// NAV
+// ══════════════════════════════════════════════════════════
+function updateNavUser() {
+  const balChip  = document.getElementById('nav-bal-chip');
+  const loginBtn = document.getElementById('nav-login-btn');
+  const avaEl    = document.getElementById('nav-ava');
+
+  if (!currentUser) {
+    if (balChip)  balChip.style.display  = 'none';
+    if (loginBtn) loginBtn.style.display = 'flex';
+    if (avaEl)    avaEl.style.display    = 'none';
+    // profile/wallet guards
+    const pg_el = document.getElementById('profile-guest');
+    const pl_el = document.getElementById('profile-logged');
+    const wg_el = document.getElementById('wallet-guest');
+    const wl_el = document.getElementById('wallet-logged');
+    if (pg_el) pg_el.style.display = 'block';
+    if (pl_el) pl_el.style.display = 'none';
+    if (wg_el) wg_el.style.display = 'block';
+    if (wl_el) wl_el.style.display = 'none';
+    return;
+  }
+
+  if (balChip)  balChip.style.display  = 'flex';
+  if (loginBtn) loginBtn.style.display = 'none';
+  if (avaEl) {
+    avaEl.style.display = 'flex';
+    if (currentUser.avatar_url) {
+      avaEl.innerHTML = `<img src="${API_URL + currentUser.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    } else {
+      avaEl.textContent = (currentUser.display_name || currentUser.username || '?').slice(0, 2).toUpperCase();
+    }
+    avaEl.onclick = () => { pg('profile'); act(document.querySelectorAll('.nl')[4]); };
+  }
+  const balEl = document.getElementById('nav-bal');
+  if (balEl) balEl.textContent = '₾' + (Number(currentUser.balance_gel) || 0).toFixed(2);
+
+  // chat rooms ჩატვირთვა
+  if (document.getElementById('page-chat')?.classList.contains('active')) {
+    loadChatRooms();
+  }
+
+  // profile/wallet show
+  const pg_el = document.getElementById('profile-guest');
+  const pl_el = document.getElementById('profile-logged');
+  const wg_el = document.getElementById('wallet-guest');
+  const wl_el = document.getElementById('wallet-logged');
+  if (pg_el) pg_el.style.display = 'none';
+  if (pl_el) pl_el.style.display = 'block';
+  if (wg_el) wg_el.style.display = 'none';
+  if (wl_el) wl_el.style.display = 'block';
+}
+
+// ══════════════════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════════════════
+function pg(id) {
+  if (!showPageGuarded(id)) return;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const el = document.getElementById('page-' + id);
+  if (el) el.classList.add('active');
+  window.scrollTo(0, 0);
+  if (id === 'wallet')  { updateNavUser(); loadWallet(); }
+  if (id === 'profile') { updateNavUser(); loadMyProfile(); }
+  if (id === 'chat')    { loadChatRooms(); }
+  if (id === 'edit')    { loadMyProfile(); }
+}
+function act(el) {
+  document.querySelectorAll('.nl').forEach(n => n.classList.remove('on'));
+  if (el) el.classList.add('on');
+}
+
+// ══════════════════════════════════════════════════════════
+// MODAL
+// ══════════════════════════════════════════════════════════
+function openM(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.add('open');
+  if (id === 'loginModal') showLoginForm();
+}
+function closeM(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.remove('open');
+}
+function setStars(n) {
+  document.querySelectorAll('.star-b').forEach((b, i) => b.classList.toggle('on', i < n));
+}
+
+// ══════════════════════════════════════════════════════════
+// LOGIN / REGISTER FORMS
+// ══════════════════════════════════════════════════════════
+function showLoginForm() {
+  const lf = document.getElementById('login-form');
+  const rf = document.getElementById('reg-form');
+  const mt = document.getElementById('login-modal-title');
+  if (rf) rf.style.display = 'none';
+  if (lf) lf.style.display = 'block';
+  if (mt) mt.textContent = 'შესვლა';
+}
+function showRegForm() {
+  const lf = document.getElementById('login-form');
+  const rf = document.getElementById('reg-form');
+  const mt = document.getElementById('login-modal-title');
+  if (lf) lf.style.display = 'none';
+  if (rf) rf.style.display = 'block';
+  if (mt) mt.textContent = 'რეგისტრაცია';
+}
+
+// ══════════════════════════════════════════════════════════
+// LOGIN
+// ══════════════════════════════════════════════════════════
+async function doLogin() {
+  const emailEl = document.getElementById('login-email');
+  const passEl  = document.getElementById('login-pass');
+  if (!emailEl || !passEl) { showToast('ფორმა ვერ მოიძებნა', 'err'); return; }
+  const email = emailEl.value.trim();
+  const pass  = passEl.value;
+  if (!email || !pass) { showToast('შეავსე ყველა ველი', 'err'); return; }
+  const btn = document.querySelector('#login-form .btn-a');
+  if (btn) { btn.textContent = '⏳ შესვლა...'; btn.disabled = true; }
+  try {
+    const data = await api('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password: pass }) });
+    setToken(data.token);
+    currentUser = data.user;
+    closeM('loginModal');
+    updateNavUser();
+    showToast('✅ წარმატებით შეხვედი!', 'ok');
+  } catch (e) {
+    showToast(e.message || 'არასწორი email ან პაროლი', 'err');
+  } finally {
+    if (btn) { btn.textContent = 'შესვლა'; btn.disabled = false; }
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// REGISTER — მხოლოდ ფორმის ველებიდან
+// ══════════════════════════════════════════════════════════
+async function doRegister() {
+  const emailEl    = document.getElementById('reg-email');
+  const usernameEl = document.getElementById('reg-username');
+  const passEl     = document.getElementById('reg-pass');
+  if (!emailEl || !usernameEl || !passEl) { showToast('ფორმა ვერ მოიძებნა', 'err'); return; }
+  const email    = emailEl.value.trim();
+  const username = usernameEl.value.trim();
+  const pass     = passEl.value;
+  if (!email || !username || !pass) { showToast('შეავსე ყველა ველი', 'err'); return; }
+  if (pass.length < 6) { showToast('პაროლი — მინ. 6 სიმბოლო', 'err'); return; }
+  if (!/^[a-zA-Z0-9_]{3,30}$/.test(username)) { showToast('Username: მხოლოდ ლათ. სიმბ., 3-30 სიმბ.', 'err'); return; }
+  const btn = document.querySelector('#reg-form .btn-a');
+  if (btn) { btn.textContent = '⏳ იქმნება...'; btn.disabled = true; }
+  try {
+    const data = await api('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ email, password: pass, username, display_name: username })
+    });
+    setToken(data.token);
+    currentUser = data.user;
+    closeM('loginModal');
+    updateNavUser();
+    showToast('✅ რეგისტრაცია დასრულდა!', 'ok');
+  } catch (e) {
+    showToast(e.message || 'რეგისტრაცია ვერ მოხდა', 'err');
+  } finally {
+    if (btn) { btn.textContent = 'რეგისტრაცია'; btn.disabled = false; }
+  }
+}
+
+// Google OAuth
+function googleAuth() {
+  window.location.href = API_URL + '/api/auth/google';
+}
+
+// Google callback
+function checkAuthCallback() {
+  const params = new URLSearchParams(window.location.search);
+  const token  = params.get('token');
+  const status = params.get('auth');
+  if (token) {
+    setToken(token);
+    window.history.replaceState({}, '', window.location.pathname);
+    loadCurrentUser();
+    showToast('✅ Google-ით შეხვედი!', 'ok');
+  } else if (status === 'error') {
+    showToast('Google შესვლა ვერ მოხდა', 'err');
+  }
+}
+
+// Logout
+function doLogout() {
+  clearToken();
+  currentUser = null;
+  updateNavUser();
+  pg('home');
+  act(document.querySelectorAll('.nl')[0]);
+  showToast('გამოხვედი', 'ok');
+}
+
+// ══════════════════════════════════════════════════════════
+// LOAD CURRENT USER
+// ══════════════════════════════════════════════════════════
+async function loadCurrentUser() {
+  if (!getToken()) { updateNavUser(); return; }
+  try {
+    currentUser = await api('/api/auth/me');
+    updateNavUser();
+  } catch (e) {
+    clearToken();
+    currentUser = null;
+    updateNavUser();
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// PUSH NOTIFICATIONS (Web Push)
+// ══════════════════════════════════════════════════════════
+let swRegistration = null;
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64  = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw     = atob(base64);
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
+
+async function registerServiceWorker() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null;
+  try {
+    swRegistration = await navigator.serviceWorker.register('/sw.js');
+    return swRegistration;
+  } catch (e) {
+    console.error('SW register failed:', e);
+    return null;
+  }
+}
+
+// ფეიჯის ჩატვირთვისას — toggle-ის მდგ. დასინქ. (აქვს თუ არა აქტ. გამოწერა)
+async function syncPushToggleState() {
+  const tog = document.getElementById('tog-push');
+  if (!tog) return;
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    tog.classList.remove('on');
+    tog.style.opacity = '0.4';
+    tog.title = 'ბრაუზერი push-ს არ უჭერს მხარს';
+    return;
+  }
+  try {
+    const reg = swRegistration || await navigator.serviceWorker.getRegistration();
+    const sub = reg ? await reg.pushManager.getSubscription() : null;
+    tog.classList.toggle('on', !!sub);
+  } catch (e) { /* ignore */ }
+}
+
+// toggle დაკლიკზე — subscribe/unsubscribe
+async function togglePushNotifications(el) {
+  if (!currentUser) { showToast('ჯერ შედი სისტემაში', 'err'); return; }
+
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    showToast('ბრაუზერი push შეტყობ-ს არ უჭერს მხარს', 'err');
+    return;
+  }
+
+  const turningOn = !el.classList.contains('on');
+
+  try {
+    if (turningOn) {
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') {
+        showToast('ბრაუზერ-ში push შეტყობ. დაბლოკილია', 'err');
+        return;
+      }
+
+      const reg = swRegistration || await registerServiceWorker();
+      if (!reg) { showToast('Service Worker ჩატვირთვა ვერ მოხერხდა', 'err'); return; }
+
+      const { publicKey } = await api('/api/push/vapid-key');
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      });
+
+      await api('/api/push/subscribe', {
+        method: 'POST',
+        body: JSON.stringify({ subscription: sub.toJSON() }),
+      });
+
+      el.classList.add('on');
+      showToast('🔔 Push შეტყობ. ჩაირთო', 'ok');
+    } else {
+      const reg = swRegistration || await navigator.serviceWorker.getRegistration();
+      const sub = reg ? await reg.pushManager.getSubscription() : null;
+      if (sub) {
+        await api('/api/push/unsubscribe', {
+          method: 'POST',
+          body: JSON.stringify({ endpoint: sub.endpoint }),
+        });
+        await sub.unsubscribe();
+      }
+      el.classList.remove('on');
+      showToast('Push შეტყობ. გათ. შეჩერდა', 'ok');
+    }
+  } catch (e) {
+    console.error('push toggle error:', e);
+    showToast(e?.error === 'push_not_configured' ? 'Push სერვერ-ზე კონფიგ. არაა' : 'შეცდომა Push-ის ჩართვისას', 'err');
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// PROFILE
+// ══════════════════════════════════════════════════════════
+async function loadMyProfile() {
+  if (!currentUser) return;
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  set('prof-name-display', currentUser.display_name || currentUser.username || '');
+  set('prof-handle-display', '@' + (currentUser.username || ''));
+  set('prof-bio-display', currentUser.bio || '');
+  set('prof-sales',         currentUser.completed_orders || 0);
+  set('prof-rating',        currentUser.avg_rating > 0 ? Number(currentUser.avg_rating).toFixed(1) : '—');
+  set('prof-reviews-count', currentUser.review_count || 0);
+  set('prof-disputes',      0);
+
+  // edit გვ. — რეალური მონაცემები
+  const editName    = document.getElementById('edit-name');
+  const editHandle  = document.getElementById('edit-handle');
+  const editBio     = document.getElementById('edit-bio');
+  const editEmail   = document.getElementById('edit-email');
+  const editDiscord = document.getElementById('edit-discord');
+  const editSteam   = document.getElementById('edit-steam');
+  const authMethod  = document.getElementById('edit-auth-method');
+  const authEmail   = document.getElementById('edit-auth-email');
+
+  if (editName)    editName.value    = currentUser.display_name || '';
+  if (editHandle)  editHandle.value  = currentUser.username || '';
+  if (editBio)     editBio.value     = currentUser.bio || '';
+  if (editEmail)   editEmail.value   = currentUser.email || '';
+  if (editDiscord) editDiscord.value = currentUser.discord_handle || '';
+  if (editSteam)   editSteam.value   = currentUser.steam_id || '';
+  if (authMethod)  authMethod.textContent = currentUser.auth_provider === 'google' ? 'Google/Gmail OAuth' : 'ელ-ფოსტა';
+  if (authEmail)   authEmail.textContent  = currentUser.email || '';
+
+  // ავატარი
+  if (currentUser.avatar_url) {
+    const src     = API_URL + currentUser.avatar_url;
+    const profAva = document.getElementById('prof-ava-display');
+    const avaPrev = document.getElementById('ava-prev');
+    const navAva  = document.getElementById('nav-ava');
+    const style   = 'width:100%;height:100%;object-fit:cover;border-radius:inherit';
+    if (profAva) profAva.innerHTML = `<img src="${src}" style="${style}">`;
+    if (avaPrev) avaPrev.innerHTML = `<img src="${src}" style="${style}">`;
+    if (navAva && !navAva.querySelector('img')) navAva.innerHTML = `<img src="${src}" style="${style}">`;
+  } else {
+    const profAva = document.getElementById('prof-ava-display');
+    if (profAva) profAva.textContent = (currentUser.display_name || currentUser.username || '?').slice(0,2).toUpperCase();
+  }
+
+  // badges
+  const badges = document.getElementById('prof-badges');
+  if (badges) {
+    let b = '';
+    if (currentUser.is_verified_seller) b += '<span class="pb pb-v">✓ ვერიფ.</span>';
+    if (currentUser.role === 'admin')    b += `<span class="pb pb-t" style="cursor:pointer" onclick="window.open('/admin.html','_blank')">⚙️ Admin Panel →</span>`;
+    badges.innerHTML = b;
+  }
+
+  syncPushToggleState();
+
+  loadMyListings();
+}
+
+async function loadMyListings() {
+  if (!currentUser) return;
+  try {
+    // seller_id პარამეტრი backend-ს გადაეცემა სწორი ID-ით
+    // include_sold=true — საკუთარი გაყიდული განცხ-ებიც ჩანდეს
+    const data = await api(
+      '/api/listings?seller_id=' + encodeURIComponent(currentUser.id) +
+      '&include_sold=true&limit=20'
+    );
+    const grid = document.getElementById('prof-grid');
+    if (!grid) return;
+    if (data.listings && data.listings.length) {
+      renderGrid('prof-grid', data.listings.map(mapApiListing), true);
+    } else {
+      grid.innerHTML = '<div class="empty"><div class="empty-ico">📦</div><div class="empty-t">განცხადებები ჯერ არ გაქვს</div></div>';
+    }
+  } catch (e) {
+    console.error('loadMyListings:', e);
+  }
+}
+
+async function saveProfile() {
+  if (!currentUser) { showToast('ჯერ შედი სისტემაში', 'err'); return; }
+  const display_name    = (document.getElementById('edit-name')    || {}).value?.trim();
+  const bio             = (document.getElementById('edit-bio')     || {}).value?.trim();
+  const discord_handle  = (document.getElementById('edit-discord') || {}).value?.trim();
+  const steam_id        = (document.getElementById('edit-steam')   || {}).value?.trim();
+  const btn = document.querySelector('#page-edit .btn-a');
+  if (btn) { btn.textContent = '⏳ ინახება...'; btn.disabled = true; }
+  try {
+    const updated = await api('/api/auth/me', {
+      method: 'PUT',
+      body: JSON.stringify({ display_name, bio, discord_handle, steam_id })
+    });
+    currentUser = { ...currentUser, ...updated };
+    updateNavUser();
+    loadMyProfile();
+    showToast('✅ შენახულია!', 'ok');
+    setTimeout(() => { pg('profile'); act(document.querySelectorAll('.nl')[4]); }, 700);
+  } catch (e) {
+    showToast('შეცდომა შენახვისას', 'err');
+  } finally {
+    if (btn) { btn.textContent = '✓ შენახვა'; btn.disabled = false; }
+  }
+}
+
+async function previewAva(input) {
+  const file = input.files[0]; if (!file) return;
+  const r = new FileReader();
+  r.onload = e => {
+    const src = e.target.result;
+    const prev = document.getElementById('ava-prev');
+    if (prev) prev.innerHTML = `<img src="${src}" style="width:100%;height:100%;object-fit:cover;border-radius:14px">`;
+  };
+  r.readAsDataURL(file);
+  if (!currentUser) { showToast('ჯერ შედი სისტემაში', 'err'); return; }
+  try {
+    const fd = new FormData(); fd.append('avatar', file);
+    const res = await fetch(API_URL + '/api/users/me/avatar', {
+      method: 'POST', headers: { Authorization: 'Bearer ' + getToken() }, body: fd
+    });
+    const data = await res.json();
+    if (data.avatar_url) {
+      currentUser.avatar_url = data.avatar_url;
+      updateNavUser();
+      const profAva = document.getElementById('prof-ava-display');
+      if (profAva) profAva.innerHTML = `<img src="${API_URL + data.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:14px">`;
+      showToast('✅ ავატარი შეიცვალა!', 'ok');
+    }
+  } catch (e) { showToast('ატვირთვა ვერ მოხდა', 'err'); }
+}
+
+// ══════════════════════════════════════════════════════════
+// WALLET
+// ══════════════════════════════════════════════════════════
+async function loadWallet() {
+  if (!currentUser) { updateNavUser(); return; }
+  try {
+    const data = await api('/api/wallet/balance');
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    set('w-bal-display', '₾' + data.balance_gel.toFixed(2));
+    set('nav-bal', '₾' + data.balance_gel.toFixed(2));
+    set('w-sub-display', `≈ $${(data.balance_gel / data.exchange_rate).toFixed(2)} · კურსი: 1$ = ₾${data.exchange_rate}`);
+    set('w-escrow', '₾' + (data.escrow_hold_gel || 0).toFixed(2));
+    loadTransactions();
+  } catch (e) { console.error('wallet error:', e); }
+}
+
+async function loadTransactions() {
+  if (!currentUser) return;
+  try {
+    const rows = await api('/api/wallet/transactions');
+    const wrap = document.getElementById('tx-list-wrap');
+    if (!wrap) return;
+    if (!rows || !rows.length) {
+      wrap.innerHTML = '<div class="tx-h">ტრანზაქციები</div><div class="empty" style="padding:32px"><div class="empty-ico">📋</div><div class="empty-t">ტრანზაქციები ჯერ არ არის</div></div>';
+      return;
+    }
+    const icons = { deposit:'🏦', withdrawal:'📤', purchase:'🛒', sale_income:'💰', escrow_hold:'🔒', escrow_release:'✅', escrow_refund:'↩️', vip_purchase:'⭐', platform_fee:'💸' };
+    const cls   = { deposit:'in', sale_income:'in', escrow_refund:'in', withdrawal:'out', purchase:'out', platform_fee:'out', escrow_hold:'hold' };
+    const lbl   = { in:'შემოსული', out:'გამოხარჯული', hold:'მიმდინარე' };
+    const html  = rows.slice(0, 20).map(t => {
+      const c = cls[t.type] || 'hold';
+      const sign = Number(t.amount_gel) > 0 ? '+' : '';
+      const d = new Date(t.created_at).toLocaleDateString('ka-GE');
+      return `<div class="tx-row">
+        <div class="tx-ico ${c}">${icons[t.type] || '💳'}</div>
+        <div class="tx-info"><div class="tx-t">${t.description || t.type}</div><div class="tx-d">${d}</div>
+        <span class="tx-s ${c==='in'?'sd':c==='out'?'sf':'sp'}">${lbl[c]}</span></div>
+        <div><div class="tx-amt ${c}">${sign}₾${Math.abs(Number(t.amount_gel)).toFixed(2)}</div></div>
+      </div>`;
+    }).join('');
+    wrap.innerHTML = '<div class="tx-h">ტრანზაქციების ისტორია</div>' + html;
+  } catch (e) {}
+}
+
+// ══════════════════════════════════════════════════════════
+// LISTINGS
+// ══════════════════════════════════════════════════════════
+function mapApiListing(l) {
+  return {
+    title: l.title, game: l.game || '', type: l.listing_type || '',
+    tags: l.tags || [], price: Number(l.price_gel),
+    seller: l.seller_username || l.username || '?',
+    si: (l.seller_name || l.seller_username || '?').slice(0, 2).toUpperCase(),
+    sc: 'var(--accent)', r: Number(l.seller_rating) || 0,
+    rc: Number(l.seller_review_count) || 0,
+    vip: l.is_vip, cat: l.category, id: l.id
+  };
+}
+
+function buildCard(l, isMob) {
+  const g = CUR === 'GEL';
+  const rate = 2.74;
+  const price = g ? '₾' + l.price : '$' + (l.price / rate).toFixed(0);
+  const psub  = g ? '$' + (l.price / rate).toFixed(0) : '₾' + l.price;
+  const ico = '🎮';
+  const lid = l.id || '';
+  return `<div class="lcard${l.vip ? ' vip' : ''}" onclick="openListing('${lid}','${(l.title||'').replace(/'/g,"\'")}',${l.price})">
+    <div class="lcard-img"><div class="lcard-img-bg">${ico}</div><span style="font-size:34px;position:relative;z-index:1">${ico}</span></div>
+    <div class="lcard-body">
+      <div class="lcard-game">${l.game} · ${l.type}</div>
+      <div class="lcard-title">${l.title}</div>
+      <div class="lcard-tags">${(l.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+      <div class="lcard-foot">
+        <div class="lcard-seller"><div class="s-ava" style="color:${l.sc}">${l.si}</div>
+        <div><div class="s-name">${l.seller}</div><div class="s-rat">★${l.r}(${l.rc})</div></div></div>
+        <div><div class="lcard-price">${price}</div><div class="lcard-price-s">${psub}</div></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderGrid(id, items, mob) {
+  const el = document.getElementById(id); if (!el) return;
+  if (!items || !items.length) {
+    el.innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="empty-ico">🔍</div><div class="empty-t">განცხადებები ვერ მოიძებნა</div></div>';
+    return;
+  }
+  el.innerHTML = items.map(l => buildCard(l, mob)).join('');
+}
+
+async function loadListingsFromAPI(gridId, params = {}) {
+  try {
+    const q = new URLSearchParams({ limit: 12, ...params }).toString();
+    const data = await api('/api/listings?' + q);
+    if (data.listings && data.listings.length) {
+      renderGrid(gridId, data.listings.map(mapApiListing), true);
+      const cnt = document.getElementById('l-count');
+      if (cnt) cnt.textContent = data.total + ' განცხ.';
+      return true;
+    }
+  } catch (e) { console.error('listings error:', e); }
+  return false;
+}
+
+// ── Listing Detail ────────────────────────────────────────────
+let currentListing = null;
+
+async function openListing(id, title, price) {
+  // ჯერ basic info ვაჩვენოთ
+  currentListing = { id, title, price };
+  document.getElementById('lm-title').textContent    = title;
+  document.getElementById('lm-price').textContent    = '₾' + price;
+  document.getElementById('lm-buy-price').textContent= '₾' + price;
+  document.getElementById('lm-game').textContent     = '';
+  document.getElementById('lm-tags').innerHTML       = '';
+  document.getElementById('lm-seller-name').textContent = '...';
+
+  // auth state
+  const guestMsg = document.getElementById('lm-guest-msg');
+  const actions  = document.getElementById('lm-actions');
+  if (currentUser) {
+    if (guestMsg) guestMsg.style.display = 'none';
+    if (actions)  actions.style.display  = 'block';
+  } else {
+    if (guestMsg) guestMsg.style.display = 'block';
+    if (actions)  actions.style.display  = 'none';
+  }
+
+  openM('listingModal');
+
+  // API-დან სრული ინფო
+  try {
+    const l = await api('/api/listings/' + id);
+    currentListing = l;
+    document.getElementById('lm-game').textContent  = (l.game || '') + ' · ' + (l.listing_type || '');
+    document.getElementById('lm-title').textContent = l.title;
+    document.getElementById('lm-price').textContent = '₾' + Number(l.price_gel).toFixed(2);
+    document.getElementById('lm-buy-price').textContent = '₾' + Number(l.price_gel).toFixed(2);
+
+    // VIP badge
+    const vipBadge = document.getElementById('lm-vip-badge');
+    if (vipBadge) vipBadge.style.display = l.is_vip ? 'inline-block' : 'none';
+
+    // tags
+    const tagsEl = document.getElementById('lm-tags');
+    if (tagsEl && l.tags && l.tags.length) {
+      tagsEl.innerHTML = l.tags.map(t => `<span class="tag">${t}</span>`).join('');
+    }
+
+    // description
+    const descWrap = document.getElementById('lm-desc-wrap');
+    const descEl   = document.getElementById('lm-desc');
+    if (descWrap && descEl && l.description) {
+      descWrap.style.display = 'block';
+      descEl.textContent = l.description;
+    }
+
+    // seller
+    const sellerName  = document.getElementById('lm-seller-name');
+    const sellerStats = document.getElementById('lm-seller-stats');
+    const sellerAva   = document.getElementById('lm-seller-ava');
+    if (sellerName)  sellerName.textContent  = l.seller_name || l.seller_username || '?';
+    if (sellerStats) sellerStats.textContent =
+      '★ ' + (Number(l.seller_rating) || 0).toFixed(1) +
+      ' · ' + (l.seller_review_count || 0) + ' შეფ.' +
+      ' · ' + (l.seller_completed || 0) + ' გაყ.';
+    if (sellerAva) {
+      if (l.seller_avatar) {
+        sellerAva.innerHTML = `<img src="${API_URL + l.seller_avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+      } else {
+        sellerAva.textContent = (l.seller_name || '?').slice(0,2).toUpperCase();
+      }
+    }
+  } catch(e) {
+    console.error('listing detail:', e);
+  }
+}
+
+// ── Buy Listing ────────────────────────────────────────────────
+async function buyListing() {
+  if (!currentUser) { openM('loginModal'); return; }
+  if (!currentListing) return;
+
+  const price = Number(currentListing.price_gel || currentListing.price);
+  const bal   = Number(currentUser.balance_gel) || 0;
+
+  if (bal < price) {
+    showToast(`ბალანსი არ კმარა. გჭირდება ₾${price.toFixed(2)}, გაქვს ₾${bal.toFixed(2)}`, 'err');
+    setTimeout(() => { closeM('listingModal'); pg('wallet'); act(document.querySelectorAll('.nl')[3]); }, 1500);
+    return;
+  }
+
+  // საკუთარ განცხადებას ვერ ყიდულობ
+  if (currentListing.seller_id === currentUser.id) {
+    showToast('საკუთარ განცხადებას ვერ ყიდულობ', 'err'); return;
+  }
+
+  const btn = document.getElementById('lm-buy-btn');
+  if (btn) { btn.textContent = '⏳ იქმნება...'; btn.disabled = true; }
+
+  try {
+    const order = await api('/api/orders', {
+      method: 'POST',
+      body: JSON.stringify({ listing_id: currentListing.id })
+    });
+
+    closeM('listingModal');
+
+    // success modal
+    const amtEl = document.getElementById('order-success-amount');
+    if (amtEl) amtEl.textContent = '₾' + price.toFixed(2);
+    openM('orderSuccessModal');
+
+    // balance განახლება
+    await loadCurrentUser();
+    loadWallet();
+
+  } catch(e) {
+    showToast(e.message || 'შეკვეთა ვერ შეიქმნა', 'err');
+  } finally {
+    if (btn) { btn.textContent = '🛒 ყიდვა — ₾' + price.toFixed(2); btn.disabled = false; }
+  }
+}
+
+// ── Seller Profile ─────────────────────────────────────────────
+let currentSellerId = null;
+
+async function openSellerProfile() {
+  if (!currentListing) return;
+  const sellerId = currentListing.seller_id;
+  if (!sellerId) return;
+  currentSellerId = sellerId;
+
+  // reset
+  document.getElementById('sm-name').textContent    = '...';
+  document.getElementById('sm-handle').textContent  = '';
+  document.getElementById('sm-bio').textContent     = '';
+  document.getElementById('sm-sales').textContent   = '0';
+  document.getElementById('sm-rating').textContent  = '—';
+  document.getElementById('sm-reviews').textContent = '0';
+  document.getElementById('sm-listings').innerHTML  = '<div style="font-size:12px;color:var(--muted);padding:8px">იტვირთება...</div>';
+  document.getElementById('sm-reviews-list').innerHTML = '';
+  openM('sellerModal');
+
+  try {
+    const [profile, reviews] = await Promise.all([
+      api('/api/users/' + sellerId),
+      api('/api/reviews/seller/' + sellerId)
+    ]);
+
+    document.getElementById('sm-name').textContent    = profile.display_name || profile.username;
+    document.getElementById('sm-handle').textContent  = '@' + profile.username;
+    document.getElementById('sm-bio').textContent     = profile.bio || '';
+    document.getElementById('sm-sales').textContent   = profile.completed_orders || 0;
+    document.getElementById('sm-rating').textContent  = Number(profile.avg_rating) > 0
+      ? Number(profile.avg_rating).toFixed(1) + ' ★' : '—';
+    document.getElementById('sm-reviews').textContent = profile.review_count || 0;
+
+    // avatar
+    const avaEl = document.getElementById('sm-ava');
+    if (avaEl) {
+      if (profile.avatar_url) {
+        avaEl.innerHTML = `<img src="${API_URL + profile.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:14px">`;
+      } else {
+        avaEl.textContent = (profile.display_name || '?').slice(0,2).toUpperCase();
+      }
+    }
+
+    // listings
+    const listEl = document.getElementById('sm-listings');
+    if (listEl && profile.listings && profile.listings.length) {
+      listEl.innerHTML = profile.listings.map(l => `
+        <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border-radius:7px;padding:9px 12px;cursor:pointer"
+             onclick="closeM('sellerModal');openListing('${l.id}','${(l.title||'').replace(/'/g,"\'")}',${l.price_gel})">
+          <div>
+            <div style="font-size:12px;font-weight:600">${l.title}</div>
+            <div style="font-size:10px;color:var(--muted)">${l.game} · ${l.listing_type}</div>
+          </div>
+          <div style="font-family:var(--mono);font-size:14px;font-weight:700;color:var(--accent)">₾${Number(l.price_gel).toFixed(0)}</div>
+        </div>
+      `).join('');
+    } else if (listEl) {
+      listEl.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:8px">განცხადებები არ არის</div>';
+    }
+
+    // reviews
+    const revEl = document.getElementById('sm-reviews-list');
+    if (revEl && reviews && reviews.length) {
+      revEl.innerHTML = reviews.slice(0,5).map(r => `
+        <div style="background:var(--bg3);border-radius:7px;padding:9px 12px;margin-bottom:6px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+            <span style="font-size:11px;font-weight:600">${r.reviewer_username || '?'}</span>
+            <span style="color:var(--gold);font-size:11px">${'★'.repeat(r.rating)}</span>
+          </div>
+          <div style="font-size:12px;color:var(--muted2)">${r.comment || ''}</div>
+        </div>
+      `).join('');
+    } else if (revEl) {
+      revEl.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:8px">შეფასებები არ არის</div>';
+    }
+  } catch(e) {
+    console.error('seller profile:', e);
+    showToast('გამყიდვ. ინფო ვერ ჩაიტვირთა', 'err');
+  }
+}
+
+function filterL(q) {
+  const params = { limit: 20 };
+  if (q) params.search = q;
+  if (FILT && FILT !== 'ყველა' && FILT !== 'VIP') params.category = FILT;
+  if (FILT === 'VIP') params.vip = 'true';
+  loadListingsFromAPI('l-grid', params).then(ok => {
+    if (!ok) {
+      const el = document.getElementById('l-grid');
+      if (el) el.innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="empty-ico">🔍</div><div class="empty-t">განცხადებები ვერ მოიძებნა</div></div>';
+    }
+  });
+}
+
+function filt(btn, cat) {
+  document.querySelectorAll('#page-listings .fbtn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  FILT = cat;
+  const catLabels = {
+    'ყველა':'ყველა განცხადება', 'mobile':'📱 მობილური', 'pc':'🖥️ PC / Console',
+    'social':'📲 სოციალური', 'boosting':'⚡ ბუსტინგი', 'currency':'💎 ვალუტა', 'VIP':'⭐ VIP'
+  };
+  const title = document.getElementById('l-title');
+  if (title) title.textContent = catLabels[cat] || cat;
+  filterL(document.getElementById('s-input')?.value || '');
+}
+
+function setCur(btn, cur) {
+  document.querySelectorAll('.ct').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  CUR = cur;
+  filterL(document.getElementById('s-input')?.value || '');
+  showToast(cur === 'GEL' ? '₾ GEL' : '$ USD', 'ok');
+}
+
+function goCategory(cat) {
+  pg('listings'); act(document.querySelectorAll('.nl')[1]);
+  // cat-card-ებიდან მოდის ქართული label — API value-ზე ვაქცევთ
+  const catMap = {
+    'მობილური': 'mobile', 'PC': 'pc', 'სოც': 'social',
+    'ბუსტინგი': 'boosting', 'ვალუტა': 'currency',
+    // API value-ებიც პირდაპ. გაატარე
+    'mobile':'mobile','pc':'pc','social':'social','boosting':'boosting','currency':'currency'
+  };
+  const apiCat = catMap[cat] || cat;
+  setTimeout(() => {
+    const btns = [...document.querySelectorAll('#page-listings .fbtn')];
+    // API value-ით ვეძებთ onclick attribute-ში
+    const btn = btns.find(b => b.getAttribute('onclick')?.includes(`'${apiCat}'`));
+    if (btn) filt(btn, apiCat);
+    else {
+      // fallback — პირდაპ. API call
+      FILT = apiCat;
+      filterL('');
+    }
+  }, 60);
+}
+
+// ══════════════════════════════════════════════════════════
+// GAME HUB
+// ══════════════════════════════════════════════════════════
+const MOBILE_GAMES = [
+  { id:'pubg',    name:'PUBG Mobile',       ico:'🎯', color:'#f0b42918', desc:'Battle Royale · Conqueror' },
+  { id:'arena',   name:'Arena Breakout',    ico:'🔫', color:'#e05d5d18', desc:'Hardcore Extraction Shooter' },
+  { id:'codm',    name:'CoD Mobile',        ico:'💥', color:'#9d7df518', desc:'Warzone Mobile' },
+  { id:'mlbb',    name:'Mobile Legends',    ico:'⚔️', color:'#4d9de018', desc:'MOBA · Bang Bang' },
+  { id:'brawl',   name:'Brawl Stars',       ico:'⭐', color:'#f0b42918', desc:'Supercell · Trophies' },
+  { id:'clash',   name:'Clash of Clans',    ico:'🏰', color:'#00ffb318', desc:'CoC · Clash Royale' },
+  { id:'genshin', name:'Genshin Impact',    ico:'✨', color:'#9d7df518', desc:'miHoYo · Honkai Star Rail' },
+  { id:'roblox',  name:'Roblox',            ico:'🟥', color:'#e05d5d18', desc:'Blox Fruits · Adopt Me' }
+];
+
+function renderMobileGames() {
+  const el = document.getElementById('mobile-games-grid'); if (!el) return;
+  el.innerHTML = MOBILE_GAMES.map(g =>
+    `<div class="game-mini" onclick="openGameHub('${g.id}')">
+      <div class="ico">${g.ico}</div>
+      <div class="gname">${g.name}</div>
+      <div class="gcnt">განცხ. ─</div>
+    </div>`
+  ).join('');
+}
+
+function openGameHub(id) {
+  curGame = MOBILE_GAMES.find(g => g.id === id); if (!curGame) return;
+  document.getElementById('gh-ico').textContent = curGame.ico;
+  document.getElementById('gh-ico').style.background = curGame.color;
+  document.getElementById('gh-title').textContent = curGame.name;
+  document.getElementById('gh-desc').textContent  = curGame.desc;
+  document.querySelectorAll('#gh-tabs .gtab').forEach((t, i) => t.classList.toggle('on', i === 0));
+  curGameTab = 0; renderGameTab();
+  pg('game');
+  document.querySelectorAll('.nl').forEach(n => n.classList.remove('on'));
+}
+
+async function renderGameTab() {
+  if (!curGame) return;
+  const typeMap = { 0: 'account', 1: 'boosting', 2: 'currency' };
+  const ok = await loadListingsFromAPI('gh-grid', { game: curGame.name, listing_type: typeMap[curGameTab], limit: 20 });
+  if (!ok) {
+    const el = document.getElementById('gh-grid');
+    if (el) el.innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="empty-ico">${curGame.ico}</div><div class="empty-t">ამ კატეგორიაში განცხადებები ჯერ არ არის</div></div>`;
+  }
+}
+
+function ghTab(el, idx) {
+  document.querySelectorAll('#gh-tabs .gtab').forEach(t => t.classList.remove('on'));
+  el.classList.add('on'); curGameTab = idx; renderGameTab();
+}
+
+function getAllListings() { return []; }
+
+// ══════════════════════════════════════════════════════════
+// CHAT
+// ══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
+// CHAT — WebSocket + REST
+// ══════════════════════════════════════════════════════════
+let wsConn        = null;   // WebSocket კავშირი
+let currentRoomId = null;   // გახსნილი ოთახი
+let currentOrderId= null;   // ოთახის ორდ.
+let wsReconnTimer = null;
+
+const WS_URL = API_URL.replace('https://', 'wss://').replace('http://', 'ws://');
+
+// ── ოთახების სია ──────────────────────────────────────────────
+async function loadChatRooms() {
+  const el = document.getElementById('chat-list');
+  if (!el) return;
+
+  if (!currentUser) {
+    el.innerHTML = `<div class="empty" style="padding:24px;text-align:center">
+      <div style="font-size:28px;margin-bottom:8px">🔒</div>
+      <div style="font-size:12px;color:var(--muted)">ჩათი ხელმისაწვდომია<br>ავტორიზაციის შემდეგ</div>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = '<div style="padding:12px;text-align:center;font-size:11px;color:var(--muted)">⏳ იტვირთება...</div>';
+
+  try {
+    const rooms = await api('/api/chat/rooms');
+    if (!rooms || !rooms.length) {
+      el.innerHTML = `<div class="empty" style="padding:24px;text-align:center">
+        <div style="font-size:28px;margin-bottom:8px">💬</div>
+        <div style="font-size:12px;color:var(--muted)">ჩატები გამოჩნდება<br>შეკვეთის შემდეგ</div>
+      </div>`;
+      return;
+    }
+
+    el.innerHTML = rooms.map(r => {
+      const isA      = r.participant_a === currentUser.id;
+      const partner  = isA ? r.participant_b_name : r.participant_a_name;
+      const initials = (partner || '?').slice(0,2).toUpperCase();
+      const lastMsg  = r.last_message || 'შეტყობინება არ არის';
+      const unread   = Number(r.unread_count) || 0;
+      const time     = r.last_message_at
+        ? new Date(r.last_message_at).toLocaleTimeString('ka-GE', {hour:'2-digit',minute:'2-digit'})
+        : '';
+      const active   = r.id === currentRoomId ? ' on' : '';
+
+      return `<div class="ci${active}" data-room="${r.id}" data-order="${r.order_id}" data-amount="${r.amount_gel}" data-escrow="${r.escrow_status}" data-partner="${partner}" onclick="openChatRoom(this)">
+        <div class="ci-av" style="color:var(--blue)">${initials}</div>
+        <div class="ci-inf">
+          <div class="ci-n">${partner || '?'}</div>
+          <div class="ci-l">${r.listing_title || ''}</div>
+          <div class="ci-l" style="font-size:10px">${lastMsg}</div>
+        </div>
+        <div class="ci-m">
+          <span class="ci-t">${time}</span>
+          ${unread ? `<span class="ci-u">${unread}</span>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    console.error('chat rooms:', e);
+    el.innerHTML = '<div style="padding:12px;text-align:center;font-size:11px;color:var(--muted)">ჩატვირთვა ვერ მოხდა</div>';
+  }
+}
+
+// ── ოთახის გახსნა ─────────────────────────────────────────────
+async function openChatRoom(el) {
+  // active class
+  document.querySelectorAll('.ci').forEach(c => c.classList.remove('on'));
+  el.classList.add('on');
+
+  const roomId   = el.dataset.room;
+  const orderId  = el.dataset.order;
+  const amount   = el.dataset.amount;
+  const escrow   = el.dataset.escrow;
+  const partner  = el.dataset.partner;
+
+  currentRoomId  = roomId;
+  currentOrderId = orderId;
+
+  // header
+  const nameEl  = document.getElementById('chat-partner-name');
+  const infoEl  = document.getElementById('chat-order-info');
+  const avaEl   = document.getElementById('chat-partner-ava');
+  if (nameEl)  nameEl.textContent  = partner || '?';
+  if (infoEl)  infoEl.textContent  = `ორდ. · ₾${Number(amount).toFixed(2)}`;
+  if (avaEl)   avaEl.textContent   = (partner||'?').slice(0,2).toUpperCase();
+
+  // escrow pill
+  const pillEl    = document.getElementById('chat-escrow-pill');
+  const pillText  = document.getElementById('chat-pill-text');
+  const confirmBtn= document.getElementById('chat-confirm-btn');
+  if (pillEl) {
+    const showPill = escrow === 'held';
+    pillEl.style.display = showPill ? 'block' : 'none';
+    if (pillText)   pillText.textContent  = `Escrow · ₾${Number(amount).toFixed(2)}`;
+    // confirm ღილაკი მხოლოდ მყიდველს
+    if (confirmBtn) {
+      const order = await api('/api/orders/' + orderId).catch(()=>null);
+      if (order && order.buyer_id === currentUser.id && escrow === 'held') {
+        confirmBtn.style.display = 'inline-block';
+      } else {
+        confirmBtn.style.display = 'none';
+      }
+    }
+  }
+
+  // input area
+  const inputArea = document.getElementById('chat-input-area');
+  if (inputArea) inputArea.style.display = 'block';
+
+  // შეტყობ. ისტ.
+  await loadMessages(roomId);
+
+  // WebSocket კავშირი
+  connectWS(roomId);
+}
+
+// ── შეტყობინებების ჩატვირთვა ──────────────────────────────────
+async function loadMessages(roomId) {
+  const msgsEl = document.getElementById('chat-msgs');
+  if (!msgsEl) return;
+  msgsEl.innerHTML = '<div style="text-align:center;padding:20px;font-size:11px;color:var(--muted)">⏳ იტვირთება...</div>';
+
+  try {
+    const msgs = await api('/api/chat/rooms/' + roomId + '/messages');
+    renderMessages(msgs);
+  } catch(e) {
+    msgsEl.innerHTML = '<div style="text-align:center;padding:20px;font-size:11px;color:var(--muted)">ჩატვირთვა ვერ მოხდა</div>';
+  }
+}
+
+function renderMessages(msgs) {
+  const msgsEl = document.getElementById('chat-msgs');
+  if (!msgsEl) return;
+
+  if (!msgs || !msgs.length) {
+    msgsEl.innerHTML = '<div class="empty" style="margin:auto;text-align:center;opacity:.4"><div style="font-size:28px;margin-bottom:6px">💬</div><div style="font-size:12px">პირველი შეტყობინება გაგზავნე</div></div>';
+    return;
+  }
+
+  msgsEl.innerHTML = msgs.map(m => {
+    const isMe = m.sender_id === currentUser.id;
+    const time  = new Date(m.created_at).toLocaleTimeString('ka-GE', {hour:'2-digit',minute:'2-digit'});
+    return `<div class="msg ${isMe ? 'me' : 'u'}">
+      <div class="msg-b">${escHtml(m.content)}</div>
+      <div class="msg-t">${time}</div>
+    </div>`;
+  }).join('');
+
+  msgsEl.scrollTop = msgsEl.scrollHeight;
+}
+
+function escHtml(str) {
+  return (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function appendMessage(m) {
+  const msgsEl = document.getElementById('chat-msgs');
+  if (!msgsEl) return;
+  // ცარიელ state-ს წავშლით
+  const empty = msgsEl.querySelector('.empty');
+  if (empty) empty.remove();
+
+  const isMe = m.sender_id === currentUser.id;
+  const time  = new Date(m.created_at||Date.now()).toLocaleTimeString('ka-GE',{hour:'2-digit',minute:'2-digit'});
+  const div = document.createElement('div');
+  div.className = `msg ${isMe ? 'me' : 'u'}`;
+  div.innerHTML = `<div class="msg-b">${escHtml(m.content)}</div><div class="msg-t">${time}</div>`;
+  msgsEl.appendChild(div);
+  msgsEl.scrollTop = msgsEl.scrollHeight;
+}
+
+// ── WebSocket კავშირი ──────────────────────────────────────────
+function connectWS(roomId) {
+  // ძველი კავშირი დავხუროთ
+  if (wsConn) {
+    try { wsConn.close(); } catch(e) {}
+    wsConn = null;
+  }
+  clearTimeout(wsReconnTimer);
+
+  const token = getToken();
+  if (!token || !roomId) return;
+
+  const url = `${WS_URL}/ws/chat?token=${token}&room=${roomId}`;
+
+  try {
+    wsConn = new WebSocket(url);
+
+    wsConn.onopen = () => {
+      console.log('✅ WS connected:', roomId);
+      const infoEl = document.getElementById('chat-order-info');
+      // ონლაინ ინდიკ.
+    };
+
+    wsConn.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg.type === 'connected') return;
+        // მხოლოდ მიმდ. ოთახის შეტყობინება
+        if (currentRoomId === roomId) {
+          appendMessage(msg);
+        }
+        // sidebar-ის განახლება
+        loadChatRooms();
+      } catch(e) { console.error('ws msg parse:', e); }
+    };
+
+    wsConn.onclose = (e) => {
+      console.log('WS closed:', e.code);
+      if (e.code !== 4001 && e.code !== 4003 && currentRoomId === roomId) {
+        // 3 წამში reconnect
+        wsReconnTimer = setTimeout(() => connectWS(roomId), 3000);
+      }
+    };
+
+    wsConn.onerror = (e) => {
+      console.error('WS error:', e);
+    };
+
+  } catch(e) {
+    console.error('WS connect failed:', e);
+    // HTTP fallback
+  }
+}
+
+// ── შეტყობინების გაგზავნა ─────────────────────────────────────
+async function sendMsg() {
+  const ta = document.getElementById('chat-ta');
+  if (!ta) return;
+  const content = ta.value.trim();
+  if (!content) return;
+  if (!currentRoomId) { showToast('ოთახი არ არის არჩეული', 'err'); return; }
+
+  ta.value = '';
+  ta.style.height = 'auto';
+
+  // WS-ით გაგზავნა
+  if (wsConn && wsConn.readyState === WebSocket.OPEN) {
+    wsConn.send(JSON.stringify({ content }));
+  } else {
+    // HTTP fallback (WS დახურულია)
+    try {
+      const msg = await api('/api/chat/rooms/' + currentRoomId + '/messages', {
+        method: 'POST',
+        body: JSON.stringify({ content })
+      });
+      appendMessage(msg);
+      loadChatRooms();
+    } catch(e) {
+      showToast('შეტყობინება ვერ გაიგზავნა', 'err');
+      ta.value = content; // restore
+    }
+  }
+}
+
+// ── Order Confirm/Dispute ჩატიდან ─────────────────────────────
+async function confirmCurrentOrder() {
+  if (!currentOrderId) return;
+  if (!confirm('დაადასტ. მიღება? ₾ გამყიდველს ჩაერიცხება.')) return;
+  try {
+    await api('/api/orders/' + currentOrderId + '/confirm', { method: 'POST' });
+    showToast('✅ დადასტ.! Escrow გათავისუფლდა', 'ok');
+    const pill = document.getElementById('chat-escrow-pill');
+    if (pill) pill.style.display = 'none';
+    loadChatRooms();
+    loadCurrentUser();
+    setTimeout(() => openM('ratingModal'), 600);
+  } catch(e) { showToast(e.message || 'შეცდომა', 'err'); }
+}
+
+function disputeCurrentOrder() {
+  if (!currentOrderId) return;
+  const modal = document.getElementById('disputeModal');
+  if (modal) modal.dataset.orderId = currentOrderId;
+  openM('disputeModal');
+}
+
+// ── renderChats (legacy alias) ─────────────────────────────────
+function renderChats() { loadChatRooms(); }
+
+// sendMsg — იხ. Chat JS ბლოკი
+
+// ══════════════════════════════════════════════════════════
+// POST LISTING
+// ══════════════════════════════════════════════════════════
+function handleImgDrop(e) {
+  e.preventDefault();
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) previewPostImg({ files: [file] });
+}
+
+// ── Post Modal — კატეგ. მიხ. ტიპები + სათაური ──────────────────
+const POST_TYPES = {
+  mobile: [
+    { value:'account',  label:'🎮 ექაუნთი' },
+    { value:'boosting', label:'⚡ ბუსტინგი / სერვისი' },
+    { value:'currency', label:'💎 ვალუტა / ნივთი' },
+  ],
+  pc: [
+    { value:'account',  label:'🎮 ექაუნთი' },
+    { value:'boosting', label:'⚡ ბუსტინგი / Carry' },
+    { value:'currency', label:'💰 სკინი / ნივთი' },
+  ],
+  social: [
+    { value:'account',  label:'📲 ექაუნთი / გვერდი' },
+    { value:'boosting', label:'🔧 სერვისი / Promo' },
+    { value:'currency', label:'📦 სხვა სოც. პროდუქტი' },
+  ],
+  boosting: [
+    { value:'boosting', label:'⚡ ბუსტინგი / Carry' },
+    { value:'account',  label:'🎮 სერვის ექ.' },
+  ],
+  currency: [
+    { value:'currency', label:'💎 ვალუტა / Coins' },
+    { value:'account',  label:'🎁 ნივთი / Bundle' },
+  ],
+};
+
+const POST_PLACEHOLDERS = {
+  'PUBG Mobile':       'მაგ.: Conqueror ჩარჩო · S30 · კარგი ეკვაიპი',
+  'Arena Breakout':    'მაგ.: High Storage · ₽2M+ ჩარჩო · კონტ.',
+  'CoD Mobile':        'მაგ.: Mythic Operator · Legendary Gun Bundle',
+  'Mobile Legends':    'მაგ.: Collector Skin · Lylia · Kagura',
+  'Brawl Stars':       'მაგ.: 3 Legendary Brawler · 50K+ ტასები',
+  'Clash of Clans':    'მაგ.: TH15 MAX · Champions League',
+  'Genshin Impact':    'მაგ.: AR60 · C6 Neuvillette · Endgame',
+  'Roblox':            'მაგ.: Dragon Fruit Lvl 2450 · Blox Fruits',
+  'CS2':               'მაგ.: Global Elite · 2800+ საათი · Prime',
+  'Valorant':          'მაგ.: Radiant ექ. · Prime + Elderflame Skins',
+  'Dota 2':            'მაგ.: Immortal · 6000 MMR · Rare Items',
+  'League of Legends': 'მაგ.: Diamond II · EUW · 50+ Skins',
+  'Instagram':         'მაგ.: 10K Followers · Lifestyle Niche · Active',
+  'TikTok':            'მაგ.: 50K Followers · Entertainment · Monetized',
+  'YouTube':           'მაგ.: 5K Subs · Gaming Channel · Monetized',
+  'Facebook':          'მაგ.: 20K Followers · Business Page',
+  // ბუსტინგი
+  'PUBG Mobile Boost': 'მაგ.: Bronze → Conqueror · ან რაიოდნ. Push',
+  'CS2 Boost':         'მაგ.: Silver → Global Elite · ან Win Boost',
+  'Valorant Boost':    'მაგ.: Iron → Radiant · ან Placement Matches',
+  'სხვა':              'მიუთითე თამაში, საწყ. და სასურ. რანგი',
+  // ვალუტა
+  'PUBG UC':           'მაგ.: 3000 UC · კოდი ან პირდაპ. შეტანა',
+  'ML Diamonds':       'მაგ.: 2000 Diamonds · Top Up',
+  'Brawl Stars Gems':  'მაგ.: 1000 Gems · Code/Top Up',
+  'CS2 Credits/Skins': 'მაგ.: AK-47 Redline FT · $50+ Inventory',
+  'სხვა ვალუტა':       'მიუთითე ვალუტის სახეობა და რაოდენობა',
+};
+
+function updatePostForm() {
+  const catEl = document.getElementById('post-category');
+  const typeEl = document.getElementById('post-type');
+  const titleEl = document.getElementById('post-title');
+  if (!catEl || !typeEl) return;
+
+  const [cat, game] = (catEl.value || '').split('|');
+  const types = POST_TYPES[cat] || POST_TYPES.mobile;
+
+  // ტიპების განახლება
+  typeEl.innerHTML = types.map(t =>
+    `<option value="${t.value}">${t.label}</option>`
+  ).join('');
+
+  // placeholder-ის განახლება
+  if (titleEl && game && POST_PLACEHOLDERS[game]) {
+    titleEl.placeholder = POST_PLACEHOLDERS[game];
+  }
+
+  updateVipPrice();
+}
+
+function updateVipPrice() {
+  const priceEl   = document.getElementById('post-price');
+  const vipInfo   = document.getElementById('vip-info');
+  const vipCost   = document.getElementById('vip-cost');
+  const vipLabel  = document.getElementById('vip-price-label');
+  const freeBox   = document.getElementById('post-free-box');
+  const vipBox    = document.getElementById('post-vip-box');
+  const isVip     = document.querySelector('input[name="post-vip-radio"]:checked')?.value === 'yes';
+
+  const price = parseFloat(priceEl?.value) || 0;
+  const cost  = Math.max(1, Math.round(price * 0.10 * 100) / 100);
+
+  if (vipLabel) vipLabel.textContent = price > 0 ? `VIP = ₾${cost}` : 'ფასის 10%';
+  if (vipCost)  vipCost.textContent  = cost.toFixed(2);
+  if (vipInfo)  vipInfo.style.display = isVip ? 'block' : 'none';
+
+  if (freeBox) freeBox.style.border = !isVip
+    ? '2px solid var(--accent)' : '2px solid var(--border2)';
+  if (vipBox)  vipBox.style.border  = isVip
+    ? '2px solid var(--gold)' : '2px solid var(--border2)';
+  if (vipBox && isVip) vipBox.style.background = 'var(--gd)';
+  else if (vipBox) vipBox.style.background = '';
+}
+
+
+// ── Post Image Preview — multi (მაქს. 5) ──────────────────────
+let postImgFiles = []; // File[] — ასატვირთი სურ-ები
+
+function previewPostImgs(input) {
+  const files = Array.from(input.files || []);
+  if (!files.length) return;
+
+  // 5-ის ლიმიტი
+  const remaining = 5 - postImgFiles.length;
+  const toAdd = files.slice(0, remaining);
+  postImgFiles = [...postImgFiles, ...toAdd];
+
+  renderImgStrip();
+  // input reset — ისევ ატვირთვის საშუალება
+  input.value = '';
+}
+
+function renderImgStrip() {
+  const strip = document.getElementById('post-img-strip');
+  const ph    = document.getElementById('post-img-placeholder');
+  if (!strip) return;
+
+  if (!postImgFiles.length) {
+    strip.innerHTML = '';
+    strip.style.display = 'none';
+    if (ph) ph.style.display = 'block';
+    return;
+  }
+
+  if (ph) ph.style.display = 'none';
+  strip.style.display = 'flex';
+  strip.innerHTML = postImgFiles.map((f, i) => {
+    const url = URL.createObjectURL(f);
+    return `<div style="position:relative;display:inline-block">
+      <img src="${url}" style="width:60px;height:60px;object-fit:cover;border-radius:7px;border:1px solid var(--border2)">
+      <button onclick="removePostImg(${i});event.stopPropagation()"
+        style="position:absolute;top:-5px;right:-5px;background:var(--red,#e74c3c);color:#fff;border:none;border-radius:50%;width:17px;height:17px;font-size:10px;cursor:pointer;line-height:1">✕</button>
+    </div>`;
+  }).join('');
+
+  // "+ ატვირთვა" ღილაკი თუ < 5
+  if (postImgFiles.length < 5) {
+    strip.innerHTML += `<div onclick="document.getElementById('post-img-input').click()"
+      style="width:60px;height:60px;border:2px dashed var(--border2);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;color:var(--muted)">+</div>`;
+  }
+}
+
+function removePostImg(idx) {
+  postImgFiles.splice(idx, 1);
+  renderImgStrip();
+}
+
+function handleImgDrop(e) {
+  e.preventDefault();
+  document.getElementById('post-img-area').style.borderColor = 'var(--border2)';
+  const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+  if (files.length) previewPostImgs({ files });
+}
+
+// ── ძველი single-img alias (backwards compat) ──────────────────
+function previewPostImg(input) { previewPostImgs(input); }
+
+async function postListing() {
+  if (!currentUser) { showToast('ჯერ შედი სისტემაში', 'err'); openM('loginModal'); return; }
+  const catVal   = (document.getElementById('post-category') || {}).value || 'mobile|სხვა';
+  const [category, game] = catVal.split('|');
+  const listing_type = (document.getElementById('post-type')  || {}).value || 'account';
+  const title    = (document.getElementById('post-title') || {}).value?.trim();
+  const price_gel= parseFloat((document.getElementById('post-price') || {}).value);
+  const desc     = (document.getElementById('post-desc')  || {}).value?.trim() || '';
+  const isVip    = document.querySelector('input[name="post-vip-radio"]:checked')?.value === 'yes';
+
+  if (!title)           { showToast('სათაური სავალდებულოა', 'err'); return; }
+  if (!price_gel || price_gel < 1) { showToast('ფასი სავალდებულოა', 'err'); return; }
+
+  // VIP ფასი = 10%
+  const vipCost = Math.max(1, Math.round(price_gel * 0.10 * 100) / 100);
+
+  if (isVip) {
+    const bal = Number(currentUser.balance_gel) || 0;
+    if (bal < vipCost) {
+      showToast(`VIP-ისთვის გჭირდება ₾${vipCost}, ბალანსი: ₾${bal.toFixed(2)}`, 'err');
+      return;
+    }
+  }
+
+  const btn = document.getElementById('post-submit-btn');
+  if (btn) { btn.textContent = '⏳ ქმნება...'; btn.disabled = true; }
+
+  try {
+    // 1. განცხ. შექმნა
+    const newL = await api('/api/listings', {
+      method: 'POST',
+      body: JSON.stringify({ category, game, listing_type, title, description: desc, price_gel, tags: [] })
+    });
+
+    // 2. სურ-ების ატვირთვა (multipart)
+    if (postImgFiles.length && newL.id) {
+      try {
+        if (btn) btn.textContent = '⏳ სურ. ტვირთება...';
+        const fd = new FormData();
+        postImgFiles.forEach(f => fd.append('images', f));
+        await fetch(API_URL + '/api/listings/' + newL.id + '/images', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + getToken() },
+          body: fd
+        });
+      } catch(e) { console.warn('img upload:', e.message); }
+    }
+
+    // 3. VIP გააქტ.
+    if (isVip && newL.id) {
+      try {
+        if (btn) btn.textContent = '⏳ VIP...';
+        await api('/api/listings/' + newL.id + '/vip', {
+          method: 'POST',
+          body: JSON.stringify({ duration_days: 30, price: vipCost })
+        });
+      } catch(e) { console.warn('vip failed:', e.message); }
+    }
+
+    // reset form
+    postImgFiles = [];
+    renderImgStrip();
+    const freeRadio = document.querySelector('input[name="post-vip-radio"][value="no"]');
+    if (freeRadio) { freeRadio.checked = true; updateVipPrice(); }
+    document.getElementById('post-title').value = '';
+    document.getElementById('post-price').value = '';
+    document.getElementById('post-desc').value  = '';
+
+    closeM('postModal');
+    showToast(isVip ? '⭐ VIP განცხადება გამოქვეყნდა!' : '✅ განცხადება გამოქვეყნდა!', 'ok');
+    loadListingsFromAPI('home-grid');
+    loadListingsFromAPI('l-grid');
+    loadHomeStats();
+    if (currentUser) loadMyListings();
+    loadCurrentUser();
+  } catch (e) {
+    showToast(e.message || 'შეცდომა', 'err');
+  } finally {
+    if (btn) { btn.textContent = 'გამოქვეყნება'; btn.disabled = false; }
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// PROFILE TABS
+// ══════════════════════════════════════════════════════════
+function ptab(btn, id) {
+  document.querySelectorAll('.ptab').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  ['pl','pr','po'].forEach(t => {
+    const el = document.getElementById(t);
+    if (el) el.style.display = t === id ? 'block' : 'none';
+  });
+  if (id === 'po') loadMyOrders();
+}
+
+async function loadMyOrders() {
+  if (!currentUser) return;
+  const el = document.getElementById('orders-list');
+  if (!el) return;
+  el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">⏳ იტვირთება...</div>';
+  try {
+    const orders = await api('/api/orders/me');
+    if (!orders || !orders.length) {
+      el.innerHTML = '<div class="empty"><div class="empty-ico">📋</div><div class="empty-t">ორდერები ჯერ არ არის</div></div>';
+      return;
+    }
+    el.innerHTML = orders.map(o => {
+      const isBuyer  = o.buyer_id === currentUser.id;
+      const role     = isBuyer ? '🛒 მყიდველი' : '💰 გამყიდველი';
+      const partner  = isBuyer ? o.seller_username : o.buyer_username;
+      const statusMap = {
+        pending:'⏳ მოლოდინი', active:'🔒 Escrow',
+        completed:'✅ დასრულებული', cancelled:'❌ გაუქმებული', disputed:'⚑ დავა'
+      };
+      const sColor = {
+        pending:'var(--muted)', active:'var(--gold)',
+        completed:'var(--accent)', cancelled:'var(--red)', disputed:'var(--red)'
+      };
+      const canConfirm = isBuyer && o.escrow_status === 'held';
+      return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="font-size:12px;font-weight:600">${o.listing_title || 'განცხ. #' + o.id.slice(0,8)}</div>
+          <span style="font-size:10px;padding:2px 8px;border-radius:4px;background:var(--bg3);color:${sColor[o.status]||'var(--muted)'}">${statusMap[o.status]||o.status}</span>
+        </div>
+        <div style="display:flex;gap:16px;font-size:11px;color:var(--muted);margin-bottom:10px">
+          <span>${role}</span>
+          <span>👤 ${partner || '?'}</span>
+          <span style="font-family:var(--mono);color:var(--accent);font-weight:700">₾${Number(o.amount_gel).toFixed(2)}</span>
+          <span>${new Date(o.created_at).toLocaleDateString('ka-GE')}</span>
+        </div>
+        <div style="display:flex;gap:8px">
+          ${canConfirm ? `<button class="btn btn-a btn-sm" onclick="confirmOrder('${o.id}',${o.amount_gel})">✅ მიღება დადასტ.</button>` : ''}
+          ${canConfirm ? `<button class="btn btn-g btn-sm" onclick="openDisputeFor('${o.id}')">⚑ დავა</button>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div class="empty"><div class="empty-ico">⚠️</div><div class="empty-t">ჩატვირთვა ვერ მოხდა</div></div>';
+  }
+}
+
+async function confirmOrder(orderId, amount) {
+  if (!confirm('დაადასტ. რომ მიიღე? ₾' + amount + ' გამყიდველს ჩაერიცხება.')) return;
+  try {
+    await api('/api/orders/' + orderId + '/confirm', { method: 'POST' });
+    showToast('✅ დადასტ.! ₾' + Number(amount).toFixed(2) + ' გამყ. ჩაერიცხა', 'ok');
+    loadMyOrders();
+    loadCurrentUser();
+    // rating modal
+    setTimeout(() => openM('ratingModal'), 600);
+  } catch(e) { showToast(e.message || 'შეცდომა', 'err'); }
+}
+
+async function openDisputeFor(orderId) {
+  const modal = document.getElementById('disputeModal');
+  if (modal) modal.dataset.orderId = orderId;
+  openM('disputeModal');
+}
+
+async function submitDispute() {
+  const modal  = document.getElementById('disputeModal');
+  const orderId= modal ? modal.dataset.orderId : null;
+  const reason = (document.querySelector('#disputeModal select') || {}).value || 'other';
+  const desc   = (document.querySelector('#disputeModal textarea') || {}).value?.trim();
+  if (!orderId) { showToast('ორდ. ID ვერ მოვძებნე', 'err'); return; }
+  if (!desc)    { showToast('აღწ. სავალდ.', 'err'); return; }
+  try {
+    await api('/api/disputes', {
+      method: 'POST',
+      body: JSON.stringify({ order_id: orderId, reason, description: desc })
+    });
+    closeM('disputeModal');
+    showToast('⚑ დავა გაიხსნა · ადმინი 24სთ-ში განიხ.', 'ok');
+    loadMyOrders();
+  } catch(e) { showToast(e.message || 'შეცდომა', 'err'); }
+}
+
+// ══════════════════════════════════════════════════════════
+// 🤖 SUPPORT CHATBOT
+// ══════════════════════════════════════════════════════════
+const BOT_NAME    = '🤖 GamerBot';
+const BOT_INITIALS= 'GB';
+
+// FAQ ბაზა — კითხვები და პასუხები
+const BOT_FAQ = [
+  {
+    keys: ['escrow','ესქრო','escrow-ი','ფული გაყინ','დაცვა','escrow დაცვა'],
+    answer: `🔒 <b>Escrow სისტემა</b> — ეს არის GamerBazar-ის უსაფრთხოების მთავარი მექანიზმი:\n\n• მყიდველი ყიდვისას ფული <b>Escrow-ში</b> (გაყინვაში) გადადის\n• ფული გამყიდველს <b>მხოლოდ მაშინ</b> ჩაერიცხება, როდესაც მყიდველი დაადასტურებს მიღებას\n• თუ პრობლემაა — გახსენი <b>დავა</b>, ადმინი 24სთ-ში გადაწყვეტს\n\n✅ ასე ორივე მხარე დაცულია!`
+  },
+  {
+    keys: ['vip','ვიპ','vip განცხ','პრემიუმ'],
+    answer: `⭐ <b>VIP განცხადება</b> — ეს სპეციალური განთავსებაა:\n\n• VIP განცხ. <b>კატეგორიის სათავეში</b> ჩანს\n• ფასი = განცხ. ფასის <b>10%</b> (მინ. ₾1)\n• ბალანსიდან ჩამოიჭრება ავტომატურად\n\nმაგ: ₾100 ღირი განცხ-სთვის VIP = ₾10\n\nVIP-ის ასაღებად: <b>➕ განცხ. დამატება → VIP</b> ვარიანტი`
+  },
+  {
+    keys: ['ბალანს','შეტანა','deposit','დეპოზიტ','გადახდა','შევტანო'],
+    answer: `💰 <b>ბალანსზე შეტანა:</b>\n\n1. გადადი <b>საფულე</b> გვერდზე\n2. დააჭირე <b>⬇ შეტანა</b>\n3. აირჩიე მეთოდი (BOG / TBC / ბარათი)\n4. შეიყვანე თანხა და გადაიხადე\n\n⚡ <b>Dev რეჟიმში</b> — სიმულაციის ბმული ავტომატურად გეძლევა\n📱 <b>Production-ში</b> — BOG/TBC გადახდის გვერდი გაიხსნება`
+  },
+  {
+    keys: ['გამოტანა','გამოტ','withdrawal','iban','withdraw'],
+    answer: `📤 <b>ბალანსიდან გამოტანა:</b>\n\n1. <b>საფულე</b> → <b>⬆ გამოტანა</b>\n2. შეიყვანე ქართული <b>IBAN</b> (GE...)\n3. მიუთითე თანხა (მინ. ₾5)\n\n💸 კომისია: <b>2%</b>\n⏱ ვადა: <b>1-2 სამუშ. დღე</b>\n\nდარწმუნდი, რომ IBAN სწორია!`
+  },
+  {
+    keys: ['განცხ','დამატება','გამოქვეყნება','post','დავდო','როგორ ვყიდო','გავყიდო'],
+    answer: `➕ <b>განცხადების დამატება:</b>\n\n1. დააჭირე <b>➕ განცხ. დამატება</b> (კატეგ. ბარათი ან nav)\n2. აირჩიე <b>თამაში / კატეგ.</b>\n3. შეავსე <b>სათაური, ფასი, აღწ.</b>\n4. სურვ. — ავირჩიე <b>VIP</b> ან ატვირთე ფოტო\n5. დააჭირე <b>გამოქვეყნება</b>\n\n⚠️ ყიდვა/გაყიდვა მოითხოვს <b>რეგისტრაციას</b>!`
+  },
+  {
+    keys: ['ყიდვა','შევიძინო','buy','შეძენა','შემიძლია შევიძინო'],
+    answer: `🛒 <b>განცხადების შეძენა:</b>\n\n1. იპოვე განცხ. <b>განცხადებები</b> გვერდზე\n2. დააჭირე განცხ. ბარათს\n3. გახსნილ მოდალში — <b>🛒 ყიდვა</b>\n4. ფული <b>Escrow-ში</b> გადადის\n5. გამყ. დაგიკავშირდება <b>ჩატში</b>\n6. მიიღე ექ. → დაადასტ. <b>✅ მიღება</b>\n7. ფული გამყ-ს ჩაერიცხება\n\n⚠️ ბალანსზე საკმარისი თანხა უნდა გქონდეს!`
+  },
+  {
+    keys: ['დავა','dispute','პრობლემა','არ გადაეცა','პაროლი','არ მუშ'],
+    answer: `⚑ <b>დავის გახსნა:</b>\n\n1. გადადი <b>ჩატი</b> გვერდზე\n2. გახსენი ოთახი პრობლ. ორდ-ზე\n3. დააჭირე <b>⚑ დავა</b>\n4. ან <b>პროფილი → ორდ. → ⚑ დავა</b>\n\nადმინი <b>24 სთ-ში</b> განიხილავს.\nEscrow ამ დროს <b>გაყინულია</b> — ფული დაცულია!`
+  },
+  {
+    keys: ['რეგ','რეგისტ','შევქმნა','ახალი ექ','ექაუნთი','signup'],
+    answer: `📝 <b>რეგისტრაცია:</b>\n\n1. დააჭირე <b>შესვლა</b> (nav-ზე)\n2. გადი <b>Google-ით</b> — ერთი დაწკაპ!\n3. ან <b>ელ-ფოსტა + პაროლი + username</b>\n\n✅ რეგ. სრულ. შემდ. შეძლებ:\n• განცხ. გამოქვ. / შეძენა\n• ბალანსის მართვა\n• ჩათი გამყ-ებთან`
+  },
+  {
+    keys: ['google','gmail','oauth','google-ით'],
+    answer: `🔐 <b>Google-ით შესვლა:</b>\n\n1. მოდალში <b>Google/Gmail-ით შესვლა</b>\n2. გადამისამართება Google-ზე\n3. ექ. ავტომატ. შეიქმნება\n\n💡 Google-ით შესვლა <b>უფრო სწრაფი</b> და უსაფრთხოა!\n\n⚠️ თუ პრობლემაა: შეამოწ. backend-ის <b>GOOGLE_CLIENT_ID</b> .env-ში`
+  },
+  {
+    keys: ['კომის','5%','პლატფ. კომ','commission','fee'],
+    answer: `💸 <b>პლატფ. კომისია:</b>\n\nGamerBazar იღებს <b>5%</b> ყოველი გაყიდვიდან.\n\nმაგ: ₾100 გაყიდვაზე:\n• გამყ. მიიღებს: <b>₾95</b>\n• პლატფ. კომ: <b>₾5</b>\n\nVIP ყიდვა ცალკეა — <b>ფასის 10%</b>`
+  },
+  {
+    keys: ['ჩატი','chat','შეტყობ','გამყ. დაკ','დაუკავშირ'],
+    answer: `💬 <b>ჩატი:</b>\n\nჩატი ავტომ. იხსნება <b>ორდ. შექმნისას</b>.\n\n• შეტყობ. <b>WebSocket</b>-ით სწრაფად იგზავნება\n• ინტ. დაკ-ზე HTTP fallback-ია\n• ჩატი ყოველ ორდ-ს ჰყავს <b>ცალკე ოთახი</b>\n\n💡 ჩატ-სია — <b>ჩატი</b> nav-ბმულით`
+  },
+  {
+    keys: ['ვერ', 'არ შედის', 'შეცდ', 'error', 'ვერ ვხვდები', 'ვერ ვყიდ'],
+    answer: `⚠️ <b>ტექნიკური პრობლემა?</b>\n\nყველ. გახ. სცადე:\n1. გვერდი <b>გადატვირთე</b> (F5)\n2. <b>გამოდი / შედი</b> ხელახლა\n3. შეამოწ. <b>ბალანსი</b> (ყიდვ-ს სჭირდება)\n4. Internet კავშირი\n\nთუ განაგრძობს: <b>admin@gamerbazar.ge</b>-ზე მოგვწერე`
+  },
+];
+
+// ── chatbot state ──
+let botMessages = [];
+let isBotOpen   = false;
+
+function openChatBot() {
+  isBotOpen = true;
+
+  // sidebar active class
+  document.querySelectorAll('.ci').forEach(c => c.classList.remove('on'));
+
+  // header
+  const nameEl  = document.getElementById('chat-partner-name');
+  const infoEl  = document.getElementById('chat-order-info');
+  const avaEl   = document.getElementById('chat-partner-ava');
+  if (nameEl) nameEl.textContent = BOT_NAME;
+  if (infoEl) infoEl.textContent = 'ავტომატური მხარდაჭერა · 24/7';
+  if (avaEl)  { avaEl.textContent = BOT_INITIALS; avaEl.style.color = 'var(--accent)'; }
+
+  // escrow pill დამალვა
+  const pill = document.getElementById('chat-escrow-pill');
+  if (pill) pill.style.display = 'none';
+
+  // input area
+  const inputArea = document.getElementById('chat-input-area');
+  if (inputArea) inputArea.style.display = 'block';
+
+  // WS დახურვა — bot HTTP-only
+  if (wsConn) { try { wsConn.close(); } catch(e){} wsConn = null; }
+  clearTimeout(wsReconnTimer);
+  currentRoomId  = '__bot__';
+  currentOrderId = null;
+
+  renderBotMessages();
+}
+
+function renderBotMessages() {
+  const msgsEl = document.getElementById('chat-msgs');
+  if (!msgsEl) return;
+
+  if (!botMessages.length) {
+    // სასალამო შეტყობინება
+    botMessages = [{
+      role: 'bot',
+      content: `გამარჯობა! 👋 მე ვარ <b>GamerBot</b> — GamerBazar-ის მხარდაჭერის ასისტენტი.\n\nგკითხე ნებისმიერი კითხვა პლატფ-ის შესახებ:\n\n💡 <i>მაგ: "Escrow რა არის?" / "VIP რა ღირს?" / "როგორ ვყიდო?"</i>`,
+      time: new Date()
+    }];
+  }
+
+  msgsEl.innerHTML = botMessages.map(m => {
+    const isMe = m.role === 'user';
+    const time  = new Date(m.time).toLocaleTimeString('ka-GE', {hour:'2-digit',minute:'2-digit'});
+    const txt   = (m.content || '').replace(/\n/g, '<br>');
+    return `<div class="msg ${isMe ? 'me' : 'u'}">
+      <div class="msg-b" style="${!isMe ? 'max-width:85%' : ''}">${txt}</div>
+      <div class="msg-t">${time}</div>
+    </div>`;
+  }).join('');
+
+  msgsEl.scrollTop = msgsEl.scrollHeight;
+}
+
+function appendBotMsg(content, role) {
+  const msgsEl = document.getElementById('chat-msgs');
+  if (!msgsEl) return;
+  const entry = { role, content, time: new Date() };
+  botMessages.push(entry);
+  const isMe = role === 'user';
+  const time = new Date().toLocaleTimeString('ka-GE', {hour:'2-digit',minute:'2-digit'});
+  const txt  = (content || '').replace(/\n/g, '<br>');
+  const div  = document.createElement('div');
+  div.className = `msg ${isMe ? 'me' : 'u'}`;
+  div.innerHTML = `<div class="msg-b" style="${!isMe ? 'max-width:85%' : ''}">${txt}</div><div class="msg-t">${time}</div>`;
+  msgsEl.appendChild(div);
+  msgsEl.scrollTop = msgsEl.scrollHeight;
+}
+
+function botReply(userText) {
+  const q = userText.toLowerCase();
+
+  // კითხვის შესაბამისი FAQ
+  const match = BOT_FAQ.find(f => f.keys.some(k => q.includes(k)));
+
+  if (match) {
+    setTimeout(() => appendBotMsg(match.answer, 'bot'), 600);
+    return;
+  }
+
+  // სალამი
+  if (/^(გამარ|hello|hi|სალამ|ჰელო)/.test(q)) {
+    setTimeout(() => appendBotMsg('გამარჯობა! 😊 რით შემიძლია დაგეხმარო?\n\n💡 სცადე: "Escrow", "VIP", "ყიდვა", "ბალანსი"', 'bot'), 400);
+    return;
+  }
+
+  // მადლობა
+  if (/მადლობ|გმადლ|thanks|thank/.test(q)) {
+    setTimeout(() => appendBotMsg('გთხოვ! 🤝 კიდევ რაიმე კითხვა გაქვს?', 'bot'), 300);
+    return;
+  }
+
+  // ნებისმიერი სხვა
+  setTimeout(() => appendBotMsg(
+    `🤔 ვერ ვიპოვე ზუსტი პასუხი. სცადე ამ თემებიდან:\n\n` +
+    `• "Escrow" — Escrow სისტემა\n` +
+    `• "VIP" — VIP განცხ.\n` +
+    `• "ბალანსი" — შეტანა / გამოტანა\n` +
+    `• "ყიდვა" — როგორ ვყიდო\n` +
+    `• "განცხ" — განცხ. დამატება\n` +
+    `• "დავა" — პრობლ. შემთხვ.\n\n` +
+    `📧 ადამიანი: <b>admin@gamerbazar.ge</b>`,
+    'bot'
+  ), 700);
+}
+
+// sendMsg-ს გადაფარვა bot რეჟიმში
+const _origSendMsg = sendMsg;
+async function sendMsg() {
+  if (currentRoomId === '__bot__') {
+    const ta = document.getElementById('chat-ta');
+    if (!ta) return;
+    const content = ta.value.trim();
+    if (!content) return;
+    ta.value = '';
+    ta.style.height = 'auto';
+    appendBotMsg(content, 'user');
+    botReply(content);
+    return;
+  }
+  return _origSendMsg();
+}
+
+// ══════════════════════════════════════════════════════════
+// HOME STATS — API-დან რეალური მონაც.
+// ══════════════════════════════════════════════════════════
+async function loadHomeStats() {
+  try {
+    const stats = await api('/api/stats').catch(() => null);
+    if (!stats) return;
+
+    // კატ. card-ების განახლება
+    const cats = ['mobile','pc','social','boosting','currency'];
+    cats.forEach(c => {
+      const el = document.getElementById('cnt-' + c);
+      const n  = stats.categories?.[c] || 0;
+      if (el) el.textContent = n > 0 ? n + ' განცხ.' : '0 განცხ.';
+    });
+
+    // hero stats
+    const sL = document.getElementById('stat-listings');
+    const sS = document.getElementById('stat-sellers');
+    const sV = document.getElementById('stat-volume');
+
+    if (sL) sL.textContent = stats.listings_active > 0
+      ? stats.listings_active + '+' : '0';
+
+    if (sS) sS.textContent = stats.sellers_active > 0
+      ? stats.sellers_active + '+' : '0';
+
+    if (sV && stats.volume_gel > 0) {
+      const v = stats.volume_gel;
+      sV.textContent = v >= 1000
+        ? '₾' + (v / 1000).toFixed(1) + 'k+'
+        : '₾' + Math.round(v) + '+';
+    } else if (sV) {
+      sV.textContent = '₾0';
+    }
+  } catch(e) { /* silent */ }
+}
+
+// ══════════════════════════════════════════════════════════
+let toastT;
+function showToast(msg, type) {
+  const t = document.getElementById('toast'); if (!t) return;
+  document.getElementById('t-txt').textContent = msg;
+  t.className = 'toast show ' + (type || '');
+  clearTimeout(toastT);
+  toastT = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+// ══════════════════════════════════════════════════════════
+// LOADING SCREEN
+// ══════════════════════════════════════════════════════════
+
+
+// ══════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════
+renderMobileGames();
+renderChats();
+
+// ბაზაში განცხ. ჩატვირთვა
+(async () => {
+  const ok = await loadListingsFromAPI('home-grid');
+  if (!ok) {
+    const hg = document.getElementById('home-grid');
+    if (hg) hg.innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="empty-ico">🎮</div><div class="empty-t">განცხადებები მალე გამოჩნდება</div></div>';
+  }
+  loadListingsFromAPI('l-grid');
+  // კატ. რაოდ. + hero stats — API-დან
+  loadHomeStats();
+})();
+
+// Auth
+
+async function doDeposit() {
+  const amountEl = document.querySelector('#depositModal input[type=number]');
+  const methodEl = document.querySelector('#depositModal select');
+  const amount = parseFloat(amountEl?.value);
+  const method = methodEl?.options[methodEl.selectedIndex]?.text?.includes('BOG') ? 'BOG' : 'TBC';
+  if (!amount || amount < 1) { showToast('თანხა სავალდ.', 'err'); return; }
+  const btn = document.querySelector('#depositModal .btn-a');
+  if (btn) { btn.textContent = '⏳...'; btn.disabled = true; }
+  try {
+    const data = await api('/api/wallet/deposit', {
+      method: 'POST', body: JSON.stringify({ amount, method })
+    });
+    closeM('depositModal');
+    // dev: simulate
+    if (data.pay_url && data.pay_url.includes('simulate')) {
+      const r = await api('/api/wallet/deposit/simulate?ref=' + data.ref + '&amount=' + amount);
+      showToast('✅ ₾' + amount + ' ბალანსზე დაემატა!', 'ok');
+      loadCurrentUser(); loadWallet();
+    } else {
+      window.open(data.pay_url, '_blank');
+      showToast('🏦 BOG-ზე გადამისამ...', 'ok');
+    }
+  } catch(e) { showToast(e.message || 'შეცდომა', 'err'); }
+  finally { if (btn) { btn.textContent = 'გადახდა'; btn.disabled = false; } }
+}
+
+async function doWithdraw() {
+  const ibanEl   = document.querySelector('#withdrawModal input[placeholder*="GE"]');
+  const amountEl = document.querySelector('#withdrawModal input[type=number]');
+  const iban   = ibanEl?.value?.trim();
+  const amount = parseFloat(amountEl?.value);
+  if (!iban)   { showToast('IBAN სავალდ.', 'err'); return; }
+  if (!amount || amount < 5) { showToast('მინ. ₾5', 'err'); return; }
+  const btn = document.querySelector('#withdrawModal .btn-a');
+  if (btn) { btn.textContent = '⏳...'; btn.disabled = true; }
+  try {
+    await api('/api/wallet/withdraw', { method:'POST', body: JSON.stringify({ amount, iban }) });
+    closeM('withdrawModal');
+    showToast('✅ მოთხ. გაიგ.! 1-2 სამ. დღე', 'ok');
+    loadCurrentUser(); loadWallet();
+  } catch(e) { showToast(e.message || 'შეცდომა', 'err'); }
+  finally { if (btn) { btn.textContent = 'გამოტანა'; btn.disabled = false; } }
+}
+
+
+// textarea auto-resize
+document.addEventListener('DOMContentLoaded', () => {
+  const ta = document.getElementById('chat-ta');
+  if (ta) {
+    ta.addEventListener('input', () => {
+      ta.style.height = 'auto';
+      ta.style.height = Math.min(ta.scrollHeight, 100) + 'px';
+    });
+  }
+});
+
+// სერვერის გაღვიძება (Render free tier)
+try { fetch(API_URL + '/health').catch(() => {}); } catch(e) {}
+
+// Auth
+try { checkAuthCallback(); } catch(e) { console.error('auth callback:', e); }
+try { loadCurrentUser(); } catch(e) { console.error('load user:', e); }
+
+// Service Worker (push notifications)
+try { registerServiceWorker(); } catch(e) { console.error('SW register:', e); }
+
+// postModal init
+setTimeout(() => {
+  try {
+    updatePostForm();
+    updateVipPrice();
+    document.querySelectorAll('input[name="post-vip-radio"]').forEach(r => {
+      r.addEventListener('change', updateVipPrice);
+    });
+  } catch(e) { console.error('postModal init:', e); }
+}, 200);
+
+// Loader — ყოველ შემთხვევაში მოვხსნათ
+// loading screen removed
+</script>
+</body>
+</html>

@@ -4,6 +4,8 @@
 const express = require('express');
 const db      = require('../db');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
+const mailer  = require('../utils/mailer');
+const push    = require('../utils/push');
 const router  = express.Router();
 
 // POST /api/disputes  — დავის გახსნა
@@ -39,6 +41,35 @@ router.post('/', requireAuth, async (req, res) => {
     );
 
     res.status(201).json(rows[0]);
+
+    // შეტყობ. — მეორე მონაწ. + ადმინები
+    (async () => {
+      try {
+        const dispute = rows[0];
+        const otherPartyId = order.buyer_id === req.user.id ? order.seller_id : order.buyer_id;
+        const { rows: listingRows } = await db.query(
+          'SELECT title FROM listings WHERE id=$1', [order.listing_id]
+        );
+        const listing = listingRows[0] || { title: 'განცხადება' };
+
+        const { rows: recipients } = await db.query(
+          `SELECT id, email, notif_email FROM users WHERE id=$1
+           UNION
+           SELECT id, email, notif_email FROM users WHERE role='admin'`,
+          [otherPartyId]
+        );
+
+        for (const recipient of recipients) {
+          await mailer.sendDisputeOpenedEmail(recipient, dispute, order, listing);
+          await push.sendToUser(recipient.id, {
+            title: '⚠️ დავა გაიხსნა',
+            body: `${listing.title} — ${reason}`,
+            url: `/?dispute=${dispute.id}`,
+            tag: `dispute-${dispute.id}`,
+          });
+        }
+      } catch (e) { console.error('dispute open notify error:', e.message); }
+    })();
   } catch (err) {
     res.status(500).json({ error: 'server_error' });
   }
@@ -120,6 +151,32 @@ router.put('/:id/resolve', requireAuth, requireAdmin, async (req, res) => {
     });
 
     res.json({ ok: true, resolution });
+
+    // შეტყობ. — მყიდველი + გამყიდველი
+    (async () => {
+      try {
+        const { rows: listingRows } = await db.query(
+          'SELECT title FROM listings WHERE id=$1', [order.listing_id]
+        );
+        const listing = listingRows[0] || { title: 'განცხადება' };
+        const dispute = { ...d[0], resolution, admin_note: admin_note || '' };
+
+        const { rows: parties } = await db.query(
+          'SELECT id, email, notif_email FROM users WHERE id=$1 OR id=$2',
+          [order.buyer_id, order.seller_id]
+        );
+
+        for (const recipient of parties) {
+          await mailer.sendDisputeResolvedEmail(recipient, dispute, order, listing, resolution);
+          await push.sendToUser(recipient.id, {
+            title: '🛡️ დავა გადაწყდა',
+            body: `${listing.title} — ${resolution === 'release' ? 'თანხა გამყიდველს' : 'თანხა მყიდველს'}`,
+            url: `/?order=${order.id}`,
+            tag: `dispute-${dispute.id}-resolved`,
+          });
+        }
+      } catch (e) { console.error('dispute resolve notify error:', e.message); }
+    })();
   } catch (err) {
     res.status(500).json({ error: 'server_error' });
   }

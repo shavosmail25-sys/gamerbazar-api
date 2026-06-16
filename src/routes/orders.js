@@ -4,6 +4,8 @@
 const express = require('express');
 const db      = require('../db');
 const { requireAuth } = require('../middleware/auth');
+const mailer  = require('../utils/mailer');
+const push    = require('../utils/push');
 const router  = express.Router();
 
 // ══════════════════════════════════════════════════════════════
@@ -65,6 +67,24 @@ router.post('/', requireAuth, async (req, res) => {
     });
 
     res.status(201).json(order);
+
+    // შეტყობ. გამყიდველს — async, response-ს არ აყოვნებს
+    (async () => {
+      try {
+        const { rows: sellerRows } = await db.query(
+          'SELECT id, email, notif_email FROM users WHERE id=$1', [listing.seller_id]
+        );
+        if (sellerRows.length) {
+          await mailer.sendOrderCreatedEmail(sellerRows[0], order, listing);
+        }
+        await push.sendToUser(listing.seller_id, {
+          title: '🛒 ახალი შეკვეთა',
+          body: `${listing.title} — ₾${Number(order.amount_gel).toFixed(2)}`,
+          url: `/?order=${order.id}`,
+          tag: `order-${order.id}`,
+        });
+      } catch (e) { console.error('order notify error:', e.message); }
+    })();
   } catch (err) {
     console.error('order create:', err.message);
     res.status(500).json({ error: 'server_error' });
@@ -168,6 +188,28 @@ router.post('/:id/confirm', requireAuth, async (req, res) => {
     });
 
     res.json({ ok: true, show_review: true });
+
+    // შეტყობ. გამყიდველს — ჩარიცხვა
+    (async () => {
+      try {
+        const { rows: sellerRows } = await db.query(
+          'SELECT id, email, notif_email FROM users WHERE id=$1', [order.seller_id]
+        );
+        const { rows: listingRows } = await db.query(
+          'SELECT title FROM listings WHERE id=$1', [order.listing_id]
+        );
+        const listing = listingRows[0] || { title: 'განცხადება' };
+        if (sellerRows.length) {
+          await mailer.sendOrderConfirmedEmail(sellerRows[0], order, listing);
+        }
+        await push.sendToUser(order.seller_id, {
+          title: '✅ შეკვეთა დადასტურდა',
+          body: `${listing.title} — ₾${Number(order.seller_receives).toFixed(2)} ბალანსზე`,
+          url: `/?page=wallet`,
+          tag: `order-${order.id}-confirmed`,
+        });
+      } catch (e) { console.error('confirm notify error:', e.message); }
+    })();
   } catch (err) {
     console.error('confirm:', err.message);
     res.status(500).json({ error: 'server_error' });
@@ -211,6 +253,28 @@ router.post('/:id/cancel', requireAuth, async (req, res) => {
     });
 
     res.json({ ok: true, refunded: order.amount_gel });
+
+    // შეტყობ. მყიდველს — refund
+    (async () => {
+      try {
+        const { rows: buyerRows } = await db.query(
+          'SELECT id, email, notif_email FROM users WHERE id=$1', [order.buyer_id]
+        );
+        const { rows: listingRows } = await db.query(
+          'SELECT title FROM listings WHERE id=$1', [order.listing_id]
+        );
+        const listing = listingRows[0] || { title: 'განცხადება' };
+        if (buyerRows.length) {
+          await mailer.sendOrderCancelledEmail(buyerRows[0], order, listing, reason);
+        }
+        await push.sendToUser(order.buyer_id, {
+          title: '↩️ შეკვეთა გაუქმდა',
+          body: `${listing.title} — ₾${Number(order.amount_gel).toFixed(2)} დაბრუნდა`,
+          url: `/?page=wallet`,
+          tag: `order-${order.id}-cancelled`,
+        });
+      } catch (e) { console.error('cancel notify error:', e.message); }
+    })();
   } catch (err) {
     res.status(500).json({ error: 'server_error' });
   }

@@ -165,6 +165,17 @@ CREATE TABLE IF NOT EXISTS sessions (
   created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
+-- ── PUSH SUBSCRIPTIONS (Web Push) ──────────────────────────────
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  id          UUID         PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id     UUID         NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  endpoint    TEXT         NOT NULL UNIQUE,
+  p256dh      VARCHAR(255) NOT NULL,
+  auth        VARCHAR(255) NOT NULL,
+  user_agent  VARCHAR(255),
+  created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
 -- ── INDEXES ──────────────────────────────────────────────────
 CREATE INDEX IF NOT EXISTS idx_listings_seller   ON listings(seller_id);
 CREATE INDEX IF NOT EXISTS idx_listings_category ON listings(category);
@@ -179,6 +190,7 @@ CREATE INDEX IF NOT EXISTS idx_messages_room     ON messages(room_id, created_at
 CREATE INDEX IF NOT EXISTS idx_tx_user           ON transactions(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_reviews_seller    ON reviews(seller_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_token    ON sessions(refresh_token);
+CREATE INDEX IF NOT EXISTS idx_push_subs_user    ON push_subscriptions(user_id);
 
 -- ── SELLER STATS VIEW ─────────────────────────────────────────
 CREATE OR REPLACE VIEW seller_stats AS
