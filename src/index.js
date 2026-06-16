@@ -43,6 +43,15 @@ app.use(cookieParser());
 const uploadDir = process.env.UPLOAD_DIR || './uploads';
 app.use('/uploads', express.static(path.resolve(uploadDir)));
 
+// ── Static (frontend HTML, admin.html, sw.js) ───────────────
+// აქ root-ში ვემსახურებით frontend ფაილებს (იგივე service, იგივე URL)
+app.use(express.static(path.resolve(__dirname, '..'), { index: false }));
+
+// ── Root → მთავარი frontend გვერდი ───────────────────────────
+app.get('/', (req, res) => {
+  res.sendFile(path.resolve(__dirname, '..', 'gamer-market-ge.html'));
+});
+
 // ── Routes ───────────────────────────────────────────────────
 app.use('/api/auth',     authRoutes);
 app.use('/api/listings', listingRoutes);
