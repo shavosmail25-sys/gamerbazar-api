@@ -3,146 +3,213 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GamerBazar.ge — Admin</title>
-<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<title>GamerBazar — Watchtower</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#07080c;--bg2:#0d0f15;--bg3:#13151e;--bg4:#1a1d27;
-  --border:#ffffff0d;--border2:#ffffff18;--border3:#ffffff28;
-  --text:#e8eaf2;--muted:#6b6e85;--muted2:#9295aa;
-  --accent:#00ffb3;--accent2:#00d496;--ad:#00ffb310;--ad2:#00ffb325;
-  --gold:#ffcc00;--gd:#ffcc0012;--gd2:#ffcc0028;
-  --blue:#5b9cf6;--bd:#5b9cf610;
-  --red:#ff5f6d;--rd:#ff5f6d10;--rd2:#ff5f6d28;
-  --purple:#b57bee;--pd:#b57bee10;
-  --font:'Lexend',sans-serif;--mono:'JetBrains Mono',monospace;
-  --r:8px;--r2:14px;
+  --ink:#0a0b0f;--panel:#13151c;--panel2:#181a23;--raised:#1d2029;
+  --line:#23262f;--line2:#2c2f3a;
+  --text:#e4e6ed;--dim:#80838f;--dim2:#565963;
+  --signal:#ff4d5e;--signal-dim:#ff4d5e14;--signal-line:#ff4d5e35;
+  --ok:#34d399;--ok-dim:#34d39914;--ok-line:#34d39935;
+  --amber:#f5a623;--amber-dim:#f5a62314;--amber-line:#f5a62335;
+  --blue:#5b9cf6;--blue-dim:#5b9cf614;
+  --mono:'JetBrains Mono',monospace;--sans:'Inter',sans-serif;
+  --radius:10px;
 }
 html{scroll-behavior:smooth}
 body{
-  background:var(--bg);color:var(--text);font-family:var(--font);
-  font-size:14px;line-height:1.6;min-height:100vh;
-  background-image:
-    radial-gradient(ellipse 60% 40% at 85% -10%, #ff5f6d08 0%, transparent 55%),
-    radial-gradient(ellipse 40% 40% at 5% 90%, #00ffb306 0%, transparent 50%);
-  background-attachment:fixed;
+  background:var(--ink);color:var(--text);font-family:var(--sans);
+  font-size:13.5px;line-height:1.55;min-height:100vh;
+  background-image:radial-gradient(ellipse 80% 50% at 50% -20%, #ff4d5e08 0%, transparent 60%);
 }
-button{font-family:var(--font);cursor:pointer;border:none;outline:none}
-input,select,textarea{font-family:var(--font)}
-::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
+button{font-family:var(--sans);cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font-family:var(--sans)}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--line2);border-radius:3px}
 
-/* ── TOP BAR ─────────────────────────────────────────────── */
-.topbar{position:sticky;top:0;z-index:100;height:56px;background:#08090de8;backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:16px}
-.logo{font-size:15px;font-weight:800;letter-spacing:-.3px;display:flex;align-items:center;gap:8px;white-space:nowrap}
-.logo em{color:var(--red);font-style:normal;text-shadow:0 0 12px var(--red)60}
-.logo .tag{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--red);background:var(--rd);border:1px solid var(--rd2);padding:2px 7px;border-radius:5px;letter-spacing:1px}
-.tabs{display:flex;gap:2px;flex:1;overflow-x:auto}.tabs::-webkit-scrollbar{display:none}
-.tab{padding:7px 14px;border-radius:7px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:6px}
-.tab:hover{color:var(--text);background:var(--bg3)}
-.tab.on{color:var(--text);background:var(--bg4)}
-.tab .pill{font-family:var(--mono);font-size:10px;background:var(--rd);color:var(--red);border:1px solid var(--rd2);padding:1px 6px;border-radius:10px;min-width:18px;text-align:center}
-.who{display:flex;align-items:center;gap:9px;flex-shrink:0}
-.who-name{font-size:12px;font-weight:600}
-.who-sub{font-size:10px;color:var(--muted)}
-.logout-btn{background:transparent;border:1px solid var(--border2);color:var(--muted);padding:6px 12px;border-radius:7px;font-size:11px;font-weight:600;transition:all .15s}
-.logout-btn:hover{color:var(--red);border-color:var(--rd2)}
+/* ════════════════════════ LOGIN GATE ════════════════════════ */
+.gate{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;position:relative;overflow:hidden}
+.gate::before{content:'';position:absolute;inset:0;background:
+  repeating-linear-gradient(0deg, transparent, transparent 39px, #ffffff03 39px, #ffffff03 40px),
+  repeating-linear-gradient(90deg, transparent, transparent 39px, #ffffff03 39px, #ffffff03 40px);
+  pointer-events:none}
+.gate-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:36px 34px;max-width:380px;width:100%;position:relative;z-index:1;box-shadow:0 30px 80px -20px #00000080}
+.gate-mark{display:flex;align-items:center;gap:10px;margin-bottom:28px}
+.gate-mark .dot{width:9px;height:9px;border-radius:50%;background:var(--signal);box-shadow:0 0 0 4px var(--signal-dim);animation:blink 2s ease-in-out infinite}
+.gate-mark .label{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+.gate-title{font-size:19px;font-weight:700;letter-spacing:-.2px;margin-bottom:6px}
+.gate-title em{color:var(--signal);font-style:normal}
+.gate-sub{font-size:12.5px;color:var(--dim);margin-bottom:26px;line-height:1.6}
+.gate-field{margin-bottom:12px}
+.gate-field label{display:block;font-size:10.5px;font-weight:600;color:var(--dim2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px}
+.gate-field input{width:100%;background:var(--ink);border:1px solid var(--line);border-radius:7px;padding:10px 12px;color:var(--text);font-size:13px;transition:border-color .15s}
+.gate-field input:focus{outline:none;border-color:var(--signal-line)}
+.gate-btn{width:100%;padding:11px;margin-top:8px;background:var(--signal);color:#fff;border-radius:7px;font-size:13px;font-weight:700;transition:opacity .15s;letter-spacing:.02em}
+.gate-btn:hover{opacity:.88}
+.gate-btn:disabled{opacity:.5;cursor:not-allowed}
+.gate-err{display:none;margin-top:14px;padding:9px 12px;background:var(--signal-dim);border:1px solid var(--signal-line);border-radius:7px;color:#ff8089;font-size:11.5px}
+.gate-foot{margin-top:20px;padding-top:16px;border-top:1px solid var(--line);font-size:10.5px;color:var(--dim2);text-align:center;font-family:var(--mono)}
 
-/* ── LAYOUT ──────────────────────────────────────────────── */
-.wrap{max-width:1180px;margin:0 auto;padding:28px 20px 60px}
-.view{display:none;animation:fadeIn .25s ease}
+/* ════════════════════════ APP SHELL ════════════════════════ */
+.shell{display:grid;grid-template-columns:228px 1fr;min-height:100vh}
+
+/* SIDEBAR */
+.sidebar{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.sb-mark{padding:20px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:9px}
+.sb-mark .dot{width:8px;height:8px;border-radius:50%;background:var(--signal)}
+.sb-mark-text{font-size:13.5px;font-weight:700;letter-spacing:-.2px}
+.sb-mark-text em{color:var(--signal);font-style:normal}
+.sb-mark-tag{font-family:var(--mono);font-size:8.5px;color:var(--dim2);letter-spacing:.12em;margin-left:auto}
+
+.sb-nav{flex:1;padding:14px 10px;overflow-y:auto}
+.sb-section-label{font-family:var(--mono);font-size:9.5px;color:var(--dim2);text-transform:uppercase;letter-spacing:.1em;padding:6px 10px 8px;margin-top:8px}
+.sb-item{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:7px;cursor:pointer;color:var(--dim);font-size:12.5px;font-weight:500;transition:all .12s;margin-bottom:2px;position:relative}
+.sb-item:hover{background:var(--raised);color:var(--text)}
+.sb-item.on{background:var(--raised);color:var(--text)}
+.sb-item.on::before{content:'';position:absolute;left:-10px;top:50%;transform:translateY(-50%);width:3px;height:16px;background:var(--signal);border-radius:0 3px 3px 0}
+.sb-item-ico{width:15px;text-align:center;flex-shrink:0;font-size:13px;opacity:.85}
+.sb-item-count{margin-left:auto;font-family:var(--mono);font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;background:var(--line);color:var(--dim)}
+.sb-item-count.alert{background:var(--signal-dim);color:var(--signal)}
+
+.sb-foot{padding:14px;border-top:1px solid var(--line)}
+.sb-who{display:flex;align-items:center;gap:9px;padding:8px 9px;border-radius:7px;margin-bottom:8px}
+.sb-who-ava{width:30px;height:30px;border-radius:50%;background:var(--raised);display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;color:var(--signal);flex-shrink:0;font-family:var(--mono)}
+.sb-who-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-who-role{font-family:var(--mono);font-size:9.5px;color:var(--dim2);text-transform:uppercase}
+.sb-logout{width:100%;padding:8px;background:var(--ink);border:1px solid var(--line);border-radius:7px;font-size:11.5px;font-weight:600;color:var(--dim);transition:all .15s}
+.sb-logout:hover{color:var(--signal);border-color:var(--signal-line)}
+
+/* MAIN */
+.main{display:flex;flex-direction:column;min-height:100vh}
+
+/* PULSE STRIP — signature element */
+.pulse-strip{display:flex;align-items:center;gap:0;background:var(--panel2);border-bottom:1px solid var(--line);padding:0 24px;height:38px;overflow-x:auto}
+.pulse-item{display:flex;align-items:center;gap:7px;padding:0 18px;height:100%;border-right:1px solid var(--line);white-space:nowrap;flex-shrink:0}
+.pulse-item:last-child{border-right:none}
+.pulse-dot{width:6px;height:6px;border-radius:50%;background:var(--dim2);flex-shrink:0}
+.pulse-dot.live{background:var(--ok)}
+.pulse-dot.warn{background:var(--amber);animation:pulse-anim 1.6s ease-in-out infinite}
+.pulse-dot.crit{background:var(--signal);animation:pulse-anim 1.2s ease-in-out infinite}
+@keyframes pulse-anim{0%,100%{box-shadow:0 0 0 0 currentColor}50%{box-shadow:0 0 0 4px transparent}}
+.pulse-label{font-family:var(--mono);font-size:10.5px;color:var(--dim);letter-spacing:.02em}
+.pulse-val{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text)}
+.pulse-time{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--dim2);padding-left:18px;flex-shrink:0}
+
+.content{flex:1;padding:28px 32px 60px;max-width:1240px}
+
+/* VIEW SWITCHING */
+.view{display:none;animation:viewIn .2s ease}
 .view.active{display:block}
-@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-.page-title{font-size:20px;font-weight:800;margin-bottom:4px}
-.page-sub{font-size:12px;color:var(--muted);margin-bottom:22px}
+@keyframes viewIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 
-/* ── CARDS / STATS ───────────────────────────────────────── */
-.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:26px}
-.stat-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:16px 18px;position:relative;overflow:hidden}
-.stat-card .ico{font-size:18px;margin-bottom:8px;opacity:.8}
-.stat-card .val{font-family:var(--mono);font-size:24px;font-weight:700;letter-spacing:-.5px}
-.stat-card .lbl{font-size:11px;color:var(--muted);margin-top:2px}
-.stat-card .sub{font-size:10px;margin-top:6px;font-weight:600}
-.stat-card.warn .val{color:var(--gold)}
-.stat-card.danger .val{color:var(--red)}
-.stat-card.ok .val{color:var(--accent)}
+.view-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:10px}
+.view-title{font-size:19px;font-weight:700;letter-spacing:-.3px}
+.view-sub{font-size:12px;color:var(--dim);margin-top:3px}
 
-/* ── FILTER BAR ──────────────────────────────────────────── */
+/* ════════════════════════ STAT GRID ════════════════════════ */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin-bottom:28px}
+.stat-cell{background:var(--panel);padding:18px 20px}
+.stat-cell-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.stat-cell-label{font-family:var(--mono);font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
+.stat-cell-flag{width:6px;height:6px;border-radius:50%;background:var(--dim2)}
+.stat-cell-flag.ok{background:var(--ok)}
+.stat-cell-flag.crit{background:var(--signal)}
+.stat-cell-val{font-family:var(--mono);font-size:26px;font-weight:700;letter-spacing:-.5px;line-height:1}
+.stat-cell-sub{font-size:11px;color:var(--dim);margin-top:7px}
+.stat-cell-sub b{color:var(--text);font-weight:600}
+
+.section-block{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;margin-bottom:18px}
+.section-block-title{font-size:13.5px;font-weight:700;margin-bottom:4px}
+.section-block-sub{font-size:11.5px;color:var(--dim);margin-bottom:16px}
+
+/* ════════════════════════ FILTER BAR ════════════════════════ */
 .filter-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
-.seg{display:flex;gap:2px;background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:3px}
-.seg-btn{padding:6px 13px;border-radius:6px;font-size:11.5px;font-weight:600;color:var(--muted);background:transparent;transition:all .15s}
-.seg-btn.on{background:var(--bg4);color:var(--text)}
-.search-i{flex:1;min-width:180px;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:8px 13px;color:var(--text);font-size:12.5px}
-.search-i:focus{border-color:var(--border3)}
-.search-i::placeholder{color:var(--muted)}
+.seg{display:flex;gap:1px;background:var(--line);border-radius:8px;padding:1px;border:1px solid var(--line)}
+.seg-btn{padding:7px 14px;border-radius:7px;font-size:11.5px;font-weight:600;color:var(--dim);background:var(--panel);transition:all .12s}
+.seg-btn.on{background:var(--raised);color:var(--text)}
+.search-i{flex:1;min-width:200px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 13px;color:var(--text);font-size:12.5px;transition:border-color .15s}
+.search-i:focus{outline:none;border-color:var(--line2)}
+.search-i::placeholder{color:var(--dim2)}
 
-/* ── TABLE / LIST ────────────────────────────────────────── */
-.list{display:flex;flex-direction:column;gap:8px}
-.row-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-.row-main{flex:1;min-width:200px}
-.row-title{font-size:13px;font-weight:700;margin-bottom:3px}
-.row-sub{font-size:11px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap}
-.row-sub b{color:var(--muted2);font-weight:600}
-.badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:5px;letter-spacing:.3px;text-transform:uppercase}
-.b-open{background:var(--rd);color:var(--red);border:1px solid var(--rd2)}
-.b-resolved{background:var(--ad);color:var(--accent);border:1px solid var(--ad2)}
-.b-active{background:var(--ad);color:var(--accent);border:1px solid var(--ad2)}
-.b-banned{background:var(--rd);color:var(--red);border:1px solid var(--rd2)}
-.b-user{background:var(--bd);color:var(--blue);border:1px solid #5b9cf628}
-.b-admin{background:var(--gd);color:var(--gold);border:1px solid var(--gd2)}
-.b-blocked{background:var(--rd);color:var(--red);border:1px solid var(--rd2)}
-.b-sold{background:var(--pd);color:var(--purple);border:1px solid #b57bee28}
-.b-deleted{background:var(--bg4);color:var(--muted);border:1px solid var(--border2)}
-.b-pending{background:var(--gd);color:var(--gold);border:1px solid var(--gd2)}
+/* ════════════════════════ ROW CARDS ════════════════════════ */
+.list{display:flex;flex-direction:column;gap:7px}
+.row{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;transition:border-color .15s}
+.row:hover{border-color:var(--line2)}
+.row-main{flex:1;min-width:220px}
+.row-title{font-size:13px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.row-meta{font-size:11px;color:var(--dim);display:flex;gap:12px;flex-wrap:wrap;font-family:var(--mono)}
+.row-meta b{color:var(--dim2);font-weight:600;font-family:var(--sans)}
+.row-desc{font-size:11.5px;color:var(--dim);margin-top:7px;max-width:600px;line-height:1.5}
+.row-resolved-note{font-size:11px;color:var(--ok);margin-top:7px;font-family:var(--mono)}
+
+.tag{font-family:var(--mono);font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:5px;letter-spacing:.04em;text-transform:uppercase;border:1px solid transparent}
+.tag-crit{background:var(--signal-dim);color:var(--signal);border-color:var(--signal-line)}
+.tag-ok{background:var(--ok-dim);color:var(--ok);border-color:var(--ok-line)}
+.tag-warn{background:var(--amber-dim);color:var(--amber);border-color:var(--amber-line)}
+.tag-neutral{background:var(--line);color:var(--dim)}
+.tag-blue{background:var(--blue-dim);color:var(--blue)}
+
 .row-actions{display:flex;gap:7px;flex-shrink:0}
+.btn{padding:7px 14px;border-radius:7px;font-size:11.5px;font-weight:700;transition:all .15s;border:1px solid transparent;white-space:nowrap}
+.btn-ghost{background:var(--raised);color:var(--dim);border-color:var(--line)}
+.btn-ghost:hover{color:var(--text);border-color:var(--line2)}
+.btn-signal{background:var(--signal-dim);color:var(--signal);border-color:var(--signal-line)}
+.btn-signal:hover{background:var(--signal);color:#fff}
+.btn-ok{background:var(--ok-dim);color:var(--ok);border-color:var(--ok-line)}
+.btn-ok:hover{background:var(--ok);color:#06150f}
+.btn:disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
 
-.btn{padding:6px 13px;border-radius:7px;font-size:11.5px;font-weight:700;transition:all .15s;border:1px solid transparent}
-.btn-ghost{background:transparent;color:var(--muted);border-color:var(--border2)}
-.btn-ghost:hover{color:var(--text);border-color:var(--border3)}
-.btn-green{background:var(--ad);color:var(--accent);border-color:var(--ad2)}
-.btn-green:hover{background:var(--ad2)}
-.btn-red{background:var(--rd);color:var(--red);border-color:var(--rd2)}
-.btn-red:hover{background:var(--rd2)}
-.btn-gold{background:var(--gd);color:var(--gold);border-color:var(--gd2)}
-.btn-gold:hover{background:var(--gd2)}
-.btn:disabled{opacity:.4;cursor:not-allowed}
+.empty{text-align:center;padding:54px 20px;color:var(--dim)}
+.empty-ico{font-family:var(--mono);font-size:22px;margin-bottom:10px;color:var(--dim2)}
+.empty-t{font-size:12.5px}
+.loading{text-align:center;padding:54px;color:var(--dim);font-size:12px;font-family:var(--mono)}
+.loading::after{content:'';display:inline-block;width:10px;text-align:left;animation:dots 1.4s steps(4) infinite}
+@keyframes dots{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}}
 
-.empty{text-align:center;padding:50px 20px;color:var(--muted)}
-.empty .ico{font-size:34px;margin-bottom:10px;opacity:.5}
-.loading{text-align:center;padding:50px;color:var(--muted);font-size:12px}
+.pagination{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:18px}
+.page-btn{min-width:30px;height:30px;padding:0 8px;border-radius:7px;background:var(--panel);border:1px solid var(--line);color:var(--dim);font-size:11.5px;font-weight:600;font-family:var(--mono);transition:all .15s}
+.page-btn:hover:not(:disabled){border-color:var(--line2);color:var(--text)}
+.page-btn.on{background:var(--raised);border-color:var(--line2);color:var(--text)}
+.page-btn:disabled{opacity:.35;cursor:not-allowed}
 
-/* ── MODAL ───────────────────────────────────────────────── */
-.modal-bg{position:fixed;inset:0;background:#000000a0;backdrop-filter:blur(4px);z-index:500;display:none;align-items:center;justify-content:center;padding:20px}
+/* ════════════════════════ MODAL ════════════════════════ */
+.modal-bg{position:fixed;inset:0;background:#00000088;backdrop-filter:blur(3px);z-index:500;display:none;align-items:center;justify-content:center;padding:20px}
 .modal-bg.show{display:flex}
-.modal{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r2);padding:22px;max-width:440px;width:100%;max-height:85vh;overflow-y:auto}
-.modal h3{font-size:15px;font-weight:700;margin-bottom:14px}
-.modal .field{margin-bottom:12px}
-.modal label{font-size:11px;color:var(--muted);display:block;margin-bottom:5px;font-weight:600}
-.modal textarea,.modal select,.modal input{width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:7px;padding:9px 11px;color:var(--text);font-size:12.5px;resize:vertical}
-.modal-info{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:11.5px;color:var(--muted2);margin-bottom:14px;line-height:1.7}
-.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.modal{background:var(--panel);border:1px solid var(--line2);border-radius:var(--radius);padding:24px;max-width:440px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 40px 100px -20px #000000a0}
+.modal-head{display:flex;align-items:center;gap:9px;margin-bottom:16px}
+.modal-head .dot{width:7px;height:7px;border-radius:50%;background:var(--signal)}
+.modal h3{font-size:14.5px;font-weight:700}
+.modal .field{margin-bottom:13px}
+.modal label{font-size:10.5px;color:var(--dim);display:block;margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.modal textarea,.modal select,.modal input{width:100%;background:var(--ink);border:1px solid var(--line);border-radius:7px;padding:9px 11px;color:var(--text);font-size:12.5px;resize:vertical}
+.modal textarea:focus,.modal select:focus,.modal input:focus{outline:none;border-color:var(--line2)}
+.modal-info{background:var(--ink);border:1px solid var(--line);border-radius:8px;padding:11px 13px;font-size:11.5px;color:var(--dim);margin-bottom:16px;line-height:1.7;font-family:var(--mono)}
+.modal-info b{color:var(--text);font-family:var(--sans)}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
 
-/* ── LOGIN GATE ──────────────────────────────────────────── */
-.gate{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-.gate-card{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r2);padding:32px;max-width:360px;width:100%;text-align:center}
-.gate-ico{font-size:36px;margin-bottom:10px}
-.gate h2{font-size:17px;font-weight:800;margin-bottom:6px}
-.gate p{font-size:12px;color:var(--muted);margin-bottom:20px;line-height:1.6}
-.gate input{width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;margin-bottom:10px}
-.gate-err{color:var(--red);font-size:11.5px;margin-top:8px;display:none}
-
-/* ── TOAST ───────────────────────────────────────────────── */
+/* TOAST */
 .toast-wrap{position:fixed;bottom:20px;right:20px;z-index:600;display:flex;flex-direction:column;gap:8px}
-.toast{background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:11px 16px;font-size:12.5px;font-weight:600;box-shadow:0 8px 24px #00000060;animation:toastIn .25s ease}
-.toast.ok{border-color:var(--ad2);color:var(--accent)}
-.toast.err{border-color:var(--rd2);color:var(--red)}
+.toast{background:var(--panel);border:1px solid var(--line2);border-radius:8px;padding:11px 16px;font-size:12px;font-weight:600;box-shadow:0 10px 30px #00000080;animation:toastIn .2s ease;font-family:var(--mono)}
+.toast.ok{border-color:var(--ok-line);color:var(--ok)}
+.toast.err{border-color:var(--signal-line);color:var(--signal)}
 @keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
-@media(max-width:640px){
-  .topbar{padding:0 12px;gap:10px}
-  .who-sub{display:none}
-  .wrap{padding:18px 12px 50px}
-  .row-card{flex-direction:column;align-items:stretch}
+/* MOBILE NAV TOGGLE */
+.mobile-nav-toggle{display:none}
+
+@media(max-width:880px){
+  .shell{grid-template-columns:1fr}
+  .sidebar{position:fixed;left:0;top:0;height:100vh;width:228px;z-index:300;transform:translateX(-100%);transition:transform .2s ease}
+  .sidebar.open{transform:translateX(0)}
+  .mobile-nav-toggle{display:flex;align-items:center;gap:8px;position:fixed;top:14px;left:14px;z-index:310;background:var(--panel);border:1px solid var(--line2);border-radius:8px;padding:9px 12px;font-size:11.5px;font-weight:700}
+  .content{padding:64px 16px 50px}
+  .pulse-strip{padding-left:60px}
+  .sidebar-backdrop{display:none;position:fixed;inset:0;background:#00000080;z-index:290}
+  .sidebar-backdrop.show{display:block}
+  .row{flex-direction:column;align-items:stretch}
   .row-actions{justify-content:flex-end}
 }
 </style>
@@ -152,154 +219,200 @@ input,select,textarea{font-family:var(--font)}
 <!-- ══════════════════════════ LOGIN GATE ══════════════════════════ -->
 <div class="gate" id="gate">
   <div class="gate-card">
-    <div class="gate-ico">🛡️</div>
-    <h2>GamerBazar <em style="color:var(--red)">Admin</em></h2>
-    <p>ეს პანელი ხელმისაწვდომია მხოლოდ ადმინისტრატორი როლის მქონე მომხმარებლებისთვის. შედი შენი ანგარიშით.</p>
-    <input type="email" id="gate-email" placeholder="ელ-ფოსტა">
-    <input type="password" id="gate-pass" placeholder="პაროლი">
-    <button class="btn btn-red" style="width:100%;padding:11px;font-size:13px" onclick="adminLogin()">შესვლა</button>
+    <div class="gate-mark"><div class="dot"></div><div class="label">restricted access</div></div>
+    <div class="gate-title">Watch<em>tower</em></div>
+    <div class="gate-sub">GamerBazar-ის ოპერატორის პანელი. წვდომა მხოლოდ admin როლის მქონე ანგარიშებისთვის.</div>
+    <div class="gate-field">
+      <label>Email</label>
+      <input type="email" id="gate-email" placeholder="admin@gamerbazar.ge" autocomplete="username">
+    </div>
+    <div class="gate-field">
+      <label>Password</label>
+      <input type="password" id="gate-pass" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="gate-btn" id="gate-btn" onclick="adminLogin()">წვდომის მოთხოვნა →</button>
     <div class="gate-err" id="gate-err"></div>
+    <div class="gate-foot">GAMERBAZAR.GE · OPERATOR CONSOLE</div>
   </div>
 </div>
 
-<!-- ══════════════════════════ ADMIN APP ══════════════════════════ -->
-<div id="app" style="display:none">
-  <div class="topbar">
-    <div class="logo">Gamer<em>Bazar</em><span class="tag">ADMIN</span></div>
-    <div class="tabs">
-      <div class="tab on" data-view="overview" onclick="switchView('overview')">📊 მთავარი</div>
-      <div class="tab" data-view="disputes" onclick="switchView('disputes')">⚠️ დავები <span class="pill" id="pill-disputes">0</span></div>
-      <div class="tab" data-view="users" onclick="switchView('users')">👤 მომხმარებლები</div>
-      <div class="tab" data-view="listings" onclick="switchView('listings')">📦 განცხადებები</div>
-    </div>
-    <div class="who">
-      <div style="text-align:right">
-        <div class="who-name" id="who-name">—</div>
-        <div class="who-sub" id="who-sub">—</div>
-      </div>
-      <button class="logout-btn" onclick="adminLogout()">გასვლა</button>
-    </div>
-  </div>
+<!-- ══════════════════════════ APP SHELL ══════════════════════════ -->
+<div class="shell" id="app" style="display:none">
 
-  <div class="wrap">
+  <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeMobileNav()"></div>
+  <button class="mobile-nav-toggle" onclick="toggleMobileNav()">☰ MENU</button>
 
-    <!-- ── OVERVIEW ── -->
-    <div class="view active" id="view-overview">
-      <div class="page-title">პლატფორმის მიმოხილვა</div>
-      <div class="page-sub">ზოგადი სტატისტიკა — მომხმარებლები, განცხადებები, შეკვეთები, დავები</div>
-      <div class="stat-grid" id="overview-stats">
-        <div class="loading">იტვირთება...</div>
-      </div>
-      <div class="row-card" style="background:var(--rd);border-color:var(--rd2)">
-        <div class="row-main">
-          <div class="row-title" style="color:var(--red)">⚠️ ღია დავების მართვა</div>
-          <div class="row-sub">დავები, რომლებიც საჭიროებენ ადმინის გადაწყვეტილებას — release ან refund.</div>
-        </div>
-        <div class="row-actions">
-          <button class="btn btn-red" onclick="switchView('disputes')">დავების ნახვა →</button>
-        </div>
-      </div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-mark">
+      <div class="dot"></div>
+      <div class="sb-mark-text">Watch<em>tower</em></div>
+      <div class="sb-mark-tag">v2</div>
     </div>
 
-    <!-- ── DISPUTES ── -->
-    <div class="view" id="view-disputes">
-      <div class="page-title">დავების მართვა</div>
-      <div class="page-sub">გადასინჯე დეტალები და გადაწყვიტე — თანხის გათავისუფლება გამყიდველზე, ან დაბრუნება მყიდველზე</div>
-      <div class="filter-bar">
-        <div class="seg" id="disputes-filter">
-          <button class="seg-btn on" data-status="open" onclick="setDisputeFilter('open')">ღია</button>
-          <button class="seg-btn" data-status="resolved" onclick="setDisputeFilter('resolved')">გადაწყვეტილი</button>
-          <button class="seg-btn" data-status="all" onclick="setDisputeFilter('all')">ყველა</button>
+    <nav class="sb-nav">
+      <div class="sb-section-label">Monitor</div>
+      <div class="sb-item on" data-view="overview" onclick="switchView('overview')">
+        <span class="sb-item-ico">◆</span>მთავარი
+      </div>
+
+      <div class="sb-section-label">Risk Queue</div>
+      <div class="sb-item" data-view="disputes" onclick="switchView('disputes')">
+        <span class="sb-item-ico">⚠</span>დავები
+        <span class="sb-item-count" id="nav-disputes-count">0</span>
+      </div>
+
+      <div class="sb-section-label">Population</div>
+      <div class="sb-item" data-view="users" onclick="switchView('users')">
+        <span class="sb-item-ico">◎</span>მომხმარებლები
+      </div>
+      <div class="sb-item" data-view="listings" onclick="switchView('listings')">
+        <span class="sb-item-ico">▣</span>განცხადებები
+      </div>
+    </nav>
+
+    <div class="sb-foot">
+      <div class="sb-who">
+        <div class="sb-who-ava" id="sb-who-ava">?</div>
+        <div style="min-width:0">
+          <div class="sb-who-name" id="sb-who-name">—</div>
+          <div class="sb-who-role">operator</div>
         </div>
       </div>
-      <div class="list" id="disputes-list"><div class="loading">იტვირთება...</div></div>
+      <button class="sb-logout" onclick="adminLogout()">სესიის დახურვა</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <!-- PULSE STRIP — signature element -->
+    <div class="pulse-strip" id="pulse-strip">
+      <div class="pulse-item"><div class="pulse-dot" id="pulse-dot-disputes"></div><span class="pulse-label">OPEN DISPUTES</span><span class="pulse-val" id="pulse-disputes">—</span></div>
+      <div class="pulse-item"><div class="pulse-dot live"></div><span class="pulse-label">USERS</span><span class="pulse-val" id="pulse-users">—</span></div>
+      <div class="pulse-item"><div class="pulse-dot" id="pulse-dot-banned"></div><span class="pulse-label">BANNED</span><span class="pulse-val" id="pulse-banned">—</span></div>
+      <div class="pulse-item"><div class="pulse-dot live"></div><span class="pulse-label">VOLUME</span><span class="pulse-val" id="pulse-volume">—</span></div>
+      <div class="pulse-time" id="pulse-time">—</div>
     </div>
 
-    <!-- ── USERS ── -->
-    <div class="view" id="view-users">
-      <div class="page-title">მომხმარებლები</div>
-      <div class="page-sub">ძებნა username/email-ით, როლის ფილტრი, ban / unban</div>
-      <div class="filter-bar">
-        <input class="search-i" id="users-search" placeholder="🔍 ძებნა username, email, სახელი..." oninput="debounceUsersSearch()">
-        <div class="seg" id="users-filter">
-          <button class="seg-btn on" data-role="all" onclick="setUsersFilter('all')">ყველა</button>
-          <button class="seg-btn" data-role="user" onclick="setUsersFilter('user')">User</button>
-          <button class="seg-btn" data-role="banned" onclick="setUsersFilter('banned')">დაბლოკილი</button>
-          <button class="seg-btn" data-role="admin" onclick="setUsersFilter('admin')">Admin</button>
+    <div class="content">
+
+      <!-- ═══════════ OVERVIEW ═══════════ -->
+      <div class="view active" id="view-overview">
+        <div class="view-head">
+          <div><div class="view-title">სისტემის მდგომარეობა</div><div class="view-sub">რეალურ დროში — მომხმარებლები, განცხადებები, შეკვეთები, დავები</div></div>
+        </div>
+        <div class="stat-grid" id="overview-stats"><div class="loading">სკანირება</div></div>
+
+        <div class="section-block" id="risk-block" style="display:none">
+          <div class="section-block-title">⚠ Risk Queue — საჭიროებს გადაწყვეტას</div>
+          <div class="section-block-sub" id="risk-sub">—</div>
+          <button class="btn btn-signal" onclick="switchView('disputes')">დავების ნახვა →</button>
         </div>
       </div>
-      <div class="list" id="users-list"><div class="loading">იტვირთება...</div></div>
-    </div>
 
-    <!-- ── LISTINGS ── -->
-    <div class="view" id="view-listings">
-      <div class="page-title">განცხადებების მოდერაცია</div>
-      <div class="page-sub">ძებნა სათაურით/თამაშით, სტატუსის ფილტრი, ბლოკვა ან წაშლა</div>
-      <div class="filter-bar">
-        <input class="search-i" id="listings-search" placeholder="🔍 ძებნა სათაურით, თამაშით..." oninput="debounceListingsSearch()">
-        <div class="seg" id="listings-filter">
-          <button class="seg-btn on" data-status="all" onclick="setListingsFilter('all')">ყველა</button>
-          <button class="seg-btn" data-status="active" onclick="setListingsFilter('active')">აქტიური</button>
-          <button class="seg-btn" data-status="blocked" onclick="setListingsFilter('blocked')">დაბლოკილი</button>
-          <button class="seg-btn" data-status="sold" onclick="setListingsFilter('sold')">გაყიდული</button>
-          <button class="seg-btn" data-status="deleted" onclick="setListingsFilter('deleted')">წაშლილი</button>
+      <!-- ═══════════ DISPUTES ═══════════ -->
+      <div class="view" id="view-disputes">
+        <div class="view-head">
+          <div><div class="view-title">დავების მართვა</div><div class="view-sub">გადასინჯე დეტალები და გადაწყვიტე — release გამყიდველზე, ან refund მყიდველზე</div></div>
         </div>
+        <div class="filter-bar">
+          <div class="seg" id="disputes-filter">
+            <button class="seg-btn on" data-status="open" onclick="setDisputeFilter('open')">ღია</button>
+            <button class="seg-btn" data-status="resolved" onclick="setDisputeFilter('resolved')">გადაწყვეტილი</button>
+            <button class="seg-btn" data-status="all" onclick="setDisputeFilter('all')">ყველა</button>
+          </div>
+        </div>
+        <div class="list" id="disputes-list"><div class="loading">სკანირება</div></div>
       </div>
-      <div class="list" id="listings-list"><div class="loading">იტვირთება...</div></div>
-    </div>
 
+      <!-- ═══════════ USERS ═══════════ -->
+      <div class="view" id="view-users">
+        <div class="view-head">
+          <div><div class="view-title">მომხმარებლები</div><div class="view-sub">ძებნა username/email-ით · როლის ფილტრი · ban / unban</div></div>
+        </div>
+        <div class="filter-bar">
+          <input class="search-i" id="users-search" placeholder="🔍 ძებნა username, email, სახელი..." oninput="debounceUsersSearch()">
+          <div class="seg" id="users-filter">
+            <button class="seg-btn on" data-role="all" onclick="setUsersFilter('all')">ყველა</button>
+            <button class="seg-btn" data-role="user" onclick="setUsersFilter('user')">User</button>
+            <button class="seg-btn" data-role="banned" onclick="setUsersFilter('banned')">დაბლოკილი</button>
+            <button class="seg-btn" data-role="admin" onclick="setUsersFilter('admin')">Admin</button>
+          </div>
+        </div>
+        <div class="list" id="users-list"><div class="loading">სკანირება</div></div>
+        <div class="pagination" id="users-pagination"></div>
+      </div>
+
+      <!-- ═══════════ LISTINGS ═══════════ -->
+      <div class="view" id="view-listings">
+        <div class="view-head">
+          <div><div class="view-title">განცხადებების მოდერაცია</div><div class="view-sub">ძებნა სათაურით/თამაშით · სტატუსის ფილტრი · ბლოკვა ან წაშლა</div></div>
+        </div>
+        <div class="filter-bar">
+          <input class="search-i" id="listings-search" placeholder="🔍 ძებნა სათაურით, თამაშით..." oninput="debounceListingsSearch()">
+          <div class="seg" id="listings-filter">
+            <button class="seg-btn on" data-status="all" onclick="setListingsFilter('all')">ყველა</button>
+            <button class="seg-btn" data-status="active" onclick="setListingsFilter('active')">აქტიური</button>
+            <button class="seg-btn" data-status="blocked" onclick="setListingsFilter('blocked')">დაბლოკილი</button>
+            <button class="seg-btn" data-status="sold" onclick="setListingsFilter('sold')">გაყიდული</button>
+            <button class="seg-btn" data-status="deleted" onclick="setListingsFilter('deleted')">წაშლილი</button>
+          </div>
+        </div>
+        <div class="list" id="listings-list"><div class="loading">სკანირება</div></div>
+        <div class="pagination" id="listings-pagination"></div>
+      </div>
+
+    </div>
   </div>
 </div>
 
 <!-- ══════════════════════════ MODALS ══════════════════════════ -->
 <div class="modal-bg" id="resolveModal">
   <div class="modal">
-    <h3>⚠️ დავის გადაწყვეტა</h3>
+    <div class="modal-head"><div class="dot"></div><h3>დავის გადაწყვეტა</h3></div>
     <div class="modal-info" id="resolve-info"></div>
     <div class="field">
-      <label>გადაწყვეტილება</label>
+      <label>Resolution</label>
       <select id="resolve-decision">
-        <option value="release">Release — თანხა გამყიდველზე</option>
-        <option value="refund">Refund — თანხა მყიდველზე</option>
+        <option value="release">RELEASE — თანხა გამყიდველზე</option>
+        <option value="refund">REFUND — თანხა მყიდველზე</option>
       </select>
     </div>
     <div class="field">
-      <label>ადმინის შენიშვნა (არასავალდებულო)</label>
+      <label>Admin Note (optional)</label>
       <textarea id="resolve-note" rows="3" placeholder="მაგ: ორივე მხარესთან საუბრის შემდეგ..."></textarea>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('resolveModal')">გაუქმება</button>
-      <button class="btn btn-red" id="resolve-confirm-btn" onclick="confirmResolve()">გადაწყვეტის დადასტურება</button>
+      <button class="btn btn-signal" id="resolve-confirm-btn" onclick="confirmResolve()">დადასტურება</button>
     </div>
   </div>
 </div>
 
 <div class="modal-bg" id="banModal">
   <div class="modal">
-    <h3 id="ban-title">მომხმარებლის დაბლოკვა</h3>
+    <div class="modal-head"><div class="dot"></div><h3 id="ban-title">მომხმარებლის დაბლოკვა</h3></div>
     <div class="modal-info" id="ban-info"></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('banModal')">გაუქმება</button>
-      <button class="btn btn-red" id="ban-confirm-btn" onclick="confirmBanAction()">დადასტურება</button>
+      <button class="btn btn-signal" id="ban-confirm-btn" onclick="confirmBanAction()">დადასტურება</button>
     </div>
   </div>
 </div>
 
 <div class="modal-bg" id="moderateModal">
   <div class="modal">
-    <h3>📦 განცხადების მოდერაცია</h3>
+    <div class="modal-head"><div class="dot"></div><h3>განცხადების მოდერაცია</h3></div>
     <div class="modal-info" id="moderate-info"></div>
     <div class="field">
-      <label>ახალი სტატუსი</label>
+      <label>New Status</label>
       <select id="moderate-status">
-        <option value="active">Active — აქტიური</option>
-        <option value="blocked">Blocked — დაბლოკილი</option>
-        <option value="deleted">Deleted — წაშლილი</option>
+        <option value="active">ACTIVE — აქტიური</option>
+        <option value="blocked">BLOCKED — დაბლოკილი</option>
+        <option value="deleted">DELETED — წაშლილი</option>
       </select>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('moderateModal')">გაუქმება</button>
-      <button class="btn btn-red" id="moderate-confirm-btn" onclick="confirmModerate()">შენახვა</button>
+      <button class="btn btn-signal" id="moderate-confirm-btn" onclick="confirmModerate()">შენახვა</button>
     </div>
   </div>
 </div>
@@ -341,6 +454,17 @@ function fmtDate(d) {
   return new Date(d).toLocaleDateString('ka-GE', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 function fmtMoney(n) { return '₾' + Number(n || 0).toFixed(2); }
+function esc(str) {
+  if (str == null) return '';
+  return String(str).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+function updatePulseTime() {
+  const el = document.getElementById('pulse-time');
+  if (el) el.textContent = new Date().toLocaleTimeString('ka-GE', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+}
+setInterval(updatePulseTime, 1000);
+updatePulseTime();
 
 // ══════════════════════════════════════════════════════════
 // AUTH GATE
@@ -349,6 +473,7 @@ async function adminLogin() {
   const email = document.getElementById('gate-email').value.trim();
   const password = document.getElementById('gate-pass').value;
   const errEl = document.getElementById('gate-err');
+  const btn = document.getElementById('gate-btn');
   errEl.style.display = 'none';
 
   if (!email || !password) {
@@ -356,6 +481,8 @@ async function adminLogin() {
     errEl.style.display = 'block';
     return;
   }
+
+  btn.disabled = true; btn.textContent = 'მოწმდება...';
 
   try {
     const data = await api('/api/auth/login', {
@@ -365,6 +492,7 @@ async function adminLogin() {
     if (data.user.role !== 'admin') {
       errEl.textContent = 'ეს ანგარიში ადმინისტრატორი არ არის';
       errEl.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'წვდომის მოთხოვნა →';
       return;
     }
     setToken(data.token);
@@ -373,6 +501,7 @@ async function adminLogin() {
   } catch (e) {
     errEl.textContent = e.message || 'არასწორი ელ-ფოსტა ან პაროლი';
     errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'წვდომის მოთხოვნა →';
   }
 }
 
@@ -391,9 +520,10 @@ async function checkExistingSession() {
 
 function enterApp() {
   document.getElementById('gate').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  document.getElementById('who-name').textContent = currentAdmin.display_name || currentAdmin.username;
-  document.getElementById('who-sub').textContent = currentAdmin.email;
+  document.getElementById('app').style.display = 'grid';
+  const name = currentAdmin.display_name || currentAdmin.username;
+  document.getElementById('sb-who-name').textContent = name;
+  document.getElementById('sb-who-ava').textContent = name.slice(0,2).toUpperCase();
   loadOverview();
   loadDisputesPill();
 }
@@ -408,13 +538,26 @@ function adminLogout() {
 }
 
 // ══════════════════════════════════════════════════════════
+// MOBILE NAV
+// ══════════════════════════════════════════════════════════
+function toggleMobileNav() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarBackdrop').classList.toggle('show');
+}
+function closeMobileNav() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarBackdrop').classList.remove('show');
+}
+
+// ══════════════════════════════════════════════════════════
 // NAV / VIEW SWITCH
 // ══════════════════════════════════════════════════════════
 function switchView(view) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+  document.querySelectorAll('.sb-item').forEach(t => t.classList.remove('on'));
   document.getElementById('view-' + view).classList.add('active');
-  document.querySelector(`.tab[data-view="${view}"]`).classList.add('on');
+  document.querySelector(`.sb-item[data-view="${view}"]`).classList.add('on');
+  closeMobileNav();
 
   if (view === 'overview') loadOverview();
   if (view === 'disputes') loadDisputes();
@@ -427,53 +570,70 @@ function closeModal(id) {
 }
 
 // ══════════════════════════════════════════════════════════
-// OVERVIEW
+// OVERVIEW + PULSE STRIP
 // ══════════════════════════════════════════════════════════
 async function loadOverview() {
   const grid = document.getElementById('overview-stats');
   try {
     const d = await api('/api/admin/overview');
+
+    // pulse strip
+    document.getElementById('pulse-disputes').textContent = d.disputes.open;
+    document.getElementById('pulse-users').textContent = d.users.total;
+    document.getElementById('pulse-banned').textContent = d.users.banned;
+    document.getElementById('pulse-volume').textContent = fmtMoney(d.volume_gel);
+    const dDot = document.getElementById('pulse-dot-disputes');
+    dDot.className = 'pulse-dot ' + (d.disputes.open > 0 ? 'crit' : 'live');
+    const bDot = document.getElementById('pulse-dot-banned');
+    bDot.className = 'pulse-dot ' + (d.users.banned > 0 ? 'warn' : 'live');
+
     grid.innerHTML = `
-      <div class="stat-card">
-        <div class="ico">👤</div>
-        <div class="val">${d.users.total}</div>
-        <div class="lbl">მომხმარებელი</div>
-        <div class="sub" style="color:var(--red)">${d.users.banned} დაბლოკილი</div>
+      <div class="stat-cell">
+        <div class="stat-cell-top"><span class="stat-cell-label">Users</span><span class="stat-cell-flag ok"></span></div>
+        <div class="stat-cell-val">${d.users.total}</div>
+        <div class="stat-cell-sub"><b>${d.users.banned}</b> დაბლოკილი</div>
       </div>
-      <div class="stat-card ok">
-        <div class="ico">📦</div>
-        <div class="val">${d.listings.active}</div>
-        <div class="lbl">აქტიური განცხ.</div>
-        <div class="sub" style="color:var(--muted)">სულ ${d.listings.total}</div>
+      <div class="stat-cell">
+        <div class="stat-cell-top"><span class="stat-cell-label">Listings</span><span class="stat-cell-flag ok"></span></div>
+        <div class="stat-cell-val">${d.listings.active}</div>
+        <div class="stat-cell-sub">აქტიური · სულ <b>${d.listings.total}</b></div>
       </div>
-      <div class="stat-card">
-        <div class="ico">🛒</div>
-        <div class="val">${d.orders.active}</div>
-        <div class="lbl">აქტ. შეკვეთა</div>
-        <div class="sub" style="color:var(--accent)">${d.orders.completed} დასრულდა</div>
+      <div class="stat-cell">
+        <div class="stat-cell-top"><span class="stat-cell-label">Orders</span><span class="stat-cell-flag ok"></span></div>
+        <div class="stat-cell-val">${d.orders.active}</div>
+        <div class="stat-cell-sub"><b>${d.orders.completed}</b> დასრულდა</div>
       </div>
-      <div class="stat-card ${d.disputes.open > 0 ? 'danger' : 'ok'}">
-        <div class="ico">⚠️</div>
-        <div class="val">${d.disputes.open}</div>
-        <div class="lbl">ღია დავა</div>
-        <div class="sub" style="color:var(--muted)">სულ ${d.disputes.total}</div>
+      <div class="stat-cell">
+        <div class="stat-cell-top"><span class="stat-cell-label">Disputes</span><span class="stat-cell-flag ${d.disputes.open > 0 ? 'crit' : 'ok'}"></span></div>
+        <div class="stat-cell-val" style="${d.disputes.open > 0 ? 'color:var(--signal)' : ''}">${d.disputes.open}</div>
+        <div class="stat-cell-sub">ღია · სულ <b>${d.disputes.total}</b></div>
       </div>
-      <div class="stat-card ok">
-        <div class="ico">💰</div>
-        <div class="val">${fmtMoney(d.volume_gel)}</div>
-        <div class="lbl">სრული ბრუნვა</div>
-        <div class="sub" style="color:var(--muted)">დასრულ. შეკვეთები</div>
+      <div class="stat-cell">
+        <div class="stat-cell-top"><span class="stat-cell-label">Volume</span><span class="stat-cell-flag ok"></span></div>
+        <div class="stat-cell-val">${fmtMoney(d.volume_gel)}</div>
+        <div class="stat-cell-sub">დასრულებული შეკვ.</div>
       </div>
     `;
+
+    const riskBlock = document.getElementById('risk-block');
+    const riskSub = document.getElementById('risk-sub');
+    if (d.disputes.open > 0) {
+      riskBlock.style.display = 'block';
+      riskSub.innerHTML = `<b style="color:var(--signal)">${d.disputes.open}</b> დავა ელოდება გადაწყვეტას. რეკომენდირებულია სასწრაფო გადასინჯვა.`;
+    } else {
+      riskBlock.style.display = 'none';
+    }
   } catch (e) {
-    grid.innerHTML = '<div class="empty"><div class="ico">⚠️</div>მონაცემების ჩატვირთვა ვერ მოხერხდა</div>';
+    grid.innerHTML = '<div class="empty"><div class="empty-ico">⚠</div>მონაცემების ჩატვირთვა ვერ მოხერხდა</div>';
   }
 }
 
 async function loadDisputesPill() {
   try {
     const list = await api('/api/admin/disputes?status=open&limit=99');
-    document.getElementById('pill-disputes').textContent = list.length;
+    const el = document.getElementById('nav-disputes-count');
+    el.textContent = list.length;
+    el.classList.toggle('alert', list.length > 0);
   } catch (e) { /* silent */ }
 }
 
@@ -491,37 +651,37 @@ function setDisputeFilter(status) {
 
 async function loadDisputes() {
   const list = document.getElementById('disputes-list');
-  list.innerHTML = '<div class="loading">იტვირთება...</div>';
+  list.innerHTML = '<div class="loading">სკანირება</div>';
   try {
     disputesData = await api(`/api/admin/disputes?status=${disputeFilter}&limit=50`);
     if (!disputesData.length) {
-      list.innerHTML = '<div class="empty"><div class="ico">✅</div>დავები არ მოიძებნა</div>';
+      list.innerHTML = '<div class="empty"><div class="empty-ico">✓</div><div class="empty-t">დავები არ მოიძებნა</div></div>';
       return;
     }
     list.innerHTML = disputesData.map(d => `
-      <div class="row-card">
+      <div class="row">
         <div class="row-main">
-          <div class="row-title">${esc(d.listing_title)} <span class="badge b-${d.status === 'open' ? 'open' : 'resolved'}">${d.status === 'open' ? 'ღია' : 'გადაწყვეტილი'}</span></div>
-          <div class="row-sub">
-            <span><b>თანხა:</b> ${fmtMoney(d.amount_gel)}</span>
-            <span><b>მიზეზი:</b> ${esc(d.reason)}</span>
-            <span><b>გახსნა:</b> ${esc(d.opened_by_username)}</span>
+          <div class="row-title">${esc(d.listing_title)} <span class="tag ${d.status === 'open' ? 'tag-crit' : 'tag-ok'}">${d.status === 'open' ? 'OPEN' : 'RESOLVED'}</span></div>
+          <div class="row-meta">
+            <span><b>თანხა</b> ${fmtMoney(d.amount_gel)}</span>
+            <span><b>მიზეზი</b> ${esc(d.reason)}</span>
+            <span><b>გახსნა</b> ${esc(d.opened_by_username)}</span>
+            <span><b>თარიღი</b> ${fmtDate(d.created_at)}</span>
           </div>
-          <div class="row-sub" style="margin-top:4px">
-            <span><b>მყიდველი:</b> ${esc(d.buyer_username)}</span>
-            <span><b>გამყიდველი:</b> ${esc(d.seller_username)}</span>
-            <span><b>თარიღი:</b> ${fmtDate(d.created_at)}</span>
+          <div class="row-meta" style="margin-top:3px">
+            <span><b>მყიდველი</b> ${esc(d.buyer_username)}</span>
+            <span><b>გამყიდველი</b> ${esc(d.seller_username)}</span>
           </div>
-          <div style="font-size:11.5px;color:var(--muted2);margin-top:6px;max-width:600px">${esc(d.description)}</div>
-          ${d.status === 'resolved' ? `<div style="font-size:11px;color:var(--accent);margin-top:6px">✓ გადაწყვეტილება: ${d.resolution === 'release' ? 'Release (გამყიდველზე)' : 'Refund (მყიდველზე)'}${d.admin_note ? ' — ' + esc(d.admin_note) : ''}</div>` : ''}
+          <div class="row-desc">${esc(d.description)}</div>
+          ${d.status === 'resolved' ? `<div class="row-resolved-note">✓ ${d.resolution === 'release' ? 'RELEASE → გამყიდველზე' : 'REFUND → მყიდველზე'}${d.admin_note ? ' — ' + esc(d.admin_note) : ''}</div>` : ''}
         </div>
         <div class="row-actions">
-          ${d.status === 'open' ? `<button class="btn btn-red" onclick="openResolveModal('${d.id}')">გადაწყვეტა</button>` : ''}
+          ${d.status === 'open' ? `<button class="btn btn-signal" onclick="openResolveModal('${d.id}')">გადაწყვეტა</button>` : ''}
         </div>
       </div>
     `).join('');
   } catch (e) {
-    list.innerHTML = '<div class="empty"><div class="ico">⚠️</div>ჩატვირთვის შეცდომა</div>';
+    list.innerHTML = '<div class="empty"><div class="empty-ico">⚠</div><div class="empty-t">ჩატვირთვის შეცდომა</div></div>';
   }
 }
 
@@ -532,8 +692,8 @@ function openResolveModal(disputeId) {
   resolveTargetId = disputeId;
   document.getElementById('resolve-info').innerHTML = `
     <b>${esc(d.listing_title)}</b> — ${fmtMoney(d.amount_gel)}<br>
-    მყიდველი: ${esc(d.buyer_username)} · გამყიდველი: ${esc(d.seller_username)}<br>
-    მიზეზი: ${esc(d.reason)}<br>${esc(d.description)}
+    BUYER: ${esc(d.buyer_username)} · SELLER: ${esc(d.seller_username)}<br>
+    REASON: ${esc(d.reason)}<br>${esc(d.description)}
   `;
   document.getElementById('resolve-decision').value = 'release';
   document.getElementById('resolve-note').value = '';
@@ -550,7 +710,7 @@ async function confirmResolve() {
       method: 'PUT',
       body: JSON.stringify({ resolution, admin_note }),
     });
-    showToast('✅ დავა გადაწყდა', 'ok');
+    showToast('დავა გადაწყდა', 'ok');
     closeModal('resolveModal');
     loadDisputes();
     loadDisputesPill();
@@ -558,7 +718,7 @@ async function confirmResolve() {
   } catch (e) {
     showToast(e.error === 'already_resolved' ? 'ეს დავა უკვე გადაწყვეტილია' : 'შეცდომა გადაწყვეტისას', 'err');
   } finally {
-    btn.disabled = false; btn.textContent = 'გადაწყვეტის დადასტურება';
+    btn.disabled = false; btn.textContent = 'დადასტურება';
   }
 }
 
@@ -568,55 +728,59 @@ async function confirmResolve() {
 let usersFilter = 'all';
 let usersSearchTimer = null;
 let usersData = [];
+let usersPage = 1;
 
 function setUsersFilter(role) {
   usersFilter = role;
+  usersPage = 1;
   document.querySelectorAll('#users-filter .seg-btn').forEach(b => b.classList.toggle('on', b.dataset.role === role));
   loadUsers();
 }
 function debounceUsersSearch() {
   clearTimeout(usersSearchTimer);
-  usersSearchTimer = setTimeout(loadUsers, 350);
+  usersSearchTimer = setTimeout(() => { usersPage = 1; loadUsers(); }, 350);
 }
 
 async function loadUsers() {
   const list = document.getElementById('users-list');
-  list.innerHTML = '<div class="loading">იტვირთება...</div>';
+  list.innerHTML = '<div class="loading">სკანირება</div>';
   const search = document.getElementById('users-search').value.trim();
   try {
-    const params = new URLSearchParams({ role: usersFilter, limit: 50 });
+    const params = new URLSearchParams({ role: usersFilter, limit: 20, page: usersPage });
     if (search) params.set('search', search);
     const data = await api(`/api/admin/users?${params}`);
     usersData = data.users;
     if (!usersData.length) {
-      list.innerHTML = '<div class="empty"><div class="ico">🔍</div>მომხმარებელი არ მოიძებნა</div>';
+      list.innerHTML = '<div class="empty"><div class="empty-ico">∅</div><div class="empty-t">მომხმარებელი არ მოიძებნა</div></div>';
+      document.getElementById('users-pagination').innerHTML = '';
       return;
     }
     list.innerHTML = usersData.map(u => `
-      <div class="row-card">
+      <div class="row">
         <div class="row-main">
-          <div class="row-title">${esc(u.display_name || u.username)} <span class="badge b-${u.role === 'banned' ? 'banned' : (u.role === 'admin' ? 'admin' : 'user')}">${u.role}</span> ${u.is_verified_seller ? '<span class="badge b-active">✓ ვერიფ.</span>' : ''}</div>
-          <div class="row-sub">
+          <div class="row-title">${esc(u.display_name || u.username)} <span class="tag ${u.role === 'banned' ? 'tag-crit' : (u.role === 'admin' ? 'tag-warn' : 'tag-blue')}">${u.role.toUpperCase()}</span> ${u.is_verified_seller ? '<span class="tag tag-ok">VERIFIED</span>' : ''}</div>
+          <div class="row-meta">
             <span><b>@${esc(u.username)}</b></span>
             <span>${esc(u.email)}</span>
-            <span><b>ბალანსი:</b> ${fmtMoney(u.balance_gel)}</span>
-            <span><b>Escrow:</b> ${fmtMoney(u.escrow_hold_gel)}</span>
+            <span><b>ბალანსი</b> ${fmtMoney(u.balance_gel)}</span>
+            <span><b>Escrow</b> ${fmtMoney(u.escrow_hold_gel)}</span>
           </div>
-          <div class="row-sub" style="margin-top:4px">
-            <span><b>რეგ.:</b> ${fmtDate(u.created_at)}</span>
-            <span><b>ბოლო აქტ.:</b> ${fmtDate(u.last_seen_at)}</span>
-            <span><b>auth:</b> ${esc(u.auth_provider)}</span>
+          <div class="row-meta" style="margin-top:3px">
+            <span><b>რეგ.</b> ${fmtDate(u.created_at)}</span>
+            <span><b>ბოლო აქტ.</b> ${fmtDate(u.last_seen_at)}</span>
+            <span><b>auth</b> ${esc(u.auth_provider)}</span>
           </div>
         </div>
         <div class="row-actions">
           ${u.role === 'admin' ? '' : (u.role === 'banned'
-            ? `<button class="btn btn-green" onclick="openBanModal('${u.id}','unban')">განბლოკვა</button>`
-            : `<button class="btn btn-red" onclick="openBanModal('${u.id}','ban')">დაბლოკვა</button>`)}
+            ? `<button class="btn btn-ok" onclick="openBanModal('${u.id}','unban')">განბლოკვა</button>`
+            : `<button class="btn btn-signal" onclick="openBanModal('${u.id}','ban')">დაბლოკვა</button>`)}
         </div>
       </div>
     `).join('');
+    renderPagination('users-pagination', data.pages || 1, data.page || 1, (p) => { usersPage = p; loadUsers(); });
   } catch (e) {
-    list.innerHTML = '<div class="empty"><div class="ico">⚠️</div>ჩატვირთვის შეცდომა</div>';
+    list.innerHTML = '<div class="empty"><div class="empty-ico">⚠</div><div class="empty-t">ჩატვირთვის შეცდომა</div></div>';
   }
 }
 
@@ -629,14 +793,14 @@ function openBanModal(userId, action) {
   const info  = document.getElementById('ban-info');
   const btn   = document.getElementById('ban-confirm-btn');
   if (action === 'ban') {
-    title.textContent = '🚫 მომხმარებლის დაბლოკვა';
+    title.textContent = 'მომხმარებლის დაბლოკვა';
     info.innerHTML = `<b>${esc(u.display_name || u.username)}</b> (@${esc(u.username)}) დაბლოკილი იქნება — ვერ შეძლებს სისტემაში შესვლას.`;
-    btn.className = 'btn btn-red';
+    btn.className = 'btn btn-signal';
     btn.textContent = 'დაბლოკვა';
   } else {
-    title.textContent = '✅ მომხმარებლის განბლოკვა';
+    title.textContent = 'მომხმარებლის განბლოკვა';
     info.innerHTML = `<b>${esc(u.display_name || u.username)}</b> (@${esc(u.username)}) განბლოკილი იქნება და შეძლებს სისტემაში შესვლას.`;
-    btn.className = 'btn btn-green';
+    btn.className = 'btn btn-ok';
     btn.textContent = 'განბლოკვა';
   }
   document.getElementById('banModal').classList.add('show');
@@ -647,7 +811,7 @@ async function confirmBanAction() {
   btn.disabled = true;
   try {
     await api(`/api/admin/users/${banTarget.userId}/${banTarget.action}`, { method: 'PUT' });
-    showToast(banTarget.action === 'ban' ? '🚫 დაბლოკილია' : '✅ განბლოკილია', 'ok');
+    showToast(banTarget.action === 'ban' ? 'დაბლოკილია' : 'განბლოკილია', 'ok');
     closeModal('banModal');
     loadUsers();
     loadOverview();
@@ -664,54 +828,59 @@ async function confirmBanAction() {
 let listingsFilter = 'all';
 let listingsSearchTimer = null;
 let listingsData = [];
+let listingsPage = 1;
 
 function setListingsFilter(status) {
   listingsFilter = status;
+  listingsPage = 1;
   document.querySelectorAll('#listings-filter .seg-btn').forEach(b => b.classList.toggle('on', b.dataset.status === status));
   loadListings();
 }
 function debounceListingsSearch() {
   clearTimeout(listingsSearchTimer);
-  listingsSearchTimer = setTimeout(loadListings, 350);
+  listingsSearchTimer = setTimeout(() => { listingsPage = 1; loadListings(); }, 350);
 }
 
 async function loadListings() {
   const list = document.getElementById('listings-list');
-  list.innerHTML = '<div class="loading">იტვირთება...</div>';
+  list.innerHTML = '<div class="loading">სკანირება</div>';
   const search = document.getElementById('listings-search').value.trim();
   try {
-    const params = new URLSearchParams({ status: listingsFilter, limit: 50 });
+    const params = new URLSearchParams({ status: listingsFilter, limit: 20, page: listingsPage });
     if (search) params.set('search', search);
     const data = await api(`/api/admin/listings?${params}`);
     listingsData = data.listings;
     if (!listingsData.length) {
-      list.innerHTML = '<div class="empty"><div class="ico">🔍</div>განცხადება არ მოიძებნა</div>';
+      list.innerHTML = '<div class="empty"><div class="empty-ico">∅</div><div class="empty-t">განცხადება არ მოიძებნა</div></div>';
+      document.getElementById('listings-pagination').innerHTML = '';
       return;
     }
+    const statusTag = { active: 'tag-ok', blocked: 'tag-crit', sold: 'tag-blue', deleted: 'tag-neutral', pending: 'tag-warn' };
     list.innerHTML = listingsData.map(l => `
-      <div class="row-card">
+      <div class="row">
         <div class="row-main">
-          <div class="row-title">${esc(l.title)} <span class="badge b-${l.status}">${l.status}</span> ${l.is_vip ? '<span class="badge b-pending">VIP</span>' : ''}</div>
-          <div class="row-sub">
+          <div class="row-title">${esc(l.title)} <span class="tag ${statusTag[l.status] || 'tag-neutral'}">${l.status.toUpperCase()}</span> ${l.is_vip ? '<span class="tag tag-warn">VIP</span>' : ''}</div>
+          <div class="row-meta">
             <span><b>${esc(l.game)}</b></span>
             <span>${esc(l.category)} / ${esc(l.listing_type)}</span>
-            <span><b>ფასი:</b> ${fmtMoney(l.price_gel)}</span>
-            <span><b>გამყიდველი:</b> ${esc(l.seller_username)}</span>
+            <span><b>ფასი</b> ${fmtMoney(l.price_gel)}</span>
+            <span><b>გამყიდველი</b> ${esc(l.seller_username)}</span>
           </div>
-          <div class="row-sub" style="margin-top:4px">
-            <span><b>ნახვები:</b> ${l.views_count}</span>
-            <span><b>შეკვ.:</b> ${l.orders_count}</span>
-            <span><b>თარიღი:</b> ${fmtDate(l.created_at)}</span>
+          <div class="row-meta" style="margin-top:3px">
+            <span><b>ნახვები</b> ${l.views_count}</span>
+            <span><b>შეკვ.</b> ${l.orders_count}</span>
+            <span><b>თარიღი</b> ${fmtDate(l.created_at)}</span>
           </div>
         </div>
         <div class="row-actions">
-          <button class="btn btn-gold" onclick="openModerateModal('${l.id}')">სტატუსი</button>
-          ${l.status !== 'deleted' ? `<button class="btn btn-red" onclick="deleteListing('${l.id}')">წაშლა</button>` : ''}
+          <button class="btn btn-ghost" onclick="openModerateModal('${l.id}')">სტატუსი</button>
+          ${l.status !== 'deleted' ? `<button class="btn btn-signal" onclick="deleteListing('${l.id}')">წაშლა</button>` : ''}
         </div>
       </div>
     `).join('');
+    renderPagination('listings-pagination', data.pages || 1, data.page || 1, (p) => { listingsPage = p; loadListings(); });
   } catch (e) {
-    list.innerHTML = '<div class="empty"><div class="ico">⚠️</div>ჩატვირთვის შეცდომა</div>';
+    list.innerHTML = '<div class="empty"><div class="empty-ico">⚠</div><div class="empty-t">ჩატვირთვის შეცდომა</div></div>';
   }
 }
 
@@ -734,7 +903,7 @@ async function confirmModerate() {
       method: 'PUT',
       body: JSON.stringify({ status }),
     });
-    showToast('✅ სტატუსი განახლდა', 'ok');
+    showToast('სტატუსი განახლდა', 'ok');
     closeModal('moderateModal');
     loadListings();
   } catch (e) {
@@ -748,7 +917,7 @@ async function deleteListing(listingId) {
   if (!confirm('დარწმუნებული ხარ, რომ წაშლი ამ განცხადებას?')) return;
   try {
     await api(`/api/admin/listings/${listingId}`, { method: 'DELETE' });
-    showToast('🗑️ წაშლილია', 'ok');
+    showToast('წაშლილია', 'ok');
     loadListings();
   } catch (e) {
     showToast('შეცდომა', 'err');
@@ -756,11 +925,28 @@ async function deleteListing(listingId) {
 }
 
 // ══════════════════════════════════════════════════════════
-// UTIL
+// PAGINATION HELPER (shared by users + listings)
 // ══════════════════════════════════════════════════════════
-function esc(str) {
-  if (str == null) return '';
-  return String(str).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+function renderPagination(elId, totalPages, current, onGo) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  if (!totalPages || totalPages <= 1) { el.innerHTML = ''; return; }
+
+  let html = `<button class="page-btn" ${current<=1?'disabled':''} data-go="${current-1}">‹</button>`;
+  const pages = [];
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === 1 || i === totalPages || Math.abs(i - current) <= 1) pages.push(i);
+    else if (pages[pages.length-1] !== '...') pages.push('...');
+  }
+  html += pages.map(p => p === '...'
+    ? `<span style="color:var(--dim2);font-size:11px">…</span>`
+    : `<button class="page-btn${p===current?' on':''}" data-go="${p}">${p}</button>`
+  ).join('');
+  html += `<button class="page-btn" ${current>=totalPages?'disabled':''} data-go="${current+1}">›</button>`;
+  el.innerHTML = html;
+  el.querySelectorAll('.page-btn[data-go]').forEach(btn => {
+    btn.addEventListener('click', () => onGo(Number(btn.dataset.go)));
+  });
 }
 
 // ══════════════════════════════════════════════════════════
