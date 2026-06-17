@@ -54,10 +54,10 @@ input,select,textarea{font-family:var(--sans)}
 .gate-foot{margin-top:20px;padding-top:16px;border-top:1px solid var(--line);font-size:10.5px;color:var(--dim2);text-align:center;font-family:var(--mono)}
 
 /* ════════════════════════ APP SHELL ════════════════════════ */
-.shell{display:grid;grid-template-columns:228px 1fr;min-height:100vh}
+.shell{min-height:100vh}
 
 /* SIDEBAR */
-.sidebar{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.sidebar{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;position:fixed;left:0;top:0;width:228px;height:100vh;z-index:200;overflow-y:auto}
 .sb-mark{padding:20px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:9px}
 .sb-mark .dot{width:8px;height:8px;border-radius:50%;background:var(--signal)}
 .sb-mark-text{font-size:13.5px;font-weight:700;letter-spacing:-.2px}
@@ -83,7 +83,7 @@ input,select,textarea{font-family:var(--sans)}
 .sb-logout:hover{color:var(--signal);border-color:var(--signal-line)}
 
 /* MAIN */
-.main{display:flex;flex-direction:column;min-height:100vh}
+.main{display:flex;flex-direction:column;min-height:100vh;margin-left:228px}
 
 /* PULSE STRIP — signature element */
 .pulse-strip{display:flex;align-items:center;gap:0;background:var(--panel2);border-bottom:1px solid var(--line);padding:0 24px;height:38px;overflow-x:auto}
@@ -201,9 +201,9 @@ input,select,textarea{font-family:var(--sans)}
 .mobile-nav-toggle{display:none}
 
 @media(max-width:880px){
-  .shell{grid-template-columns:1fr}
-  .sidebar{position:fixed;left:0;top:0;height:100vh;width:228px;z-index:300;transform:translateX(-100%);transition:transform .2s ease}
+  .sidebar{transform:translateX(-100%);transition:transform .2s ease;z-index:300}
   .sidebar.open{transform:translateX(0)}
+  .main{margin-left:0}
   .mobile-nav-toggle{display:flex;align-items:center;gap:8px;position:fixed;top:14px;left:14px;z-index:310;background:var(--panel);border:1px solid var(--line2);border-radius:8px;padding:9px 12px;font-size:11.5px;font-weight:700}
   .content{padding:64px 16px 50px}
   .pulse-strip{padding-left:60px}
@@ -520,7 +520,7 @@ async function checkExistingSession() {
 
 function enterApp() {
   document.getElementById('gate').style.display = 'none';
-  document.getElementById('app').style.display = 'grid';
+  document.getElementById('app').style.display = 'block';
   const name = currentAdmin.display_name || currentAdmin.username;
   document.getElementById('sb-who-name').textContent = name;
   document.getElementById('sb-who-ava').textContent = name.slice(0,2).toUpperCase();
