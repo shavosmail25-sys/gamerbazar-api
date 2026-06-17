@@ -322,6 +322,36 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
 .rv-u{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600}
 .rv-stars{color:var(--gold);font-size:11px}.rv-txt{font-size:12px;color:var(--muted2);line-height:1.6}.rv-date{font-size:9px;color:var(--muted);margin-top:2px}
 
+/* ORDER HISTORY */
+.oh-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.oh-back{width:32px;height:32px;border-radius:8px;background:var(--bg2);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;flex-shrink:0;transition:border-color .15s}
+.oh-back:hover{border-color:var(--border3)}
+.oh-h-title{font-size:18px;font-weight:800;letter-spacing:-.4px}
+.oh-filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.oh-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:16px 18px;margin-bottom:12px}
+.oh-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.oh-title{font-size:13px;font-weight:700;cursor:pointer}
+.oh-title:hover{color:var(--accent)}
+.oh-meta{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin:9px 0 14px}
+.oh-amt{font-family:var(--mono);color:var(--accent);font-weight:700}
+.oh-timeline{display:flex;flex-direction:column;margin:4px 0 14px}
+.oh-step{display:flex;gap:11px;position:relative;padding-bottom:18px}
+.oh-step:last-child{padding-bottom:0}
+.oh-step:last-child .oh-line{display:none}
+.oh-dot{width:19px;height:19px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;z-index:1;background:var(--bg4);border:1.5px solid var(--border2)}
+.oh-step.done .oh-dot{background:var(--ad);border-color:var(--ad2);color:var(--accent)}
+.oh-step.current .oh-dot{background:var(--gd);border-color:var(--gd2);color:var(--gold)}
+.oh-step.cancelled .oh-dot,.oh-step.flag .oh-dot{background:var(--rd);border-color:#e05d5d35;color:var(--red)}
+.oh-line{position:absolute;left:8.5px;top:19px;bottom:-18px;width:1.5px;background:var(--border2)}
+.oh-step.done .oh-line{background:var(--ad2)}
+.oh-step-body{flex:1;padding-top:1px}
+.oh-step-label{font-size:11.5px;font-weight:600;color:var(--text)}
+.oh-step.current .oh-step-label{color:var(--gold)}
+.oh-step-time{font-size:10px;color:var(--muted);margin-top:1px}
+.oh-acts{display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:13px}
+.oh-pagination{display:flex;justify-content:center;gap:5px;margin-top:18px}
+.oh-orderid{font-family:var(--mono);color:var(--muted)}
+
 /* PROFILE EDIT */
 .edit-section{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:20px 22px;margin-bottom:12px}
 .edit-sec-title{font-size:13px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:7px}
@@ -777,6 +807,7 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
       <div id="pl"><div class="grid" id="prof-grid"><div class="empty"><div class="empty-ico">📦</div><div class="empty-t">განცხადებები ჯერ არ გაქვს</div></div></div></div>
       <div id="pr" style="display:none"><div class="empty"><div class="empty-ico">⭐</div><div class="empty-t">შეფასებები ჯერ არ არის</div></div></div>
       <div id="po" style="display:none">
+        <button class="btn btn-g btn-sm" style="margin-bottom:10px" onclick="pg('order-history')">📋 სრული ისტორია (ფილტრი + timeline) →</button>
         <div id="orders-list">
           <div class="empty"><div class="empty-ico">📋</div><div class="empty-t">ორდერები ჯერ არ არის</div></div>
         </div>
@@ -839,6 +870,27 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
       <button class="btn btn-a" style="flex:1;padding:10px" onclick="saveProfile()">✓ შენახვა</button>
       <button class="btn btn-g" style="padding:10px 16px" onclick="pg('profile');act(document.querySelectorAll('.nl')[4])">გაუქმება</button>
     </div>
+  </div>
+</div>
+
+<!-- ORDER HISTORY -->
+<div id="page-order-history" class="page main">
+  <div class="prof-wrap">
+    <div class="oh-head">
+      <div class="oh-back" onclick="pg('profile');act(document.querySelectorAll('.nl')[4])">←</div>
+      <div class="oh-h-title">📋 ორდერების ისტორია</div>
+    </div>
+    <div class="oh-filters">
+      <button class="fbtn on" onclick="ohFilter(this,null)">ყველა</button>
+      <button class="fbtn" onclick="ohFilter(this,'active')">🔒 აქტიური</button>
+      <button class="fbtn" onclick="ohFilter(this,'completed')">✅ დასრულებული</button>
+      <button class="fbtn" onclick="ohFilter(this,'cancelled')">❌ გაუქმებული</button>
+      <button class="fbtn" onclick="ohFilter(this,'disputed')">⚑ დავა</button>
+    </div>
+    <div id="oh-list">
+      <div class="empty"><div class="empty-ico">📋</div><div class="empty-t">ორდერები ჯერ არ არის</div></div>
+    </div>
+    <div class="oh-pagination" id="oh-pagination"></div>
   </div>
 </div>
 
@@ -1191,7 +1243,7 @@ async function api(path, opts = {}) {
 // AUTH GUARD — გვერდების დაცვა
 // ══════════════════════════════════════════════════════════
 function showPageGuarded(id) {
-  const guarded = ['profile', 'edit', 'wallet', 'chat'];
+  const guarded = ['profile', 'edit', 'wallet', 'chat', 'order-history'];
   if (guarded.includes(id) && !currentUser) {
     openM('loginModal');
     showToast('პირველ შედი სისტემაში', 'err');
@@ -1267,6 +1319,7 @@ function pg(id) {
   if (id === 'profile') { updateNavUser(); loadMyProfile(); }
   if (id === 'chat')    { loadChatRooms(); }
   if (id === 'edit')    { loadMyProfile(); }
+  if (id === 'order-history') { loadOrderHistory(); }
 }
 function act(el) {
   document.querySelectorAll('.nl').forEach(n => n.classList.remove('on'));
@@ -2911,7 +2964,7 @@ async function confirmOrder(orderId, amount) {
   try {
     await api('/api/orders/' + orderId + '/confirm', { method: 'POST' });
     showToast('✅ დადასტ.! ₾' + Number(amount).toFixed(2) + ' გამყ. ჩაერიცხა', 'ok');
-    loadMyOrders();
+    refreshOrderViews();
     loadCurrentUser();
     // rating modal
     setTimeout(() => openM('ratingModal'), 600);
@@ -2938,9 +2991,187 @@ async function submitDispute() {
     });
     closeM('disputeModal');
     showToast('⚑ დავა გაიხსნა · ადმინი 24სთ-ში განიხ.', 'ok');
-    loadMyOrders();
+    refreshOrderViews();
   } catch(e) { showToast(e.message || 'შეცდომა', 'err'); }
 }
+
+// ── ორივე ორდერების view-ის განახლება (profile-ის mini-list + history page) ──
+function refreshOrderViews() {
+  loadMyOrders();
+  if (document.getElementById('page-order-history')?.classList.contains('active')) {
+    loadOrderHistory();
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// ORDER HISTORY — სრული სია + ფილტრები + timeline
+// ══════════════════════════════════════════════════════════
+let OH_STATUS = null;
+let OH_PAGE   = 1;
+const OH_LIMIT = 10;
+
+const OH_STATUS_MAP = {
+  pending:   '⏳ მოლოდინი',
+  active:    '🔒 Escrow-ში',
+  completed: '✅ დასრულებული',
+  cancelled: '❌ გაუქმებული',
+  disputed:  '⚑ დავაშია',
+};
+const OH_STATUS_COLOR = {
+  pending:   'var(--muted)',
+  active:    'var(--gold)',
+  completed: 'var(--accent)',
+  cancelled: 'var(--red)',
+  disputed:  'var(--red)',
+};
+const OH_DISPUTE_REASONS = {
+  not_received:    'პროდუქტი არ მივიდა',
+  not_as_described:'არ შეესაბ. აღწერას',
+  scam:             'თაღლითობა',
+  other:            'სხვა მიზეზი',
+};
+
+function ohFilter(btn, status) {
+  document.querySelectorAll('.oh-filters .fbtn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  OH_STATUS = status;
+  OH_PAGE   = 1;
+  loadOrderHistory();
+}
+
+async function loadOrderHistory() {
+  if (!currentUser) return;
+  const el = document.getElementById('oh-list');
+  if (!el) return;
+  el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);font-size:13px">⏳ იტვირთება...</div>';
+  try {
+    const qs = new URLSearchParams({ page: OH_PAGE, limit: OH_LIMIT });
+    if (OH_STATUS) qs.set('status', OH_STATUS);
+    const data   = await api('/api/orders/history?' + qs.toString());
+    const orders = data.orders || [];
+    if (!orders.length) {
+      el.innerHTML = '<div class="empty"><div class="empty-ico">📋</div><div class="empty-t">ამ ფილტრით ორდერები არ მოიძებნა</div></div>';
+      renderOhPagination(0, 1);
+      return;
+    }
+    el.innerHTML = orders.map(renderOhCard).join('');
+    renderOhPagination(data.total_pages || 1, data.page || 1);
+  } catch(e) {
+    el.innerHTML = '<div class="empty"><div class="empty-ico">⚠️</div><div class="empty-t">ჩატვირთვა ვერ მოხდა</div></div>';
+  }
+}
+
+function ohFmtDT(iso) {
+  if (!iso) return null;
+  return new Date(iso).toLocaleString('ka-GE', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+
+function ohStep(state, icon, label, time) {
+  return `<div class="oh-step ${state}">
+    <div class="oh-line"></div>
+    <div class="oh-dot">${icon}</div>
+    <div class="oh-step-body">
+      <div class="oh-step-label">${label}</div>
+      ${time ? `<div class="oh-step-time">${time}</div>` : ''}
+    </div>
+  </div>`;
+}
+
+function buildOhTimeline(o) {
+  let steps = '';
+  steps += ohStep('done', '🛒', 'შეკვეთა შექმნილი', ohFmtDT(o.created_at));
+  steps += ohStep('done', '🔒', `Escrow-ში ₾${Number(o.amount_gel).toFixed(2)} გაიყინა`, ohFmtDT(o.created_at));
+
+  if (o.dispute_id) {
+    const reasonLabel = OH_DISPUTE_REASONS[o.dispute_reason] || o.dispute_reason || '';
+    steps += ohStep('flag', '⚑', 'დავა გაიხსნა' + (reasonLabel ? ' — ' + reasonLabel : ''), ohFmtDT(o.dispute_created_at));
+    if (o.dispute_status === 'resolved') {
+      const outcome = o.dispute_resolution === 'release' ? 'თანხა გამყიდველს გადაირიცხა' : 'თანხა მყიდველს დაუბრუნდა';
+      steps += ohStep('done', '🛡️', 'დავა გადაწყდა — ' + outcome, ohFmtDT(o.dispute_resolved_at));
+    } else {
+      steps += ohStep('current', '⏳', 'ადმინისტრაცია განიხილავს', null);
+    }
+  } else if (o.status === 'active' && o.escrow_status === 'held') {
+    const deadline = ohFmtDT(o.confirm_deadline);
+    steps += ohStep('current', '⏳', 'მყიდველის დადასტურების მოლოდინში', deadline ? 'ვადა: ' + deadline : null);
+  } else if (o.status === 'completed') {
+    steps += ohStep('done', '✅', 'მყიდველმა დაადასტურა — Escrow გათავ.', ohFmtDT(o.completed_at));
+  } else if (o.status === 'cancelled') {
+    steps += ohStep('cancelled', '↩️', 'გაუქმდა, თანხა დაბრუნდა' + (o.cancel_reason ? ' — ' + o.cancel_reason : ''), ohFmtDT(o.cancelled_at));
+  } else {
+    steps += ohStep('current', '⏳', 'მოლოდინში', null);
+  }
+  return steps;
+}
+
+function renderOhCard(o) {
+  const isBuyer = o.buyer_id === currentUser.id;
+  const role    = isBuyer ? '🛒 მყიდველი' : '💰 გამყიდველი';
+  const partner = isBuyer ? o.seller_username : o.buyer_username;
+  const canAct  = isBuyer && o.escrow_status === 'held' && !o.dispute_id;
+  const canReview = o.status === 'completed' && isBuyer && !o.review_id;
+
+  return `<div class="oh-card">
+    <div class="oh-top">
+      <div class="oh-title" onclick="openListingDetail('${o.listing_id}')">${o.listing_title || 'განცხ. #' + o.id.slice(0,8)}</div>
+      <span style="font-size:10px;padding:2px 9px;border-radius:4px;background:var(--bg3);color:${OH_STATUS_COLOR[o.status]||'var(--muted)'};font-weight:600">${OH_STATUS_MAP[o.status]||o.status}</span>
+    </div>
+    <div class="oh-meta">
+      <span>${role}</span>
+      <span>👤 ${partner || '?'}</span>
+      <span class="oh-amt">₾${Number(o.amount_gel).toFixed(2)}</span>
+      <span>${new Date(o.created_at).toLocaleDateString('ka-GE')}</span>
+      <span class="oh-orderid">#${o.id.slice(0,8)}</span>
+    </div>
+    <div class="oh-timeline">${buildOhTimeline(o)}</div>
+    <div class="oh-acts">
+      ${canAct ? `<button class="btn btn-a btn-sm" onclick="confirmOrder('${o.id}',${o.amount_gel})">✅ მიღება დადასტ.</button>` : ''}
+      ${canAct ? `<button class="btn btn-g btn-sm" onclick="openDisputeFor('${o.id}')">⚑ დავა</button>` : ''}
+      ${o.chat_room_id ? `<button class="btn btn-g btn-sm" onclick="openOrderChat('${o.id}')">💬 ჩატი</button>` : ''}
+      ${canReview ? `<button class="btn btn-g btn-sm" onclick="document.getElementById('ratingModal').dataset.orderId='${o.id}';openM('ratingModal')">⭐ შეფასება</button>` : ''}
+    </div>
+  </div>`;
+}
+
+function renderOhPagination(totalPages, current) {
+  const el = document.getElementById('oh-pagination');
+  if (!el) return;
+  if (!totalPages || totalPages <= 1) { el.innerHTML = ''; return; }
+
+  let html = `<button class="page-btn" ${current<=1?'disabled':''} onclick="goToOhPage(${current-1})">‹</button>`;
+  const pages = [];
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === 1 || i === totalPages || Math.abs(i - current) <= 1) pages.push(i);
+    else if (pages[pages.length-1] !== '...') pages.push('...');
+  }
+  html += pages.map(p => p === '...'
+    ? `<span class="page-dots">…</span>`
+    : `<button class="page-btn${p===current?' on':''}" onclick="goToOhPage(${p})">${p}</button>`
+  ).join('');
+  html += `<button class="page-btn" ${current>=totalPages?'disabled':''} onclick="goToOhPage(${current+1})">›</button>`;
+  el.innerHTML = html;
+}
+
+function goToOhPage(p) {
+  if (p < 1) return;
+  OH_PAGE = p;
+  loadOrderHistory();
+  document.getElementById('page-order-history')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── კონკრ. ორდერის ჩატში გადასვლა ────────────────────────────
+async function openOrderChat(orderId) {
+  if (!showPageGuarded('chat')) return;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-chat')?.classList.add('active');
+  window.scrollTo(0, 0);
+  await loadChatRooms();
+  const el = document.querySelector(`.ci[data-order="${orderId}"]`);
+  if (el) openChatRoom(el);
+  else showToast('ჩატი ვერ მოიძებნა', 'err');
+}
+
+
 
 // ══════════════════════════════════════════════════════════
 // 🤖 SUPPORT CHATBOT

@@ -115,6 +115,65 @@ router.get('/me', requireAuth, async (req, res) => {
 });
 
 // ══════════════════════════════════════════════════════════════
+// GET /api/orders/history  — სრული ისტ. სტატუს-ფილტრით + pagination
+// ?status=active|completed|cancelled|disputed|pending  &page=1 &limit=10
+// ══════════════════════════════════════════════════════════════
+router.get('/history', requireAuth, async (req, res) => {
+  try {
+    const ALLOWED_STATUSES = ['pending', 'active', 'completed', 'cancelled', 'disputed'];
+    const { status } = req.query;
+    const statusFilter = ALLOWED_STATUSES.includes(status) ? status : null;
+
+    const pageNum  = Math.max(1, parseInt(req.query.page, 10)  || 1);
+    const limitNum = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 10));
+    const offset   = (pageNum - 1) * limitNum;
+
+    const { rows: countRows } = await db.query(`
+      SELECT COUNT(*) AS n
+      FROM orders o
+      WHERE (o.buyer_id=$1 OR o.seller_id=$1)
+        AND ($2::varchar IS NULL OR o.status=$2)
+    `, [req.user.id, statusFilter]);
+    const total = Number(countRows[0].n);
+
+    const { rows } = await db.query(`
+      SELECT
+        o.*,
+        l.title AS listing_title, l.game, l.listing_type,
+        b.username AS buyer_username, b.avatar_url AS buyer_avatar,
+        s.username AS seller_username, s.avatar_url AS seller_avatar,
+        cr.id AS chat_room_id,
+        d.id AS dispute_id, d.reason AS dispute_reason, d.status AS dispute_status,
+        d.resolution AS dispute_resolution, d.created_at AS dispute_created_at,
+        d.resolved_at AS dispute_resolved_at,
+        rv.id AS review_id, rv.rating AS review_rating
+      FROM orders o
+      JOIN listings l        ON l.id=o.listing_id
+      JOIN users b            ON b.id=o.buyer_id
+      JOIN users s            ON s.id=o.seller_id
+      LEFT JOIN chat_rooms cr ON cr.order_id=o.id
+      LEFT JOIN disputes d    ON d.order_id=o.id
+      LEFT JOIN reviews rv    ON rv.order_id=o.id
+      WHERE (o.buyer_id=$1 OR o.seller_id=$1)
+        AND ($2::varchar IS NULL OR o.status=$2)
+      ORDER BY o.created_at DESC
+      LIMIT $3 OFFSET $4
+    `, [req.user.id, statusFilter, limitNum, offset]);
+
+    res.json({
+      orders: rows,
+      page: pageNum,
+      limit: limitNum,
+      total,
+      total_pages: Math.max(1, Math.ceil(total / limitNum)),
+    });
+  } catch (err) {
+    console.error('orders history:', err.message);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
 // GET /api/orders/:id
 // ══════════════════════════════════════════════════════════════
 router.get('/:id', requireAuth, async (req, res) => {

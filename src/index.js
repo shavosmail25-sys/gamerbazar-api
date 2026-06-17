@@ -94,6 +94,7 @@ if (process.env.NODE_ENV !== 'production') {
         'POST   /api/listings/:id/vip',
         'POST   /api/orders',
         'GET    /api/orders/me',
+        'GET    /api/orders/history?status=&page=&limit=',
         'GET    /api/orders/:id',
         'POST   /api/orders/:id/confirm',
         'POST   /api/orders/:id/cancel',
