@@ -105,6 +105,10 @@ if (process.env.NODE_ENV !== 'production') {
     res.json({
       endpoints: [
         'POST   /api/auth/register   (rate-limited: 10/15წთ)',
+        'GET    /api/auth/verify-email?token=',
+        'POST   /api/auth/resend-verification',
+        'POST   /api/auth/forgot-password',
+        'POST   /api/auth/reset-password',
         'POST   /api/auth/login      (rate-limited: 10/15წთ)',
         'GET    /api/auth/google',
         'GET    /api/auth/google/callback',
@@ -261,8 +265,9 @@ async function start() {
   }
 
   try {
-    const { setupDatabase } = require('./db/setup');
+    const { setupDatabase, runMigrations } = require('./db/setup');
     await setupDatabase();
+    await runMigrations();
   } catch(e) {
     console.log('ℹ️  DB setup:', e.message);
   }

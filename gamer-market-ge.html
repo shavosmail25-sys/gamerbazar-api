@@ -166,12 +166,6 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
 .lcard.vip::after{content:'VIP';position:absolute;top:9px;right:9px;background:linear-gradient(135deg,#f0b429,#e07d29);color:#08090d;font-size:8px;font-weight:800;padding:2px 6px;border-radius:3px;letter-spacing:.04em}
 .lcard-img{height:100px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:38px;position:relative;overflow:hidden}
 .lcard-img-bg{position:absolute;inset:0;font-size:90px;display:flex;align-items:center;justify-content:center;opacity:.1;filter:blur(3px)}
-.lcard-has-img{cursor:pointer;display:block}
-.lcard-slide{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .3s}
-.lcard-slide.on{opacity:1}
-.lcard-dots{position:absolute;bottom:5px;left:50%;transform:translateX(-50%);display:flex;gap:4px;z-index:2}
-.lcard-dot{width:5px;height:5px;border-radius:50%;background:#ffffff50;transition:background .2s}
-.lcard-dot.on{background:#fff}
 .lcard-body{padding:13px}
 .lcard-game{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
 .lcard-title{font-size:13px;font-weight:600;line-height:1.3;margin-bottom:7px}
@@ -900,6 +894,43 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
   </div>
 </div>
 
+
+<!-- ── EMAIL NOT VERIFIED BANNER ── -->
+<div id="verify-banner" style="display:none;position:fixed;bottom:70px;left:50%;transform:translateX(-50%);z-index:500;background:#1a1200;border:1px solid #f0b42940;border-radius:10px;padding:12px 18px;max-width:420px;width:calc(100% - 40px);display:flex;align-items:center;gap:10px">
+  <span style="font-size:18px">✉️</span>
+  <div style="flex:1;font-size:12px;color:#f0b429">შეამოწმე ემაილი — დაგვიგზავნე ვერიფიკაციის ლინკი</div>
+  <button onclick="resendVerification()" style="background:#f0b42920;border:1px solid #f0b42940;color:#f0b429;padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;white-space:nowrap">ხელახლა</button>
+  <button onclick="document.getElementById('verify-banner').style.display='none'" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:0 4px">×</button>
+</div>
+
+<!-- ── FORGOT PASSWORD MODAL ── -->
+<div class="modal-bg" id="forgotModal" onclick="if(event.target===this)closeM('forgotModal')">
+  <div class="modal">
+    <div class="modal-title">🔐 პაროლის აღდგენა</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px">შეიყვანე ემაილი და გამოგიგზავნით აღდგენის ლინკს</div>
+    <div class="form-g"><label class="form-l">ემაილი</label><input class="form-i" id="forgot-email" type="email" placeholder="your@email.com"></div>
+    <div id="forgot-msg" style="font-size:12px;color:var(--accent);margin-top:8px;display:none"></div>
+    <div class="m-acts">
+      <button class="btn btn-g" onclick="closeM('forgotModal');openM('loginModal')">← უკან</button>
+      <button class="btn btn-a" onclick="doForgotPassword()">გაგზავნა</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── RESET PASSWORD MODAL ── -->
+<div class="modal-bg" id="resetModal" onclick="if(event.target===this)closeM('resetModal')">
+  <div class="modal">
+    <div class="modal-title">🔐 ახალი პაროლი</div>
+    <input type="hidden" id="reset-token-val">
+    <div class="form-g"><label class="form-l">ახალი პაროლი</label><input class="form-i" id="reset-pass" type="password" placeholder="მინ. 6 სიმბოლო"></div>
+    <div class="form-g"><label class="form-l">გაიმეორე პაროლი</label><input class="form-i" id="reset-pass2" type="password" placeholder="მინ. 6 სიმბოლო"></div>
+    <div class="m-acts">
+      <button class="btn btn-g" onclick="closeM('resetModal')">გაუქმება</button>
+      <button class="btn btn-a" onclick="doResetPassword()">შეცვლა</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODALS -->
 <div class="modal-bg" id="loginModal" onclick="if(event.target===this)closeM('loginModal')">
   <div class="modal">
@@ -916,6 +947,9 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
       </div>
       <div style="text-align:center;margin-top:12px;font-size:12px;color:var(--muted)">
         ექაუნთი არ გაქვს? <span style="color:var(--accent);cursor:pointer;font-weight:600" onclick="showRegForm()">რეგისტრაცია →</span>
+      </div>
+      <div style="text-align:center;margin-top:8px;font-size:11px">
+        <span style="color:var(--muted);cursor:pointer" onclick="showForgotForm()">🔐 დამავიწყდა პაროლი</span>
       </div>
     </div>
     <!-- რეგისტრაციის ფორმა -->
@@ -1435,15 +1469,36 @@ function googleAuth() {
 // Google callback
 function checkAuthCallback() {
   const params = new URLSearchParams(window.location.search);
-  const token  = params.get('token');
-  const status = params.get('auth');
-  if (token) {
+  const token      = params.get('token');
+  const status     = params.get('auth');
+  const verify     = params.get('verify');
+  const resetToken = params.get('reset_token');
+
+  if (token && status === 'success') {
     setToken(token);
     window.history.replaceState({}, '', window.location.pathname);
     loadCurrentUser();
     showToast('✅ Google-ით შეხვედი!', 'ok');
   } else if (status === 'error') {
     showToast('Google შესვლა ვერ მოხდა', 'err');
+  } else if (status === 'banned') {
+    showToast('❌ ეს ექაუნთი დაბლოკილია', 'err');
+  }
+
+  if (verify === 'success') {
+    window.history.replaceState({}, '', window.location.pathname);
+    showToast('✅ ემაილი დადასტურდა! ახლა შეგიძლია შეხვიდე.', 'ok');
+  } else if (verify === 'expired') {
+    window.history.replaceState({}, '', window.location.pathname);
+    showToast('⏰ ლინკის ვადა გავიდა — ხელახლა გაგზავნე', 'err');
+  } else if (verify === 'invalid') {
+    window.history.replaceState({}, '', window.location.pathname);
+    showToast('❌ არასწორი ვერიფიკაციის ლინკი', 'err');
+  }
+
+  if (resetToken) {
+    window.history.replaceState({}, '', window.location.pathname);
+    openResetPasswordModal(resetToken);
   }
 }
 
@@ -1457,6 +1512,76 @@ function doLogout() {
   showToast('გამოხვედი', 'ok');
 }
 
+// ── Email Verification Banner ─────────────────────────────
+function showEmailVerificationBanner() {
+  const banner = document.getElementById('verify-banner');
+  if (banner) banner.style.display = 'flex';
+}
+
+async function resendVerification() {
+  try {
+    await api('/api/auth/resend-verification', { method: 'POST' });
+    showToast('✅ ვერიფიკაციის ემაილი გაიგზავნა!', 'ok');
+  } catch(e) {
+    showToast('შეცდომა — სცადე მოგვიანებით', 'err');
+  }
+}
+
+// ── Forgot Password ───────────────────────────────────────
+function showForgotForm() {
+  closeM('loginModal');
+  document.getElementById('forgot-email').value = '';
+  const msg = document.getElementById('forgot-msg');
+  if (msg) { msg.style.display = 'none'; msg.textContent = ''; }
+  openM('forgotModal');
+}
+
+async function doForgotPassword() {
+  const email = document.getElementById('forgot-email').value.trim();
+  const msg   = document.getElementById('forgot-msg');
+  if (!email) { showToast('შეიყვანე ემაილი', 'err'); return; }
+
+  try {
+    await api('/api/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email })
+    });
+    msg.textContent = '✅ თუ ეს ემაილი რეგისტრირებულია, მიიღებ ლინკს რამდენიმე წუთში.';
+    msg.style.display = 'block';
+  } catch(e) {
+    showToast('შეცდომა — სცადე მოგვიანებით', 'err');
+  }
+}
+
+// ── Reset Password ────────────────────────────────────────
+function openResetPasswordModal(token) {
+  document.getElementById('reset-token-val').value = token;
+  document.getElementById('reset-pass').value  = '';
+  document.getElementById('reset-pass2').value = '';
+  openM('resetModal');
+}
+
+async function doResetPassword() {
+  const token = document.getElementById('reset-token-val').value;
+  const pass  = document.getElementById('reset-pass').value;
+  const pass2 = document.getElementById('reset-pass2').value;
+
+  if (!pass || pass.length < 6) { showToast('პაროლი მინ. 6 სიმბოლო', 'err'); return; }
+  if (pass !== pass2) { showToast('პაროლები არ ემთხვევა', 'err'); return; }
+
+  try {
+    await api('/api/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, password: pass })
+    });
+    closeM('resetModal');
+    showToast('✅ პაროლი წარმატებით შეიცვალა! შეგიძლია შეხვიდე.', 'ok');
+    setTimeout(() => openM('loginModal'), 1000);
+  } catch(e) {
+    showToast(e.message || 'ლინკი ვადაგასულია — ხელახლა სცადე', 'err');
+  }
+}
+
 // ══════════════════════════════════════════════════════════
 // LOAD CURRENT USER
 // ══════════════════════════════════════════════════════════
@@ -1465,6 +1590,10 @@ async function loadCurrentUser() {
   try {
     currentUser = await api('/api/auth/me');
     updateNavUser();
+    // ვერიფიცირებული არ არის — banner ვაჩვენოთ
+    if (currentUser && !currentUser.email_verified && currentUser.auth_provider === 'email') {
+      showEmailVerificationBanner();
+    }
   } catch (e) {
     clearToken();
     currentUser = null;
@@ -1755,8 +1884,7 @@ function mapApiListing(l) {
     si: (l.seller_name || l.seller_username || '?').slice(0, 2).toUpperCase(),
     sc: 'var(--accent)', r: Number(l.seller_rating) || 0,
     rc: Number(l.seller_review_count) || 0,
-    vip: l.is_vip, cat: l.category, id: l.id,
-    images: l.images || []
+    vip: l.is_vip, cat: l.category, id: l.id
   };
 }
 
@@ -1767,25 +1895,8 @@ function buildCard(l, isMob) {
   const psub  = g ? '$' + (l.price / rate).toFixed(0) : '₾' + l.price;
   const ico = '🎮';
   const lid = l.id || '';
-  const imgs = (l.images || []).filter(Boolean);
-
-  // image section — real photo თუ არის, თუ არა — emoji
-  let imgHtml;
-  if (imgs.length) {
-    const multiDots = imgs.length > 1
-      ? `<div class="lcard-dots">${imgs.map((_, i) => `<span class="lcard-dot${i===0?' on':''}"></span>`).join('')}</div>`
-      : '';
-    const allImgs = imgs.map((src, i) =>
-      `<img src="${API_URL + src}" alt="" class="lcard-slide${i===0?' on':''}" draggable="false" loading="lazy" onerror="this.style.display='none'">`
-    ).join('');
-    imgHtml = `<div class="lcard-img lcard-has-img" data-idx="0" data-count="${imgs.length}"
-      onclick="event.stopPropagation();lcNext(this)">${allImgs}${multiDots}</div>`;
-  } else {
-    imgHtml = `<div class="lcard-img"><div class="lcard-img-bg">${ico}</div><span style="font-size:34px;position:relative;z-index:1">${ico}</span></div>`;
-  }
-
   return `<div class="lcard${l.vip ? ' vip' : ''}" onclick="openListing('${lid}','${(l.title||'').replace(/'/g,"\'")}',${l.price})">
-    ${imgHtml}
+    <div class="lcard-img"><div class="lcard-img-bg">${ico}</div><span style="font-size:34px;position:relative;z-index:1">${ico}</span></div>
     <div class="lcard-body">
       <div class="lcard-game">${l.game} · ${l.type}</div>
       <div class="lcard-title">${l.title}</div>
@@ -1797,20 +1908,6 @@ function buildCard(l, isMob) {
       </div>
     </div>
   </div>`;
-}
-
-// ── listing card carousel: click → შემდეგ სურათი ──
-function lcNext(el) {
-  const slides = el.querySelectorAll('.lcard-slide');
-  const dots   = el.querySelectorAll('.lcard-dot');
-  if (slides.length < 2) return;
-  let idx = parseInt(el.dataset.idx || '0', 10);
-  slides[idx].classList.remove('on');
-  if (dots[idx]) dots[idx].classList.remove('on');
-  idx = (idx + 1) % slides.length;
-  el.dataset.idx = idx;
-  slides[idx].classList.add('on');
-  if (dots[idx]) dots[idx].classList.add('on');
 }
 
 function renderGrid(id, items, mob) {

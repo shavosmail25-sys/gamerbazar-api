@@ -9,7 +9,14 @@ const jwt     = require('jsonwebtoken');
 const db      = require('../db');
 const { requireAuth } = require('../middleware/auth');
 
-const router = express.Router();
+const crypto  = require('crypto');
+const mailer  = require('../utils/mailer');
+const router  = express.Router();
+
+// ── Verification token გენ. ───────────────────────────────────
+function makeVerifyToken() {
+  return crypto.randomBytes(32).toString('hex');
+}
 
 // ── JWT ტოკენის გენერაცია ─────────────────────────────────────
 function makeToken(userId) {
@@ -82,7 +89,24 @@ router.post('/register', async (req, res) => {
     const user  = rows[0];
     const token = makeToken(user.id);
 
-    res.status(201).json({ token, user });
+    res.status(201).json({
+      token, user,
+      email_verification_sent: true,
+      message: 'რეგისტრაცია წარმატებულია! შეამოწმე ემაილი დასადასტურებლად.'
+    });
+
+    // ვერიფიკაციის ემაილი — async
+    (async () => {
+      try {
+        const verifyToken = makeVerifyToken();
+        const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24სთ
+        await db.query(
+          'INSERT INTO email_verifications(user_id, token, expires_at) VALUES($1,$2,$3)',
+          [user.id, verifyToken, expires]
+        );
+        await mailer.sendVerificationEmail(user, verifyToken);
+      } catch(e) { console.error('verify email send error:', e.message); }
+    })();
   } catch (err) {
     console.error('register error:', err.message);
     // PostgreSQL unique violation
@@ -93,6 +117,118 @@ router.post('/register', async (req, res) => {
       return res.status(409).json({ error: 'already_exists', message: 'ეს email ან username უკვე გამოყენებულია' });
     }
     res.status(500).json({ error: 'server_error', message: err.message });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// GET /api/auth/verify-email?token=xxx
+// ══════════════════════════════════════════════════════════════
+router.get('/verify-email', async (req, res) => {
+  const FRONTEND = process.env.FRONTEND_URL || 'http://localhost:3000';
+  try {
+    const { token } = req.query;
+    if (!token) return res.redirect(`${FRONTEND}/?verify=invalid`);
+
+    const { rows } = await db.query(
+      'SELECT * FROM email_verifications WHERE token=$1 AND expires_at > NOW() AND used=FALSE',
+      [token]
+    );
+    if (!rows.length) return res.redirect(`${FRONTEND}/?verify=expired`);
+
+    const v = rows[0];
+    await db.query('UPDATE users SET email_verified=TRUE WHERE id=$1', [v.user_id]);
+    await db.query('UPDATE email_verifications SET used=TRUE WHERE id=$1', [v.id]);
+
+    res.redirect(`${FRONTEND}/?verify=success`);
+  } catch(err) {
+    console.error('verify email error:', err.message);
+    res.redirect(`${process.env.FRONTEND_URL || ''}/?verify=error`);
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// POST /api/auth/resend-verification  — ხელახლა გაგზავნა
+// ══════════════════════════════════════════════════════════════
+router.post('/resend-verification', requireAuth, async (req, res) => {
+  try {
+    const { rows } = await db.query('SELECT * FROM users WHERE id=$1', [req.user.id]);
+    const user = rows[0];
+    if (user.email_verified) return res.status(400).json({ error: 'already_verified' });
+
+    // წინა token-ები გავაუქმოთ
+    await db.query('UPDATE email_verifications SET used=TRUE WHERE user_id=$1', [user.id]);
+
+    const verifyToken = makeVerifyToken();
+    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await db.query(
+      'INSERT INTO email_verifications(user_id, token, expires_at) VALUES($1,$2,$3)',
+      [user.id, verifyToken, expires]
+    );
+    await mailer.sendVerificationEmail(user, verifyToken);
+
+    res.json({ ok: true, message: 'ვერიფიკაციის ემაილი გაიგზავნა' });
+  } catch(err) {
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// POST /api/auth/forgot-password  — პაროლის გადაყენება
+// ══════════════════════════════════════════════════════════════
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'email_required' });
+
+    const { rows } = await db.query(
+      "SELECT * FROM users WHERE email=$1 AND auth_provider='email'",
+      [email.toLowerCase()]
+    );
+
+    // security: ყოველთვის ok ვუბრუნებთ (email enumeration-ის თავიდან ასაცილებლად)
+    res.json({ ok: true, message: 'თუ ეს ემაილი რეგისტრირებულია, მიიღებ ლინკს' });
+
+    if (!rows.length) return;
+    const user = rows[0];
+
+    (async () => {
+      try {
+        const resetToken = makeVerifyToken();
+        const expires = new Date(Date.now() + 60 * 60 * 1000); // 1სთ
+        await db.query(
+          'INSERT INTO password_resets(user_id, token, expires_at) VALUES($1,$2,$3)',
+          [user.id, resetToken, expires]
+        );
+        await mailer.sendPasswordResetEmail(user, resetToken);
+      } catch(e) { console.error('forgot password error:', e.message); }
+    })();
+  } catch(err) {
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// POST /api/auth/reset-password  — ახალი პაროლის დაყენება
+// ══════════════════════════════════════════════════════════════
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) return res.status(400).json({ error: 'required_fields' });
+    if (password.length < 6) return res.status(400).json({ error: 'password_too_short' });
+
+    const { rows } = await db.query(
+      'SELECT * FROM password_resets WHERE token=$1 AND expires_at > NOW() AND used=FALSE',
+      [token]
+    );
+    if (!rows.length) return res.status(400).json({ error: 'invalid_or_expired_token' });
+
+    const hash = await bcrypt.hash(password, 12);
+    await db.query('UPDATE users SET password_hash=$1 WHERE id=$2', [hash, rows[0].user_id]);
+    await db.query('UPDATE password_resets SET used=TRUE WHERE id=$1', [rows[0].id]);
+
+    res.json({ ok: true, message: 'პაროლი წარმატებით შეიცვალა' });
+  } catch(err) {
+    res.status(500).json({ error: 'server_error' });
   }
 });
 

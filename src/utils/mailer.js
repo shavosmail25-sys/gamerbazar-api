@@ -159,6 +159,42 @@ async function sendDisputeResolvedEmail(recipient, dispute, order, listing, outc
   });
 }
 
+// ══════════════════════════════════════════════════════════════
+// EMAIL VERIFICATION
+// ══════════════════════════════════════════════════════════════
+async function sendVerificationEmail(user, token) {
+  if (!user.email) return;
+  const verifyUrl = `${FRONTEND}/api/auth/verify-email?token=${token}`;
+  return sendMail({
+    to: user.email,
+    subject: '✉️ GamerBazar.ge — ემაილის დადასტურება',
+    html: wrap(
+      'დაადასტურე შენი ემაილი',
+      `გამარჯობა <b>${user.username}</b>!<br><br>
+       GamerBazar.ge-ზე რეგისტრაციისთვის დაადასტურე შენი ემაილი.<br><br>
+       ლინკი მოქმედებს <b>24 საათის</b> განმავლობაში.`,
+      '✅ ემაილის დადასტურება', verifyUrl
+    ),
+  });
+}
+
+async function sendPasswordResetEmail(user, token) {
+  if (!user.email) return;
+  const resetUrl = `${FRONTEND}/?reset_token=${token}`;
+  return sendMail({
+    to: user.email,
+    subject: '🔐 GamerBazar.ge — პაროლის აღდგენა',
+    html: wrap(
+      'პაროლის აღდგენა',
+      `გამარჯობა <b>${user.username}</b>!<br><br>
+       პაროლის შესაცვლელად დააჭირე ღილაკს.<br><br>
+       ლინკი მოქმედებს <b>1 საათის</b> განმავლობაში.<br>
+       თუ ეს შენ არ მოითხოვე — უგულებელყავი ეს ემაილი.`,
+      '🔐 პაროლის შეცვლა', resetUrl
+    ),
+  });
+}
+
 module.exports = {
   sendMail,
   sendOrderCreatedEmail,
@@ -167,4 +203,6 @@ module.exports = {
   sendOrderExpiredEmail,
   sendDisputeOpenedEmail,
   sendDisputeResolvedEmail,
+  sendVerificationEmail,
+  sendPasswordResetEmail,
 };

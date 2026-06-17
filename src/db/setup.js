@@ -270,7 +270,45 @@ async function setupDatabase() {
 
 // ← ამ ფაილს პირდაპირ არ ვუშვებთ production-ში
 // index.js-ის start()-ი ამოწმებს ცხრილებს
-if (require.main === module) {
-  setupDatabase();
+// ეს ფუნქცია migration-ად გამოიყენება უკვე არსებულ DB-ზე
+async function runMigrations() {
+  const client = await pool.connect();
+  try {
+    // email_verifications ცხრილი
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS email_verifications (
+        id         UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+        user_id    UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        token      VARCHAR(64) NOT NULL UNIQUE,
+        expires_at TIMESTAMPTZ NOT NULL,
+        used       BOOLEAN     NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_email_ver_token ON email_verifications(token);
+    `);
+
+    // password_resets ცხრილი
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS password_resets (
+        id         UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+        user_id    UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        token      VARCHAR(64) NOT NULL UNIQUE,
+        expires_at TIMESTAMPTZ NOT NULL,
+        used       BOOLEAN     NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_pwd_reset_token ON password_resets(token);
+    `);
+
+    console.log('✅ Migrations გაიარა');
+  } catch(err) {
+    console.error('Migration error:', err.message);
+  } finally {
+    client.release();
+  }
 }
-module.exports = { setupDatabase };
+
+if (require.main === module) {
+  setupDatabase().then(() => runMigrations());
+}
+module.exports = { setupDatabase, runMigrations };
