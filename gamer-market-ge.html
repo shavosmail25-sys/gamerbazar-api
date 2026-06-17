@@ -166,6 +166,12 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
 .lcard.vip::after{content:'VIP';position:absolute;top:9px;right:9px;background:linear-gradient(135deg,#f0b429,#e07d29);color:#08090d;font-size:8px;font-weight:800;padding:2px 6px;border-radius:3px;letter-spacing:.04em}
 .lcard-img{height:100px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:38px;position:relative;overflow:hidden}
 .lcard-img-bg{position:absolute;inset:0;font-size:90px;display:flex;align-items:center;justify-content:center;opacity:.1;filter:blur(3px)}
+.lcard-has-img{cursor:pointer;display:block}
+.lcard-slide{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .3s}
+.lcard-slide.on{opacity:1}
+.lcard-dots{position:absolute;bottom:5px;left:50%;transform:translateX(-50%);display:flex;gap:4px;z-index:2}
+.lcard-dot{width:5px;height:5px;border-radius:50%;background:#ffffff50;transition:background .2s}
+.lcard-dot.on{background:#fff}
 .lcard-body{padding:13px}
 .lcard-game{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
 .lcard-title{font-size:13px;font-weight:600;line-height:1.3;margin-bottom:7px}
@@ -1749,7 +1755,8 @@ function mapApiListing(l) {
     si: (l.seller_name || l.seller_username || '?').slice(0, 2).toUpperCase(),
     sc: 'var(--accent)', r: Number(l.seller_rating) || 0,
     rc: Number(l.seller_review_count) || 0,
-    vip: l.is_vip, cat: l.category, id: l.id
+    vip: l.is_vip, cat: l.category, id: l.id,
+    images: l.images || []
   };
 }
 
@@ -1760,8 +1767,25 @@ function buildCard(l, isMob) {
   const psub  = g ? '$' + (l.price / rate).toFixed(0) : '₾' + l.price;
   const ico = '🎮';
   const lid = l.id || '';
+  const imgs = (l.images || []).filter(Boolean);
+
+  // image section — real photo თუ არის, თუ არა — emoji
+  let imgHtml;
+  if (imgs.length) {
+    const multiDots = imgs.length > 1
+      ? `<div class="lcard-dots">${imgs.map((_, i) => `<span class="lcard-dot${i===0?' on':''}"></span>`).join('')}</div>`
+      : '';
+    const allImgs = imgs.map((src, i) =>
+      `<img src="${API_URL + src}" alt="" class="lcard-slide${i===0?' on':''}" draggable="false" loading="lazy" onerror="this.style.display='none'">`
+    ).join('');
+    imgHtml = `<div class="lcard-img lcard-has-img" data-idx="0" data-count="${imgs.length}"
+      onclick="event.stopPropagation();lcNext(this)">${allImgs}${multiDots}</div>`;
+  } else {
+    imgHtml = `<div class="lcard-img"><div class="lcard-img-bg">${ico}</div><span style="font-size:34px;position:relative;z-index:1">${ico}</span></div>`;
+  }
+
   return `<div class="lcard${l.vip ? ' vip' : ''}" onclick="openListing('${lid}','${(l.title||'').replace(/'/g,"\'")}',${l.price})">
-    <div class="lcard-img"><div class="lcard-img-bg">${ico}</div><span style="font-size:34px;position:relative;z-index:1">${ico}</span></div>
+    ${imgHtml}
     <div class="lcard-body">
       <div class="lcard-game">${l.game} · ${l.type}</div>
       <div class="lcard-title">${l.title}</div>
@@ -1773,6 +1797,20 @@ function buildCard(l, isMob) {
       </div>
     </div>
   </div>`;
+}
+
+// ── listing card carousel: click → შემდეგ სურათი ──
+function lcNext(el) {
+  const slides = el.querySelectorAll('.lcard-slide');
+  const dots   = el.querySelectorAll('.lcard-dot');
+  if (slides.length < 2) return;
+  let idx = parseInt(el.dataset.idx || '0', 10);
+  slides[idx].classList.remove('on');
+  if (dots[idx]) dots[idx].classList.remove('on');
+  idx = (idx + 1) % slides.length;
+  el.dataset.idx = idx;
+  slides[idx].classList.add('on');
+  if (dots[idx]) dots[idx].classList.add('on');
 }
 
 function renderGrid(id, items, mob) {
