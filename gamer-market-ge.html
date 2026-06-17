@@ -93,7 +93,7 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
 /* SEARCH */
 .sbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 20px;position:sticky;top:56px;z-index:100}
 .sbar-inner{max-width:1120px;margin:0 auto;display:flex;gap:7px;align-items:center;flex-wrap:wrap}
-.sbox{display:flex;align-items:center;gap:7px;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:0 11px;flex:1;min-width:180px;transition:border-color .15s}
+.sbox{display:flex;align-items:center;gap:7px;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:0 11px;flex:1;min-width:180px;transition:border-color .15s;position:relative}
 .sbox:focus-within{border-color:var(--ad2)}
 .sbox input{flex:1;background:none;border:none;outline:none;color:var(--text);font-size:12px;padding:8px 0}
 .sbox input::placeholder{color:var(--muted)}
@@ -103,6 +103,18 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
 .ct{padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;background:none;border:none;color:var(--muted);transition:all .15s;font-family:var(--mono)}
 .ct.on{background:var(--accent);color:#08090d}
 
+/* SEARCH AUTOCOMPLETE */
+.search-suggest{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;box-shadow:0 10px 30px #00000060;z-index:200;overflow:hidden;display:none;max-height:340px;overflow-y:auto}
+.search-suggest.show{display:block}
+.ss-group-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:9px 14px 5px}
+.ss-item{display:flex;align-items:center;gap:10px;padding:8px 14px;cursor:pointer;transition:background .12s}
+.ss-item:hover,.ss-item.hi{background:var(--bg3)}
+.ss-item-ico{font-size:14px;width:18px;text-align:center;flex-shrink:0;color:var(--muted)}
+.ss-item-text{flex:1;font-size:12.5px}
+.ss-item-sub{font-size:10.5px;color:var(--muted)}
+.ss-item-price{font-family:var(--mono);font-size:11.5px;color:var(--accent);font-weight:600}
+.ss-empty{padding:14px;text-align:center;font-size:11.5px;color:var(--muted)}
+
 /* GRID */
 .wrap{max-width:1120px;margin:0 auto;padding:20px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
@@ -110,6 +122,14 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
 .sec-title{font-size:17px;font-weight:700;letter-spacing:-.3px}
 .sec-count{font-size:11px;color:var(--muted);font-family:var(--mono)}
 .sort-sel{background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:4px 8px;border-radius:6px;font-size:11px;cursor:pointer;outline:none;font-family:var(--mono)}
+
+/* PAGINATION */
+.pagination{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:24px;flex-wrap:wrap}
+.page-btn{min-width:32px;height:32px;padding:0 9px;border-radius:7px;background:var(--bg3);border:1px solid var(--border2);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center}
+.page-btn:hover:not(:disabled){border-color:var(--border3);color:var(--text)}
+.page-btn.on{background:var(--ad);border-color:var(--ad2);color:var(--accent)}
+.page-btn:disabled{opacity:.35;cursor:not-allowed}
+.page-dots{color:var(--muted);font-size:12px;padding:0 3px}
 
 /* CAT CARDS */
 .cat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:16px 12px;text-align:center;cursor:pointer;transition:all .18s;font-size:24px}
@@ -161,6 +181,61 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
 /* VIP BANNER */
 .vip-banner{background:linear-gradient(135deg,var(--gd),var(--bg2));border:1px solid var(--gd2);border-radius:var(--r2);padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
 .vb-t{font-size:13px;font-weight:700;color:var(--gold)}.vb-s{font-size:11px;color:var(--muted);margin-top:1px}
+
+/* LISTING DETAIL PAGE */
+.ld-back{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--muted);cursor:pointer;margin:18px 0 14px;transition:color .15s}
+.ld-back:hover{color:var(--text)}
+.ld-loading{text-align:center;padding:60px 0;color:var(--muted);font-size:13px}
+.ld-notfound{text-align:center;padding:60px 0;color:var(--muted);font-size:13px}
+.ld-layout{display:grid;grid-template-columns:1fr 340px;gap:22px;align-items:start}
+
+.ld-gallery{margin-bottom:18px}
+.ld-gallery-main{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);height:320px;display:flex;align-items:center;justify-content:center;font-size:72px;overflow:hidden;position:relative}
+.ld-gallery-main img{width:100%;height:100%;object-fit:cover}
+.ld-gallery-thumbs{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.ld-thumb{width:62px;height:62px;border-radius:8px;background:var(--bg2);border:2px solid var(--border);cursor:pointer;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;transition:border-color .15s}
+.ld-thumb img{width:100%;height:100%;object-fit:cover}
+.ld-thumb.on{border-color:var(--accent)}
+.ld-thumb:hover{border-color:var(--border3)}
+
+.ld-section{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:18px 20px;margin-bottom:16px}
+.ld-section-title{font-size:13px;font-weight:700;margin-bottom:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.04em}
+.ld-desc{font-size:13.5px;line-height:1.7;color:var(--muted2);white-space:pre-wrap}
+.ld-meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ld-meta-item{display:flex;flex-direction:column;gap:2px}
+.ld-meta-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.ld-meta-val{font-size:13px;font-weight:600}
+
+.ld-buy-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:20px;margin-bottom:14px;position:sticky;top:70px}
+.ld-game-tag{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+.ld-title{font-size:18px;font-weight:700;line-height:1.35;margin-bottom:9px}
+.ld-tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px}
+.ld-price-row{display:flex;align-items:baseline;gap:9px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.ld-price{font-family:var(--mono);font-size:28px;font-weight:700;color:var(--accent)}
+.ld-price-sub{font-size:12px;color:var(--muted)}
+.ld-escrow-note{background:var(--ad);border:1px solid var(--ad2);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:11.5px;color:var(--accent);line-height:1.5}
+.ld-views{text-align:center;font-size:11px;color:var(--muted);margin-top:12px}
+
+.ld-seller-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:border-color .15s}
+.ld-seller-card:hover{border-color:var(--border3)}
+.ld-seller-ava{width:42px;height:42px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:var(--accent);flex-shrink:0;overflow:hidden}
+.ld-seller-ava img{width:100%;height:100%;object-fit:cover}
+.ld-seller-name{font-size:13.5px;font-weight:600}
+.ld-seller-stats{font-size:11px;color:var(--muted);margin-top:1px}
+.ld-seller-arrow{font-size:13px;color:var(--muted)}
+
+.ld-review-item{padding:11px 0;border-bottom:1px solid var(--border)}
+.ld-review-item:last-child{border-bottom:none}
+.ld-review-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.ld-review-user{font-size:12.5px;font-weight:600}
+.ld-review-stars{font-size:11px;color:var(--gold)}
+.ld-review-text{font-size:12.5px;color:var(--muted2);line-height:1.5}
+
+@media(max-width:800px){
+  .ld-layout{grid-template-columns:1fr}
+  .ld-buy-card{position:static}
+  .ld-gallery-main{height:240px;font-size:54px}
+}
 
 /* WALLET */
 .wallet-wrap{max-width:820px;margin:0 auto;padding:24px 20px}
@@ -284,27 +359,6 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
 .confirm-amt{text-align:center;font-family:var(--mono);font-size:24px;font-weight:700;color:var(--accent);margin:5px 0}
 .confirm-txt{text-align:center;color:var(--muted);font-size:12px}
 
-/* ORDERS PAGE */
-.ord-tab{padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border2);background:var(--bg2);color:var(--muted);transition:all .15s}
-.ord-tab.on{background:var(--ad);border-color:var(--ad2);color:var(--accent)}
-.ord-stat-card{background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:12px;text-align:center}
-.ord-stat-n{font-size:20px;font-weight:700;margin-bottom:2px}
-.ord-stat-l{font-size:10px;color:var(--muted)}
-.ord-card{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;overflow:hidden;margin-bottom:10px;transition:border-color .15s}
-.ord-card:hover{border-color:var(--border3)}
-.ord-card-head{padding:13px 15px 10px;display:flex;align-items:flex-start;gap:12px}
-.ord-card-icon{width:42px;height:42px;border-radius:10px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
-.ord-card-title{font-size:13px;font-weight:700;margin-bottom:3px;line-height:1.3}
-.ord-card-meta{font-size:11px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap}
-.ord-status{font-size:10px;font-weight:600;padding:3px 9px;border-radius:5px;white-space:nowrap}
-.ord-timeline{padding:0 15px 13px;border-top:1px solid var(--border2);margin-top:8px;padding-top:12px}
-.ord-tl-row{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;position:relative}
-.ord-tl-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:3px}
-.ord-tl-line{position:absolute;left:4px;top:13px;width:2px;height:calc(100% + 2px);background:var(--border2)}
-.ord-tl-text{font-size:11px;color:var(--muted2);line-height:1.4}
-.ord-tl-time{font-size:10px;color:var(--muted);margin-top:1px}
-.ord-card-actions{padding:0 15px 13px;display:flex;gap:7px;flex-wrap:wrap}
-
 /* TOAST */
 .toast{position:fixed;bottom:18px;right:18px;z-index:400;background:var(--bg2);border:1px solid var(--border2);border-radius:9px;padding:9px 14px;font-size:12px;box-shadow:0 8px 24px #00000060;transform:translateY(60px);opacity:0;transition:all .25s;display:flex;align-items:center;gap:8px}
 .toast.show{transform:none;opacity:1}.toast.ok{border-color:#00e5a035}.toast.err{border-color:#e05d5d35}
@@ -391,7 +445,6 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
   <div class="nav-links">
     <div class="nl on" onclick="pg('home');act(this)">მთავარი</div>
     <div class="nl" onclick="pg('listings');act(this)">განცხადებები</div>
-    <div class="nl" onclick="pg('orders');act(this)" id="nav-orders">შეკვეთები</div>
     <div class="nl" onclick="pg('chat');act(this)">ჩატი</div>
     <div class="nl" onclick="pg('wallet');act(this)">საფულე</div>
     <div class="nl" onclick="pg('profile');act(this)">პროფილი</div>
@@ -462,7 +515,7 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
 <div id="page-listings" class="page main">
   <div class="sbar">
     <div class="sbar-inner">
-      <div class="sbox"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input type="text" placeholder="მოძებნე..." oninput="filterL(this.value)" id="s-input"></div>
+      <div class="sbox"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input type="text" placeholder="მოძებნე..." oninput="handleSearchInput(this.value)" onfocus="if(this.value.length>=2)showSearchSuggest()" id="s-input" autocomplete="off"><div class="search-suggest" id="search-suggest"></div></div>
       <button class="fbtn on" onclick="filt(this,'ყველა')">ყველა</button>
       <button class="fbtn" onclick="filt(this,'mobile')">📱 მობ.</button>
       <button class="fbtn" onclick="filt(this,'pc')">🖥️ PC</button>
@@ -475,53 +528,10 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
   <div class="wrap">
     <div class="sec-head">
       <div class="sec-title" id="l-title">ყველა განცხადება</div>
-      <div style="display:flex;align-items:center;gap:8px"><span class="sec-count" id="l-count">0 განცხ.</span><select class="sort-sel"><option>უახლესი</option><option>ფასი ↑</option><option>ფასი ↓</option></select></div>
+      <div style="display:flex;align-items:center;gap:8px"><span class="sec-count" id="l-count">0 განცხ.</span><select class="sort-sel" id="l-sort" onchange="handleSortChange(this.value)"><option value="newest">უახლესი</option><option value="price_asc">ფასი ↑</option><option value="price_desc">ფასი ↓</option></select></div>
     </div>
     <div class="grid" id="l-grid"></div>
-  </div>
-</div>
-
-<!-- ORDERS PAGE -->
-<div id="page-orders" class="page main" style="display:none">
-  <div class="wrap">
-
-    <!-- header -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
-      <div style="font-size:18px;font-weight:800;letter-spacing:-.4px">📋 ჩემი შეკვეთები</div>
-      <div style="display:flex;gap:5px;flex-wrap:wrap">
-        <button class="ord-tab on" onclick="ordTab(this,'all')">ყველა</button>
-        <button class="ord-tab" onclick="ordTab(this,'active')">🔒 აქტიური</button>
-        <button class="ord-tab" onclick="ordTab(this,'completed')">✅ დასრ.</button>
-        <button class="ord-tab" onclick="ordTab(this,'cancelled')">❌ გაუქმ.</button>
-        <button class="ord-tab" onclick="ordTab(this,'disputed')">⚑ დავა</button>
-      </div>
-    </div>
-
-    <!-- stats row -->
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:18px">
-      <div class="ord-stat-card">
-        <div class="ord-stat-n" id="ost-total">0</div>
-        <div class="ord-stat-l">სულ</div>
-      </div>
-      <div class="ord-stat-card">
-        <div class="ord-stat-n" id="ost-active" style="color:#f5c518">0</div>
-        <div class="ord-stat-l">აქტიური</div>
-      </div>
-      <div class="ord-stat-card">
-        <div class="ord-stat-n" id="ost-completed" style="color:#4ade80">0</div>
-        <div class="ord-stat-l">დასრულ.</div>
-      </div>
-      <div class="ord-stat-card">
-        <div class="ord-stat-n" id="ost-volume" style="color:var(--accent)">₾0</div>
-        <div class="ord-stat-l">მოცულობა</div>
-      </div>
-    </div>
-
-    <!-- orders list -->
-    <div id="ord-page-list">
-      <div class="empty"><div class="empty-ico">📋</div><div class="empty-t">შეკვეთები ჩაიტვირთება...</div></div>
-    </div>
-
+    <div class="pagination" id="l-pagination"></div>
   </div>
 </div>
 
@@ -544,6 +554,96 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
       <div class="gtab" onclick="ghTab(this,2)">💎 ვალუტა / ნივთები</div>
     </div>
     <div class="grid" id="gh-grid"></div>
+  </div>
+</div>
+
+<!-- LISTING DETAIL PAGE -->
+<div id="page-listing-detail" class="page main">
+  <div class="wrap" id="ld-wrap">
+    <div class="ld-back" onclick="ldGoBack()">← უკან</div>
+
+    <div class="ld-loading" id="ld-loading">იტვირთება...</div>
+
+    <div id="ld-content" style="display:none">
+      <div class="ld-layout">
+        <!-- LEFT: gallery + description -->
+        <div class="ld-main">
+          <div class="ld-gallery">
+            <div class="ld-gallery-main" id="ld-gallery-main">🎮</div>
+            <div class="ld-gallery-thumbs" id="ld-gallery-thumbs"></div>
+          </div>
+
+          <div class="ld-section">
+            <div class="ld-section-title">აღწერა</div>
+            <div class="ld-desc" id="ld-desc">—</div>
+          </div>
+
+          <div class="ld-section">
+            <div class="ld-section-title">დეტალები</div>
+            <div class="ld-meta-grid" id="ld-meta-grid"></div>
+          </div>
+
+          <div class="ld-section" id="ld-reviews-section" style="display:none">
+            <div class="ld-section-title">გამყიდველის შეფასებები</div>
+            <div id="ld-reviews-list"></div>
+          </div>
+        </div>
+
+        <!-- RIGHT: price + buy + seller -->
+        <div class="ld-side">
+          <div class="ld-buy-card">
+            <div class="ld-game-tag" id="ld-game-tag">—</div>
+            <div class="ld-title" id="ld-title">—</div>
+            <div id="ld-vip-badge" class="badge bv" style="display:none;margin-bottom:8px">⭐ VIP</div>
+            <div class="ld-tags" id="ld-tags"></div>
+
+            <div class="ld-price-row">
+              <span class="ld-price" id="ld-price">₾0</span>
+              <span class="ld-price-sub" id="ld-price-sub">$0</span>
+            </div>
+
+            <div class="ld-escrow-note">
+              🔒 <strong>Escrow დაცვა</strong> — ფული გაიყინება სანამ ექაუნთს მიიღებ.
+            </div>
+
+            <div id="ld-actions">
+              <button class="btn btn-a" id="ld-buy-btn" onclick="buyListingDetail()" style="width:100%;padding:12px;font-size:14px">
+                🛒 ყიდვა — <span id="ld-buy-price">₾0</span>
+              </button>
+            </div>
+            <div id="ld-guest-msg" style="display:none;text-align:center;margin-top:10px">
+              <div style="font-size:12px;color:var(--muted);margin-bottom:10px">შეძენისთვის საჭიროა ავტ.</div>
+              <button class="btn btn-a" style="width:100%" onclick="openM('loginModal')">შესვლა / რეგისტრაცია</button>
+            </div>
+            <div id="ld-own-msg" style="display:none;text-align:center;margin-top:10px;font-size:12px;color:var(--muted)">
+              ეს შენი განცხადებაა
+            </div>
+
+            <div class="ld-views" id="ld-views">👁 0 ნახვა</div>
+          </div>
+
+          <div class="ld-seller-card" id="ld-seller-row" onclick="openSellerProfile()">
+            <div id="ld-seller-ava" class="ld-seller-ava">?</div>
+            <div style="flex:1">
+              <div class="ld-seller-name" id="ld-seller-name">—</div>
+              <div class="ld-seller-stats" id="ld-seller-stats">—</div>
+            </div>
+            <div class="ld-seller-arrow">→</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ld-section" style="margin-top:24px">
+        <div class="ld-section-title">მსგავსი განცხადებები</div>
+        <div class="grid" id="ld-similar-grid"></div>
+      </div>
+    </div>
+
+    <div class="ld-notfound" id="ld-notfound" style="display:none">
+      <div style="font-size:40px;margin-bottom:12px">🔍</div>
+      <div>განცხადება ვერ მოიძებნა ან წაშლილია</div>
+      <button class="btn btn-g" style="margin-top:14px" onclick="pg('listings');act(document.querySelectorAll('.nl')[1])">განცხადებებზე დაბრუნება</button>
+    </div>
   </div>
 </div>
 
@@ -1060,6 +1160,11 @@ let CUR          = 'GEL';
 let FILT         = 'ყველა';
 let curGame      = null;
 let curGameTab   = 0;
+let L_PAGE       = 1;
+let L_SORT       = 'newest';
+let L_SEARCH     = '';
+let searchSuggestTimer = null;
+let suggestActiveIndex = -1;
 // postImgFile replaced by postImgFiles array (multi-upload)
 
 // ══════════════════════════════════════════════════════════
@@ -1162,7 +1267,6 @@ function pg(id) {
   if (id === 'profile') { updateNavUser(); loadMyProfile(); }
   if (id === 'chat')    { loadChatRooms(); }
   if (id === 'edit')    { loadMyProfile(); }
-  if (id === 'orders')  { loadOrdersPage(); }
 }
 function act(el) {
   document.querySelectorAll('.nl').forEach(n => n.classList.remove('on'));
@@ -1635,87 +1739,212 @@ async function loadListingsFromAPI(gridId, params = {}) {
       renderGrid(gridId, data.listings.map(mapApiListing), true);
       const cnt = document.getElementById('l-count');
       if (cnt) cnt.textContent = data.total + ' განცხ.';
-      return true;
+      return data;
     }
   } catch (e) { console.error('listings error:', e); }
-  return false;
+  return null;
 }
 
-// ── Listing Detail ────────────────────────────────────────────
+// ── Listing Detail (page navigation) ────────────────────────────
 let currentListing = null;
 
-async function openListing(id, title, price) {
-  // ჯერ basic info ვაჩვენოთ
-  currentListing = { id, title, price };
-  document.getElementById('lm-title').textContent    = title;
-  document.getElementById('lm-price').textContent    = '₾' + price;
-  document.getElementById('lm-buy-price').textContent= '₾' + price;
-  document.getElementById('lm-game').textContent     = '';
-  document.getElementById('lm-tags').innerHTML       = '';
-  document.getElementById('lm-seller-name').textContent = '...';
+function openListing(id, title, price) {
+  // ახლა modal-ის მაგივრად სრულ გვერდზე გადავდივართ
+  openListingDetail(id);
+}
 
-  // auth state
-  const guestMsg = document.getElementById('lm-guest-msg');
-  const actions  = document.getElementById('lm-actions');
-  if (currentUser) {
-    if (guestMsg) guestMsg.style.display = 'none';
-    if (actions)  actions.style.display  = 'block';
-  } else {
-    if (guestMsg) guestMsg.style.display = 'block';
-    if (actions)  actions.style.display  = 'none';
-  }
+async function openListingDetail(id) {
+  pg('listing-detail');
+  window.location.hash = 'listing/' + id;
 
-  openM('listingModal');
+  const loadingEl = document.getElementById('ld-loading');
+  const contentEl = document.getElementById('ld-content');
+  const notFoundEl = document.getElementById('ld-notfound');
+  loadingEl.style.display = 'block';
+  contentEl.style.display = 'none';
+  notFoundEl.style.display = 'none';
 
-  // API-დან სრული ინფო
   try {
     const l = await api('/api/listings/' + id);
     currentListing = l;
-    document.getElementById('lm-game').textContent  = (l.game || '') + ' · ' + (l.listing_type || '');
-    document.getElementById('lm-title').textContent = l.title;
-    document.getElementById('lm-price').textContent = '₾' + Number(l.price_gel).toFixed(2);
-    document.getElementById('lm-buy-price').textContent = '₾' + Number(l.price_gel).toFixed(2);
-
-    // VIP badge
-    const vipBadge = document.getElementById('lm-vip-badge');
-    if (vipBadge) vipBadge.style.display = l.is_vip ? 'inline-block' : 'none';
-
-    // tags
-    const tagsEl = document.getElementById('lm-tags');
-    if (tagsEl && l.tags && l.tags.length) {
-      tagsEl.innerHTML = l.tags.map(t => `<span class="tag">${t}</span>`).join('');
-    }
-
-    // description
-    const descWrap = document.getElementById('lm-desc-wrap');
-    const descEl   = document.getElementById('lm-desc');
-    if (descWrap && descEl && l.description) {
-      descWrap.style.display = 'block';
-      descEl.textContent = l.description;
-    }
-
-    // seller
-    const sellerName  = document.getElementById('lm-seller-name');
-    const sellerStats = document.getElementById('lm-seller-stats');
-    const sellerAva   = document.getElementById('lm-seller-ava');
-    if (sellerName)  sellerName.textContent  = l.seller_name || l.seller_username || '?';
-    if (sellerStats) sellerStats.textContent =
-      '★ ' + (Number(l.seller_rating) || 0).toFixed(1) +
-      ' · ' + (l.seller_review_count || 0) + ' შეფ.' +
-      ' · ' + (l.seller_completed || 0) + ' გაყ.';
-    if (sellerAva) {
-      if (l.seller_avatar) {
-        sellerAva.innerHTML = `<img src="${API_URL + l.seller_avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
-      } else {
-        sellerAva.textContent = (l.seller_name || '?').slice(0,2).toUpperCase();
-      }
-    }
-  } catch(e) {
+    renderListingDetail(l);
+    loadingEl.style.display = 'none';
+    contentEl.style.display = 'block';
+    loadSimilarListings(l);
+    loadSellerReviewsForListing(l.seller_id);
+  } catch (e) {
     console.error('listing detail:', e);
+    loadingEl.style.display = 'none';
+    notFoundEl.style.display = 'block';
   }
 }
 
-// ── Buy Listing ────────────────────────────────────────────────
+function ldGoBack() {
+  pg('listings');
+  act(document.querySelectorAll('.nl')[1]);
+}
+
+function renderListingDetail(l) {
+  const rate = 2.74;
+  const price = Number(l.price_gel);
+
+  // gallery
+  const images = (l.images && l.images.length) ? l.images : [];
+  const mainEl = document.getElementById('ld-gallery-main');
+  const thumbsEl = document.getElementById('ld-gallery-thumbs');
+  if (images.length) {
+    mainEl.innerHTML = `<img src="${API_URL + images[0]}" alt="${esc(l.title)}">`;
+    thumbsEl.innerHTML = images.map((img, i) =>
+      `<div class="ld-thumb${i === 0 ? ' on' : ''}" onclick="ldShowImage('${API_URL + img}', this)"><img src="${API_URL + img}"></div>`
+    ).join('');
+  } else {
+    mainEl.innerHTML = '🎮';
+    thumbsEl.innerHTML = '';
+  }
+
+  // header / buy card
+  document.getElementById('ld-game-tag').textContent = (l.game || '') + ' · ' + (l.listing_type || '');
+  document.getElementById('ld-title').textContent = l.title;
+  document.getElementById('ld-vip-badge').style.display = l.is_vip ? 'inline-block' : 'none';
+  document.getElementById('ld-price').textContent = '₾' + price.toFixed(2);
+  document.getElementById('ld-price-sub').textContent = '$' + (price / rate).toFixed(2);
+  document.getElementById('ld-buy-price').textContent = '₾' + price.toFixed(2);
+  document.getElementById('ld-views').textContent = '👁 ' + (l.views_count || 0) + ' ნახვა';
+
+  const tagsEl = document.getElementById('ld-tags');
+  tagsEl.innerHTML = (l.tags || []).map(t => `<span class="tag">${esc(t)}</span>`).join('');
+
+  // description
+  document.getElementById('ld-desc').textContent = l.description || 'აღწერა არ არის დამატებული.';
+
+  // meta grid
+  const metaEl = document.getElementById('ld-meta-grid');
+  metaEl.innerHTML = `
+    <div class="ld-meta-item"><span class="ld-meta-label">კატეგორია</span><span class="ld-meta-val">${esc(l.category || '—')}</span></div>
+    <div class="ld-meta-item"><span class="ld-meta-label">თამაში</span><span class="ld-meta-val">${esc(l.game || '—')}</span></div>
+    <div class="ld-meta-item"><span class="ld-meta-label">ტიპი</span><span class="ld-meta-val">${esc(l.listing_type || '—')}</span></div>
+    <div class="ld-meta-item"><span class="ld-meta-label">გამოქვეყნდა</span><span class="ld-meta-val">${fmtListingDate(l.created_at)}</span></div>
+  `;
+
+  // actions — auth / own listing state
+  const actionsEl  = document.getElementById('ld-actions');
+  const guestEl    = document.getElementById('ld-guest-msg');
+  const ownEl      = document.getElementById('ld-own-msg');
+  if (!currentUser) {
+    actionsEl.style.display = 'none'; guestEl.style.display = 'block'; ownEl.style.display = 'none';
+  } else if (l.seller_id === currentUser.id) {
+    actionsEl.style.display = 'none'; guestEl.style.display = 'none'; ownEl.style.display = 'block';
+  } else {
+    actionsEl.style.display = 'block'; guestEl.style.display = 'none'; ownEl.style.display = 'none';
+  }
+
+  // seller
+  const sellerName  = document.getElementById('ld-seller-name');
+  const sellerStats = document.getElementById('ld-seller-stats');
+  const sellerAva   = document.getElementById('ld-seller-ava');
+  sellerName.textContent = l.display_name || l.username || '?';
+  sellerStats.textContent =
+    '★ ' + (Number(l.seller_rating) || 0).toFixed(1) +
+    ' · ' + (l.seller_review_count || 0) + ' შეფ.' +
+    ' · ' + (l.seller_completed || 0) + ' გაყ.';
+  if (l.avatar_url) {
+    sellerAva.innerHTML = `<img src="${API_URL + l.avatar_url}">`;
+  } else {
+    sellerAva.textContent = (l.display_name || l.username || '?').slice(0,2).toUpperCase();
+  }
+}
+
+function ldShowImage(url, thumbEl) {
+  document.getElementById('ld-gallery-main').innerHTML = `<img src="${url}">`;
+  document.querySelectorAll('.ld-thumb').forEach(t => t.classList.remove('on'));
+  if (thumbEl) thumbEl.classList.add('on');
+}
+
+function fmtListingDate(d) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('ka-GE', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function esc(str) {
+  if (str == null) return '';
+  return String(str).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+async function loadSimilarListings(l) {
+  const el = document.getElementById('ld-similar-grid');
+  try {
+    const data = await api(`/api/listings?category=${encodeURIComponent(l.category)}&limit=4`);
+    const items = (data.listings || []).filter(x => x.id !== l.id).slice(0, 4);
+    if (!items.length) {
+      el.innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="empty-ico">🔍</div><div class="empty-t">მსგავსი განცხადება ვერ მოიძებნა</div></div>';
+      return;
+    }
+    renderGrid('ld-similar-grid', items.map(mapApiListing), true);
+  } catch (e) { el.innerHTML = ''; }
+}
+
+async function loadSellerReviewsForListing(sellerId) {
+  const section = document.getElementById('ld-reviews-section');
+  const list = document.getElementById('ld-reviews-list');
+  if (!sellerId) { section.style.display = 'none'; return; }
+  try {
+    const reviews = await api('/api/reviews/seller/' + sellerId);
+    if (!reviews.length) { section.style.display = 'none'; return; }
+    section.style.display = 'block';
+    list.innerHTML = reviews.slice(0, 5).map(r => `
+      <div class="ld-review-item">
+        <div class="ld-review-head">
+          <span class="ld-review-user">${esc(r.reviewer_username || '?')}</span>
+          <span class="ld-review-stars">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</span>
+        </div>
+        ${r.comment ? `<div class="ld-review-text">${esc(r.comment)}</div>` : ''}
+      </div>
+    `).join('');
+  } catch (e) { section.style.display = 'none'; }
+}
+
+// ── Buy Listing (detail page) ────────────────────────────────────
+async function buyListingDetail() {
+  if (!currentUser) { openM('loginModal'); return; }
+  if (!currentListing) return;
+
+  const price = Number(currentListing.price_gel);
+  const bal   = Number(currentUser.balance_gel) || 0;
+
+  if (bal < price) {
+    showToast(`ბალანსი არ კმარა. გჭირდება ₾${price.toFixed(2)}, გაქვს ₾${bal.toFixed(2)}`, 'err');
+    setTimeout(() => { pg('wallet'); act(document.querySelectorAll('.nl')[3]); }, 1500);
+    return;
+  }
+
+  if (currentListing.seller_id === currentUser.id) {
+    showToast('საკუთარ განცხადებას ვერ ყიდულობ', 'err'); return;
+  }
+
+  const btn = document.getElementById('ld-buy-btn');
+  if (btn) { btn.textContent = '⏳ იქმნება...'; btn.disabled = true; }
+
+  try {
+    const order = await api('/api/orders', {
+      method: 'POST',
+      body: JSON.stringify({ listing_id: currentListing.id })
+    });
+
+    const amtEl = document.getElementById('order-success-amount');
+    if (amtEl) amtEl.textContent = '₾' + price.toFixed(2);
+    openM('orderSuccessModal');
+
+    await loadCurrentUser();
+    loadWallet();
+
+  } catch(e) {
+    showToast(e.message || 'შეკვეთა ვერ შეიქმნა', 'err');
+  } finally {
+    if (btn) { btn.textContent = '🛒 ყიდვა — ₾' + price.toFixed(2); btn.disabled = false; }
+  }
+}
+
+// ── Buy Listing (legacy modal, კვლავ ხელმისაწვდომია თუმცა არ გამოიყენება ახლა) ──
 async function buyListing() {
   if (!currentUser) { openM('loginModal'); return; }
   if (!currentListing) return;
@@ -1843,16 +2072,21 @@ async function openSellerProfile() {
   }
 }
 
-function filterL(q) {
-  const params = { limit: 20 };
-  if (q) params.search = q;
+function filterL(q, page = 1) {
+  L_PAGE = page;
+  L_SEARCH = q || '';
+  const params = { limit: 12, page: L_PAGE, sort: L_SORT };
+  if (L_SEARCH) params.search = L_SEARCH;
   if (FILT && FILT !== 'ყველა' && FILT !== 'VIP') params.category = FILT;
   if (FILT === 'VIP') params.vip = 'true';
-  loadListingsFromAPI('l-grid', params).then(ok => {
-    if (!ok) {
+  loadListingsFromAPI('l-grid', params).then(data => {
+    if (!data) {
       const el = document.getElementById('l-grid');
       if (el) el.innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="empty-ico">🔍</div><div class="empty-t">განცხადებები ვერ მოიძებნა</div></div>';
+      renderPagination(0, 1);
+      return;
     }
+    renderPagination(data.pages || 1, data.page || 1);
   });
 }
 
@@ -1866,16 +2100,131 @@ function filt(btn, cat) {
   };
   const title = document.getElementById('l-title');
   if (title) title.textContent = catLabels[cat] || cat;
-  filterL(document.getElementById('s-input')?.value || '');
+  filterL(document.getElementById('s-input')?.value || '', 1);
 }
 
 function setCur(btn, cur) {
   document.querySelectorAll('.ct').forEach(b => b.classList.remove('on'));
   btn.classList.add('on');
   CUR = cur;
-  filterL(document.getElementById('s-input')?.value || '');
+  filterL(document.getElementById('s-input')?.value || '', L_PAGE);
   showToast(cur === 'GEL' ? '₾ GEL' : '$ USD', 'ok');
 }
+
+function handleSortChange(sort) {
+  L_SORT = sort;
+  filterL(document.getElementById('s-input')?.value || '', 1);
+}
+
+// ── PAGINATION ──────────────────────────────────────────────
+function renderPagination(totalPages, current) {
+  const el = document.getElementById('l-pagination');
+  if (!el) return;
+  if (!totalPages || totalPages <= 1) { el.innerHTML = ''; return; }
+
+  let html = `<button class="page-btn" ${current<=1?'disabled':''} onclick="goToPage(${current-1})">‹</button>`;
+
+  const pages = [];
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === 1 || i === totalPages || Math.abs(i - current) <= 1) pages.push(i);
+    else if (pages[pages.length-1] !== '...') pages.push('...');
+  }
+
+  html += pages.map(p => p === '...'
+    ? `<span class="page-dots">…</span>`
+    : `<button class="page-btn${p===current?' on':''}" onclick="goToPage(${p})">${p}</button>`
+  ).join('');
+
+  html += `<button class="page-btn" ${current>=totalPages?'disabled':''} onclick="goToPage(${current+1})">›</button>`;
+  el.innerHTML = html;
+}
+
+function goToPage(p) {
+  if (p < 1) return;
+  filterL(document.getElementById('s-input')?.value || '', p);
+  document.querySelector('#page-listings .wrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── SEARCH AUTOCOMPLETE ─────────────────────────────────────
+function handleSearchInput(q) {
+  clearTimeout(searchSuggestTimer);
+  suggestActiveIndex = -1;
+
+  // ჩვეული ფილტრაცია (debounce-ით)
+  searchSuggestTimer = setTimeout(() => filterL(q, 1), 350);
+
+  // suggest dropdown
+  if (q.length < 2) { hideSearchSuggest(); return; }
+  clearTimeout(window._suggestFetchTimer);
+  window._suggestFetchTimer = setTimeout(() => fetchSearchSuggest(q), 200);
+}
+
+async function fetchSearchSuggest(q) {
+  try {
+    const data = await api('/api/listings/suggest?q=' + encodeURIComponent(q));
+    renderSearchSuggest(data, q);
+  } catch (e) { hideSearchSuggest(); }
+}
+
+function renderSearchSuggest(data, q) {
+  const el = document.getElementById('search-suggest');
+  if (!el) return;
+  const games = data.games || [];
+  const titles = data.titles || [];
+
+  if (!games.length && !titles.length) {
+    el.innerHTML = `<div class="ss-empty">"${esc(q)}"-ზე შედეგი არ მოიძებნა</div>`;
+    el.classList.add('show');
+    return;
+  }
+
+  let html = '';
+  if (games.length) {
+    html += `<div class="ss-group-label">თამაშები</div>`;
+    html += games.map(g => `
+      <div class="ss-item" onclick="selectSuggestGame('${esc(g).replace(/'/g,"\\'")}')">
+        <span class="ss-item-ico">🎮</span><span class="ss-item-text">${esc(g)}</span>
+      </div>`).join('');
+  }
+  if (titles.length) {
+    html += `<div class="ss-group-label">განცხადებები</div>`;
+    html += titles.map(t => `
+      <div class="ss-item" onclick="selectSuggestListing('${t.id}')">
+        <span class="ss-item-ico">🛒</span>
+        <span class="ss-item-text">${esc(t.title)}<div class="ss-item-sub">${esc(t.game)}</div></span>
+        <span class="ss-item-price">₾${Number(t.price_gel).toFixed(0)}</span>
+      </div>`).join('');
+  }
+  el.innerHTML = html;
+  el.classList.add('show');
+}
+
+function showSearchSuggest() {
+  const el = document.getElementById('search-suggest');
+  if (el && el.innerHTML.trim()) el.classList.add('show');
+}
+
+function hideSearchSuggest() {
+  const el = document.getElementById('search-suggest');
+  if (el) el.classList.remove('show');
+}
+
+function selectSuggestGame(gameName) {
+  const input = document.getElementById('s-input');
+  if (input) input.value = gameName;
+  hideSearchSuggest();
+  filterL(gameName, 1);
+}
+
+function selectSuggestListing(id) {
+  hideSearchSuggest();
+  openListingDetail(id);
+}
+
+document.addEventListener('click', (e) => {
+  const sbox = e.target.closest('.sbox');
+  if (!sbox) hideSearchSuggest();
+});
 
 function goCategory(cat) {
   pg('listings'); act(document.querySelectorAll('.nl')[1]);
@@ -2511,212 +2860,6 @@ function ptab(btn, id) {
   if (id === 'po') loadMyOrders();
 }
 
-// ══════════════════════════════════════════════════════════
-// 📋 ORDERS PAGE
-// ══════════════════════════════════════════════════════════
-let allOrders   = [];
-let ordFilter   = 'all';
-
-function ordTab(btn, filter) {
-  document.querySelectorAll('.ord-tab').forEach(b => b.classList.remove('on'));
-  btn.classList.add('on');
-  ordFilter = filter;
-  renderOrdersList();
-}
-
-async function loadOrdersPage() {
-  if (!currentUser) return;
-  const list = document.getElementById('ord-page-list');
-  if (!list) return;
-  list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted)">⏳ იტვირთება...</div>';
-
-  try {
-    allOrders = await api('/api/orders/me');
-    updateOrderStats();
-    renderOrdersList();
-  } catch(e) {
-    list.innerHTML = '<div class="empty"><div class="empty-ico">⚠️</div><div class="empty-t">ჩატვირთვა ვერ მოხდა</div></div>';
-  }
-}
-
-function updateOrderStats() {
-  const active    = allOrders.filter(o => o.status === 'active').length;
-  const completed = allOrders.filter(o => o.status === 'completed').length;
-  const volume    = allOrders
-    .filter(o => o.status === 'completed' && o.buyer_id === currentUser.id)
-    .reduce((s, o) => s + Number(o.amount_gel), 0);
-
-  const el = (id, v) => { const e = document.getElementById(id); if(e) e.textContent = v; };
-  el('ost-total',     allOrders.length);
-  el('ost-active',    active);
-  el('ost-completed', completed);
-  el('ost-volume',    '₾' + volume.toFixed(2));
-}
-
-function renderOrdersList() {
-  const list = document.getElementById('ord-page-list');
-  if (!list) return;
-
-  const filtered = ordFilter === 'all'
-    ? allOrders
-    : allOrders.filter(o => o.status === ordFilter);
-
-  if (!filtered.length) {
-    const labels = { all:'შეკვეთები ჯერ არ არის', active:'აქტიური შეკვ. არ არის',
-      completed:'დასრულ. შეკვ. არ არის', cancelled:'გაუქმ. შეკვ. არ არის', disputed:'დავები არ არის' };
-    list.innerHTML = `<div class="empty"><div class="empty-ico">📋</div><div class="empty-t">${labels[ordFilter]||'არ არის'}</div></div>`;
-    return;
-  }
-
-  list.innerHTML = filtered.map(o => renderOrderCard(o)).join('');
-}
-
-function renderOrderCard(o) {
-  const isBuyer = o.buyer_id === currentUser.id;
-  const partner = isBuyer ? (o.seller_username || '?') : (o.buyer_username || '?');
-  const partnerAva = isBuyer ? o.seller_avatar : o.buyer_avatar;
-
-  const statusCfg = {
-    pending:   { label:'⏳ მოლოდინი',    color:'var(--muted)',   bg:'var(--bg3)',  dot:'#888' },
-    active:    { label:'🔒 Escrow',       color:'#f5c518',        bg:'#2a2205',     dot:'#f5c518' },
-    completed: { label:'✅ დასრულდა',     color:'#4ade80',        bg:'#0d2218',     dot:'#4ade80' },
-    cancelled: { label:'❌ გაუქმდა',      color:'#f87171',        bg:'#250d0d',     dot:'#f87171' },
-    disputed:  { label:'⚑ დავა',         color:'#fb923c',        bg:'#251408',     dot:'#fb923c' },
-  };
-  const sc = statusCfg[o.status] || statusCfg.pending;
-
-  // timeline events
-  const timeline = buildTimeline(o, isBuyer);
-
-  // actions
-  const canConfirm  = isBuyer && o.status === 'active' && o.escrow_status === 'held';
-  const canDispute  = (isBuyer || o.seller_id === currentUser.id) && o.status === 'active';
-  const canCancel   = isBuyer && o.status === 'active';
-  const canReview   = isBuyer && o.status === 'completed';
-  const canOpenChat = o.status !== 'cancelled';
-
-  const actions = [];
-  if (canConfirm) actions.push(
-    `<button class="btn btn-a btn-sm" onclick="confirmOrder('${o.id}',${o.amount_gel})">✅ მიღება</button>`
-  );
-  if (canDispute) actions.push(
-    `<button class="btn btn-g btn-sm" style="color:#fb923c;border-color:#fb923c" onclick="openDisputeFor('${o.id}')">⚑ დავა</button>`
-  );
-  if (canCancel && !canConfirm) actions.push(
-    `<button class="btn btn-g btn-sm" onclick="cancelOrderFromPage('${o.id}')">↩ გაუქმება</button>`
-  );
-  if (canReview) actions.push(
-    `<button class="btn btn-g btn-sm" onclick="openM('ratingModal')">⭐ შეფ.</button>`
-  );
-  if (canOpenChat) actions.push(
-    `<button class="btn btn-g btn-sm" onclick="pg('chat');act(document.getElementById('nav-orders'))">💬 ჩატი</button>`
-  );
-
-  // deadline countdown
-  let deadlineHtml = '';
-  if (o.status === 'active' && o.confirm_deadline) {
-    const rem = new Date(o.confirm_deadline) - new Date();
-    if (rem > 0) {
-      const h = Math.floor(rem / 3600000);
-      const m = Math.floor((rem % 3600000) / 60000);
-      deadlineHtml = `<span style="font-size:10px;color:${h < 6 ? '#fb923c' : 'var(--muted)'}">⏱ ${h}სთ ${m}წთ</span>`;
-    }
-  }
-
-  const partnerAvaHtml = partnerAva
-    ? `<img src="${partnerAva.startsWith('http') ? partnerAva : API_URL + partnerAva}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
-    : `<span style="font-size:12px;font-weight:700;color:var(--accent)">${partner.slice(0,2).toUpperCase()}</span>`;
-
-  return `<div class="ord-card">
-    <div class="ord-card-head">
-      <div class="ord-card-icon">🎮</div>
-      <div style="flex:1;min-width:0">
-        <div class="ord-card-title">${o.listing_title || 'განცხ. #' + o.id.slice(0,8)}</div>
-        <div class="ord-card-meta">
-          <span>${isBuyer ? '🛒 მყიდველი' : '💰 გამყიდველი'}</span>
-          <span style="display:flex;align-items:center;gap:4px">
-            <span style="width:18px;height:18px;border-radius:50%;background:var(--bg3);display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">${partnerAvaHtml}</span>
-            ${partner}
-          </span>
-          <span style="font-family:var(--mono);color:var(--accent);font-weight:700">₾${Number(o.amount_gel).toFixed(2)}</span>
-          ${deadlineHtml}
-        </div>
-      </div>
-      <span class="ord-status" style="color:${sc.color};background:${sc.bg}">${sc.label}</span>
-    </div>
-
-    <!-- timeline -->
-    <div class="ord-timeline">
-      ${timeline.map((t, i) => `
-        <div class="ord-tl-row">
-          ${i < timeline.length - 1 ? '<div class="ord-tl-line"></div>' : ''}
-          <div class="ord-tl-dot" style="background:${t.done ? t.color : 'var(--bg3)'};border:2px solid ${t.done ? t.color : 'var(--border2)'}"></div>
-          <div>
-            <div class="ord-tl-text" style="color:${t.done ? 'var(--text)' : 'var(--muted)'}">${t.label}</div>
-            ${t.time ? `<div class="ord-tl-time">${t.time}</div>` : ''}
-          </div>
-        </div>`
-      ).join('')}
-    </div>
-
-    ${actions.length ? `<div class="ord-card-actions">${actions.join('')}</div>` : ''}
-  </div>`;
-}
-
-function buildTimeline(o, isBuyer) {
-  const fmt = (d) => d ? new Date(d).toLocaleString('ka-GE', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : null;
-
-  const steps = [
-    {
-      label: '📝 შეკვეთა შეიქმნა',
-      done:  true,
-      color: '#7c5cff',
-      time:  fmt(o.created_at),
-    },
-    {
-      label: '🔒 Escrow-ში გაიყინა',
-      done:  ['active','completed','cancelled','disputed'].includes(o.status),
-      color: '#f5c518',
-      time:  o.status !== 'pending' ? fmt(o.created_at) : null,
-    },
-    {
-      label: o.status === 'disputed' ? '⚑ დავა გაიხსნა' :
-             o.status === 'cancelled' ? '❌ გაუქმდა' :
-             isBuyer ? '📦 გადაეცემა / მიღება' : '📦 გადაცემა',
-      done:  ['completed','cancelled','disputed'].includes(o.status),
-      color: o.status === 'cancelled' ? '#f87171' : o.status === 'disputed' ? '#fb923c' : '#60a5fa',
-      time:  o.cancelled_at ? fmt(o.cancelled_at) : null,
-    },
-    {
-      label: '✅ დასრულდა · თანხა ჩაირიცხა',
-      done:  o.status === 'completed',
-      color: '#4ade80',
-      time:  o.completed_at ? fmt(o.completed_at) : null,
-    },
-  ];
-
-  // cancelled/disputed — ბოლო step-ს ვასწორებთ
-  if (o.status === 'cancelled') {
-    steps[3] = { label: '↩ Escrow დაბრუნდა', done: true, color: '#f87171', time: fmt(o.cancelled_at) };
-  }
-  if (o.status === 'disputed') {
-    steps[3] = { label: '🛡 ადმინი განიხილავს', done: false, color: '#fb923c', time: null };
-  }
-
-  return steps;
-}
-
-async function cancelOrderFromPage(orderId) {
-  if (!confirm('გაუქმება? Escrow-ს ბალანსზე დაგიბრუნდება.')) return;
-  try {
-    const r = await api('/api/orders/' + orderId + '/cancel', { method: 'POST', body: JSON.stringify({ reason: 'მყიდველმა გააუქმა' }) });
-    showToast('↩ გაუქმდა · ₾' + Number(r.refunded).toFixed(2) + ' დაბრუნდა', 'ok');
-    loadOrdersPage();
-    loadCurrentUser();
-  } catch(e) { showToast(e.message || 'შეცდომა', 'err'); }
-}
-
-// ── profile-ის loadMyOrders რჩება profile tab-ისთვის ──────────
 async function loadMyOrders() {
   if (!currentUser) return;
   const el = document.getElementById('orders-list');
@@ -2728,23 +2871,53 @@ async function loadMyOrders() {
       el.innerHTML = '<div class="empty"><div class="empty-ico">📋</div><div class="empty-t">ორდერები ჯერ არ არის</div></div>';
       return;
     }
-    el.innerHTML = orders.slice(0, 5).map(o => {
-      const isBuyer = o.buyer_id === currentUser.id;
-      const statusMap = { pending:'⏳', active:'🔒', completed:'✅', cancelled:'❌', disputed:'⚑' };
-      return `<div style="background:var(--bg3);border-radius:8px;padding:10px 12px;margin-bottom:7px;display:flex;align-items:center;gap:10px;cursor:pointer" onclick="pg('orders');act(document.getElementById('nav-orders'))">
-        <span style="font-size:18px">${statusMap[o.status]||'?'}</span>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${o.listing_title||'განცხ.'}</div>
-          <div style="font-size:10px;color:var(--muted)">${isBuyer ? '🛒' : '💰'} ₾${Number(o.amount_gel).toFixed(2)}</div>
+    el.innerHTML = orders.map(o => {
+      const isBuyer  = o.buyer_id === currentUser.id;
+      const role     = isBuyer ? '🛒 მყიდველი' : '💰 გამყიდველი';
+      const partner  = isBuyer ? o.seller_username : o.buyer_username;
+      const statusMap = {
+        pending:'⏳ მოლოდინი', active:'🔒 Escrow',
+        completed:'✅ დასრულებული', cancelled:'❌ გაუქმებული', disputed:'⚑ დავა'
+      };
+      const sColor = {
+        pending:'var(--muted)', active:'var(--gold)',
+        completed:'var(--accent)', cancelled:'var(--red)', disputed:'var(--red)'
+      };
+      const canConfirm = isBuyer && o.escrow_status === 'held';
+      return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="font-size:12px;font-weight:600">${o.listing_title || 'განცხ. #' + o.id.slice(0,8)}</div>
+          <span style="font-size:10px;padding:2px 8px;border-radius:4px;background:var(--bg3);color:${sColor[o.status]||'var(--muted)'}">${statusMap[o.status]||o.status}</span>
         </div>
-        <span style="font-size:10px;color:var(--muted)">→</span>
+        <div style="display:flex;gap:16px;font-size:11px;color:var(--muted);margin-bottom:10px">
+          <span>${role}</span>
+          <span>👤 ${partner || '?'}</span>
+          <span style="font-family:var(--mono);color:var(--accent);font-weight:700">₾${Number(o.amount_gel).toFixed(2)}</span>
+          <span>${new Date(o.created_at).toLocaleDateString('ka-GE')}</span>
+        </div>
+        <div style="display:flex;gap:8px">
+          ${canConfirm ? `<button class="btn btn-a btn-sm" onclick="confirmOrder('${o.id}',${o.amount_gel})">✅ მიღება დადასტ.</button>` : ''}
+          ${canConfirm ? `<button class="btn btn-g btn-sm" onclick="openDisputeFor('${o.id}')">⚑ დავა</button>` : ''}
+        </div>
       </div>`;
-    }).join('') +
-    (orders.length > 5 ? `<div style="text-align:center;margin-top:6px"><button class="btn btn-g btn-sm" onclick="pg('orders');act(document.getElementById('nav-orders'))">ყველა (${orders.length})</button></div>` : '');
+    }).join('');
   } catch(e) {
-    el.innerHTML = '<div class="empty"><div class="empty-ico">⚠️</div><div class="empty-t">ვერ ჩაიტვ.</div></div>';
+    el.innerHTML = '<div class="empty"><div class="empty-ico">⚠️</div><div class="empty-t">ჩატვირთვა ვერ მოხდა</div></div>';
   }
 }
+
+async function confirmOrder(orderId, amount) {
+  if (!confirm('დაადასტ. რომ მიიღე? ₾' + amount + ' გამყიდველს ჩაერიცხება.')) return;
+  try {
+    await api('/api/orders/' + orderId + '/confirm', { method: 'POST' });
+    showToast('✅ დადასტ.! ₾' + Number(amount).toFixed(2) + ' გამყ. ჩაერიცხა', 'ok');
+    loadMyOrders();
+    loadCurrentUser();
+    // rating modal
+    setTimeout(() => openM('ratingModal'), 600);
+  } catch(e) { showToast(e.message || 'შეცდომა', 'err'); }
+}
+
 async function openDisputeFor(orderId) {
   const modal = document.getElementById('disputeModal');
   if (modal) modal.dataset.orderId = orderId;
