@@ -8,6 +8,7 @@ const cors         = require('cors');
 const cookieParser = require('cookie-parser');
 const path         = require('path');
 const http         = require('http');
+const { rateLimit } = require('express-rate-limit');     // ← ახალი
 
 const db              = require('./db');
 const mailer          = require('./utils/mailer');       // ← ახალი
@@ -28,6 +29,26 @@ const adminRoutes     = require('./routes/admin');       // ← ახალი
 const app    = express();
 const server = http.createServer(app);
 const PORT   = process.env.PORT || 4000;
+
+// Render-ი (და სხვა PaaS) reverse proxy-ს უკან მუშაობს — ეს საჭიროა,
+// რომ req.ip ნამდვილი client IP იყოს და არა პროქსის IP (rate-limit-ისთვის)
+app.set('trust proxy', 1);
+
+// ── Rate Limiting — brute-force-ის წინააღმდეგ ──────────────────
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 წუთი
+  limit: 10,                // მაქს. 10 ცდა per IP per window
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { error: 'too_many_attempts', message: 'ბევრი ცდა — სცადე 15 წუთში' },
+});
+const withdrawLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 საათი
+  limit: 5,                 // მაქს. 5 გამოტ. მოთხ. per IP per window
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { error: 'too_many_attempts', message: 'ბევრი მოთხ. — სცადე 1 საათში' },
+});
 
 // ── Middleware ────────────────────────────────────────────────
 app.use(cors({
@@ -53,6 +74,9 @@ app.get('/', (req, res) => {
 });
 
 // ── Routes ───────────────────────────────────────────────────
+app.use('/api/auth/login',      authLimiter);              // ← ახალი
+app.use('/api/auth/register',   authLimiter);              // ← ახალი
+app.use('/api/wallet/withdraw', withdrawLimiter);           // ← ახალი
 app.use('/api/auth',     authRoutes);
 app.use('/api/listings', listingRoutes);
 app.use('/api/orders',   orderRoutes);
@@ -80,8 +104,8 @@ if (process.env.NODE_ENV !== 'production') {
   app.get('/api', (req, res) => {
     res.json({
       endpoints: [
-        'POST   /api/auth/register',
-        'POST   /api/auth/login',
+        'POST   /api/auth/register   (rate-limited: 10/15წთ)',
+        'POST   /api/auth/login      (rate-limited: 10/15წთ)',
         'GET    /api/auth/google',
         'GET    /api/auth/google/callback',
         'GET    /api/auth/me',
@@ -101,7 +125,7 @@ if (process.env.NODE_ENV !== 'production') {
         'GET    /api/wallet/balance',
         'GET    /api/wallet/transactions',
         'POST   /api/wallet/deposit',
-        'POST   /api/wallet/withdraw',
+        'POST   /api/wallet/withdraw (rate-limited: 5/1სთ)',
         'GET    /api/wallet/deposit/simulate (dev only)',
         'GET    /api/chat/rooms',
         'GET    /api/chat/rooms/:id/messages',
