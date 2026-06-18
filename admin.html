@@ -972,6 +972,10 @@ async function adminAddBalance() {
 function showAdminToast(msg, isErr = false) {
   const t = document.createElement('div');
   t.style.cssText = `position:fixed;bottom:24px;right:24px;z-index:9999;background:${isErr?'#3a1010':'#0d2a1a'};border:1px solid ${isErr?'#ef444440':'#4ade8040'};color:${isErr?'#f87171':'#4ade80'};padding:12px 18px;border-radius:10px;font-size:13px;font-weight:600;max-width:320px`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
 
 // ══════════════════════════════════════════════════════════
 // WITHDRAWALS
@@ -1028,14 +1032,6 @@ async function rejectWithdrawal(id, amount, userId) {
   } catch(e) {
     showAdminToast('შეცდომა: ' + e.message, true);
   }
-}
-
-function showAdminToast(msg, isErr = false) {
-  const t = document.createElement('div');
-  t.style.cssText = `position:fixed;bottom:24px;right:24px;z-index:9999;background:${isErr?'#3a1010':'#0d2a1a'};border:1px solid ${isErr?'#ef444440':'#4ade8040'};color:${isErr?'#f87171':'#4ade80'};padding:12px 18px;border-radius:10px;font-size:13px;font-weight:600;max-width:320px`;
-  t.textContent = msg;
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), 4000);
 }
 
 async function loadListings() {
