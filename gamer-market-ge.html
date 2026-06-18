@@ -2505,6 +2505,8 @@ async function openChatRoom(el) {
 
   currentRoomId  = roomId;
   currentOrderId = orderId;
+  lastSeenMsgId  = null;
+  stopPolling();
 
   // header
   const nameEl  = document.getElementById('chat-partner-name');
@@ -2544,7 +2546,55 @@ async function openChatRoom(el) {
   connectWS(roomId);
 }
 
-// ── შეტყობინებების ჩატვირთვა ──────────────────────────────────
+// ── HTTP Polling (WS-is fallback, Render free tier-ze) ──────────
+let pollTimer = null;
+let lastSeenMsgId = null;
+
+function startPolling(roomId) {
+  if (pollTimer) return; // ukve mushaobs
+  console.log('📡 HTTP polling started for room:', roomId);
+  pollTimer = setInterval(() => pollMessages(roomId), 3000);
+}
+
+function stopPolling() {
+  if (pollTimer) {
+    clearInterval(pollTimer);
+    pollTimer = null;
+    console.log('📡 HTTP polling stopped (WS connected)');
+  }
+}
+
+async function pollMessages(roomId) {
+  if (!currentRoomId || currentRoomId !== roomId) {
+    stopPolling();
+    return;
+  }
+  try {
+    const msgs = await api('/api/chat/rooms/' + roomId + '/messages?limit=20');
+    if (!msgs || !msgs.length) return;
+
+    const latestMsg = msgs[msgs.length - 1];
+    if (latestMsg.id === lastSeenMsgId) return; // axali ar aris
+
+    // mxolod axali messages-i davamato (ar gavimeorot)
+    const newMsgs = lastSeenMsgId
+      ? msgs.filter(m => {
+          // lastSeenMsgId-is SHemdeg mosvlilni
+          const seenIdx = msgs.findIndex(x => x.id === lastSeenMsgId);
+          return seenIdx === -1 || msgs.indexOf(m) > seenIdx;
+        })
+      : msgs.filter(m => m.sender_id !== currentUser?.id); // pirveli load-ze mxolod sxvis
+
+    newMsgs.forEach(m => {
+      if (m.sender_id !== currentUser?.id) {
+        appendMessage(m);
+      }
+    });
+
+    lastSeenMsgId = latestMsg.id;
+    if (newMsgs.length) loadChatRooms();
+  } catch(e) { /* polling error — silent */ }
+}
 async function loadMessages(roomId) {
   const msgsEl = document.getElementById('chat-msgs');
   if (!msgsEl) return;
@@ -2553,6 +2603,10 @@ async function loadMessages(roomId) {
   try {
     const msgs = await api('/api/chat/rooms/' + roomId + '/messages');
     renderMessages(msgs);
+    // lastSeenMsgId-s davasaveT, rom polling-ma ar gaimeorot
+    if (msgs && msgs.length) {
+      lastSeenMsgId = msgs[msgs.length - 1].id;
+    }
   } catch(e) {
     msgsEl.innerHTML = '<div style="text-align:center;padding:20px;font-size:11px;color:var(--muted)">ჩატვირთვა ვერ მოხდა</div>';
   }
@@ -2625,12 +2679,16 @@ function connectWS(roomId) {
     wsConn.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
-        if (msg.type === 'connected') return;
-        // მხოლოდ მიმდ. ოთახის შეტყობინება
+        if (msg.type === 'connected') {
+          // WS mushaobs — polling gaavtomatebt
+          stopPolling();
+          return;
+        }
+        // mxolod mimdi. otaxis SHetyvobineba
         if (currentRoomId === roomId) {
           appendMessage(msg);
         }
-        // sidebar-ის განახლება
+        // sidebar-is ganaxleba
         loadChatRooms();
       } catch(e) { console.error('ws msg parse:', e); }
     };
@@ -2638,13 +2696,17 @@ function connectWS(roomId) {
     wsConn.onclose = (e) => {
       console.log('WS closed:', e.code);
       if (e.code !== 4001 && e.code !== 4003 && currentRoomId === roomId) {
-        // 3 წამში reconnect
+        // 3 wamShi reconnect
         wsReconnTimer = setTimeout(() => connectWS(roomId), 3000);
+        // HTTP polling fallback — WS ar mushaobs
+        startPolling(roomId);
       }
     };
 
     wsConn.onerror = (e) => {
       console.error('WS error:', e);
+      // HTTP polling fallback
+      startPolling(roomId);
     };
 
   } catch(e) {
