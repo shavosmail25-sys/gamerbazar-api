@@ -419,4 +419,73 @@ router.post('/deposits/:id/reject', async (req, res) => {
   }
 });
 
+// ══════════════════════════════════════════════════════════════
+// GET /api/admin/withdrawals/pending
+// ══════════════════════════════════════════════════════════════
+router.get('/withdrawals/pending', async (req, res) => {
+  try {
+    const { rows } = await db.query(`
+      SELECT t.*, u.username, u.email, u.display_name, u.id AS user_id
+      FROM transactions t
+      JOIN users u ON u.id = t.user_id
+      WHERE t.type = 'withdrawal' AND t.status = 'pending'
+      ORDER BY t.created_at DESC
+    `);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// POST /api/admin/withdrawals/:id/confirm  — გადარიცხვა დასრულდა
+// ══════════════════════════════════════════════════════════════
+router.post('/withdrawals/:id/confirm', async (req, res) => {
+  try {
+    await db.query(
+      "UPDATE transactions SET status='completed' WHERE id=$1 AND type='withdrawal' AND status='pending'",
+      [req.params.id]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// POST /api/admin/withdrawals/:id/reject  — გატანა უარყოფა + თანხის დაბრუნება
+// ══════════════════════════════════════════════════════════════
+router.post('/withdrawals/:id/reject', async (req, res) => {
+  try {
+    const { rows: tx } = await db.query(
+      "SELECT * FROM transactions WHERE id=$1 AND type='withdrawal' AND status='pending'",
+      [req.params.id]
+    );
+    if (!tx.length) return res.status(404).json({ error: 'not_found' });
+    const t = tx[0];
+
+    await db.transaction(async (client) => {
+      // თანხა დაუბრუნდეს (amount_gel უარყოფითია withdrawal-ზე)
+      const refund = Math.abs(Number(t.amount_gel));
+      await client.query(
+        'UPDATE users SET balance_gel=balance_gel+$1 WHERE id=$2',
+        [refund, t.user_id]
+      );
+      await client.query(
+        "UPDATE transactions SET status='failed' WHERE id=$1",
+        [t.id]
+      );
+      await client.query(
+        `INSERT INTO transactions(user_id, type, amount_gel, status, description)
+         VALUES($1, 'refund', $2, 'completed', 'გატანის გაუქმება — ადმინი')`,
+        [t.user_id, refund]
+      );
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
 module.exports = router;
