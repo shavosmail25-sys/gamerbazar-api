@@ -1259,7 +1259,7 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
     </div>
     <div class="m-acts">
       <button class="btn btn-g" onclick="closeM('orderSuccessModal')">დახურვა</button>
-      <button class="btn btn-a" onclick="closeM('orderSuccessModal');pg('chat');act(document.querySelectorAll('.nl')[2])">💬 ჩატი</button>
+      <button class="btn btn-a" onclick="closeM('orderSuccessModal');openOrderChat(window._lastOrderId)">💬 ჩატი</button>
     </div>
   </div>
 </div>
@@ -2047,6 +2047,8 @@ async function buyListingDetail() {
       body: JSON.stringify({ listing_id: currentListing.id })
     });
 
+    window._lastOrderId = order.id;
+
     const amtEl = document.getElementById('order-success-amount');
     if (amtEl) amtEl.textContent = '₾' + price.toFixed(2);
     openM('orderSuccessModal');
@@ -2089,6 +2091,7 @@ async function buyListing() {
       body: JSON.stringify({ listing_id: currentListing.id })
     });
 
+    window._lastOrderId = order.id;
     closeM('listingModal');
 
     // success modal
@@ -2651,7 +2654,7 @@ function connectWS(roomId) {
 }
 
 // ── შეტყობინების გაგზავნა ─────────────────────────────────────
-async function sendMsg() {
+async function sendMsgToRoom() {
   const ta = document.getElementById('chat-ta');
   if (!ta) return;
   const content = ta.value.trim();
@@ -3408,8 +3411,7 @@ function botReply(userText) {
   ), 700);
 }
 
-// sendMsg-ს გადაფარვა bot რეჟიმში
-const _origSendMsg = sendMsg;
+// sendMsg-ის ერთადერთი ვერსია — bot რეჟიმში ან ჩვეულ ოთახში
 async function sendMsg() {
   if (currentRoomId === '__bot__') {
     const ta = document.getElementById('chat-ta');
@@ -3422,7 +3424,7 @@ async function sendMsg() {
     botReply(content);
     return;
   }
-  return _origSendMsg();
+  return sendMsgToRoom();
 }
 
 // ══════════════════════════════════════════════════════════
