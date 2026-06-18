@@ -936,9 +936,9 @@ async function adminAddBalance() {
 
   try {
     // ჯერ user_id ვიპოვოთ
-    const users = await api(`/api/admin/users?search=${encodeURIComponent(usernameOrEmail)}`);
-    if (!users.rows?.length) { showAdminToast('მომხმარებელი ვერ მოიძებნა', true); return; }
-    const user = users.rows[0];
+    const data = await api(`/api/admin/users?search=${encodeURIComponent(usernameOrEmail)}`);
+    if (!data.users?.length) { showAdminToast('მომხმარებელი ვერ მოიძებნა', true); return; }
+    const user = data.users[0];
 
     if (!confirm(`დაემატოს ₾${amount} — ${user.username}?`)) return;
 
