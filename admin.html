@@ -876,7 +876,7 @@ async function loadDeposits() {
   const list = document.getElementById('deposits-list');
   list.innerHTML = '<div class="loading">სკანირება</div>';
   try {
-    const rows = await adminApi('/api/admin/deposits/pending');
+    const rows = await api('/api/admin/deposits/pending');
     const count = document.getElementById('nav-deposits-count');
     if (count) count.textContent = rows.length;
 
@@ -907,7 +907,7 @@ async function loadDeposits() {
 async function confirmDeposit(id, username, amount) {
   if (!confirm(`დაადასტურე ₾${amount} — ${username}?`)) return;
   try {
-    await adminApi(`/api/admin/deposits/${id}/confirm`, { method: 'POST' });
+    await api(`/api/admin/deposits/${id}/confirm`, { method: 'POST' });
     showAdminToast(`✅ ₾${amount} — ${username}-ს ბალანსი განახლდა`);
     loadDeposits();
   } catch(e) {
@@ -918,7 +918,7 @@ async function confirmDeposit(id, username, amount) {
 async function rejectDeposit(id) {
   if (!confirm('უარვყოთ ეს შეტანა?')) return;
   try {
-    await adminApi(`/api/admin/deposits/${id}/reject`, { method: 'POST' });
+    await api(`/api/admin/deposits/${id}/reject`, { method: 'POST' });
     showAdminToast('შეტანა უარყოფილია');
     loadDeposits();
   } catch(e) {
@@ -936,13 +936,13 @@ async function adminAddBalance() {
 
   try {
     // ჯერ user_id ვიპოვოთ
-    const users = await adminApi(`/api/admin/users?search=${encodeURIComponent(usernameOrEmail)}`);
+    const users = await api(`/api/admin/users?search=${encodeURIComponent(usernameOrEmail)}`);
     if (!users.rows?.length) { showAdminToast('მომხმარებელი ვერ მოიძებნა', true); return; }
     const user = users.rows[0];
 
     if (!confirm(`დაემატოს ₾${amount} — ${user.username}?`)) return;
 
-    await adminApi('/api/admin/balance/add', {
+    await api('/api/admin/balance/add', {
       method: 'POST',
       body: JSON.stringify({ user_id: user.id, amount, note: note || `ადმინის მიერ: ${usernameOrEmail}` })
     });
