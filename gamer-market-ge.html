@@ -894,43 +894,6 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
   </div>
 </div>
 
-
-<!-- ── EMAIL NOT VERIFIED BANNER ── -->
-<div id="verify-banner" style="display:none;position:fixed;bottom:70px;left:50%;transform:translateX(-50%);z-index:500;background:#1a1200;border:1px solid #f0b42940;border-radius:10px;padding:12px 18px;max-width:420px;width:calc(100% - 40px);align-items:center;gap:10px">
-  <span style="font-size:18px">✉️</span>
-  <div style="flex:1;font-size:12px;color:#f0b429">შეამოწმე ემაილი — დაგვიგზავნე ვერიფიკაციის ლინკი</div>
-  <button onclick="resendVerification()" style="background:#f0b42920;border:1px solid #f0b42940;color:#f0b429;padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;white-space:nowrap">ხელახლა</button>
-  <button onclick="document.getElementById('verify-banner').style.display='none'" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:0 4px">×</button>
-</div>
-
-<!-- ── FORGOT PASSWORD MODAL ── -->
-<div class="modal-bg" id="forgotModal" onclick="if(event.target===this)closeM('forgotModal')">
-  <div class="modal">
-    <div class="modal-title">🔐 პაროლის აღდგენა</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:14px">შეიყვანე ემაილი და გამოგიგზავნით აღდგენის ლინკს</div>
-    <div class="form-g"><label class="form-l">ემაილი</label><input class="form-i" id="forgot-email" type="email" placeholder="your@email.com"></div>
-    <div id="forgot-msg" style="font-size:12px;color:var(--accent);margin-top:8px;display:none"></div>
-    <div class="m-acts">
-      <button class="btn btn-g" onclick="closeM('forgotModal');openM('loginModal')">← უკან</button>
-      <button class="btn btn-a" onclick="doForgotPassword()">გაგზავნა</button>
-    </div>
-  </div>
-</div>
-
-<!-- ── RESET PASSWORD MODAL ── -->
-<div class="modal-bg" id="resetModal" onclick="if(event.target===this)closeM('resetModal')">
-  <div class="modal">
-    <div class="modal-title">🔐 ახალი პაროლი</div>
-    <input type="hidden" id="reset-token-val">
-    <div class="form-g"><label class="form-l">ახალი პაროლი</label><input class="form-i" id="reset-pass" type="password" placeholder="მინ. 6 სიმბოლო"></div>
-    <div class="form-g"><label class="form-l">გაიმეორე პაროლი</label><input class="form-i" id="reset-pass2" type="password" placeholder="მინ. 6 სიმბოლო"></div>
-    <div class="m-acts">
-      <button class="btn btn-g" onclick="closeM('resetModal')">გაუქმება</button>
-      <button class="btn btn-a" onclick="doResetPassword()">შეცვლა</button>
-    </div>
-  </div>
-</div>
-
 <!-- MODALS -->
 <div class="modal-bg" id="loginModal" onclick="if(event.target===this)closeM('loginModal')">
   <div class="modal">
@@ -948,9 +911,6 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
       <div style="text-align:center;margin-top:12px;font-size:12px;color:var(--muted)">
         ექაუნთი არ გაქვს? <span style="color:var(--accent);cursor:pointer;font-weight:600" onclick="showRegForm()">რეგისტრაცია →</span>
       </div>
-      <div style="text-align:center;margin-top:8px;font-size:11px">
-        <span style="color:var(--muted);cursor:pointer" onclick="showForgotForm()">🔐 დამავიწყდა პაროლი</span>
-      </div>
     </div>
     <!-- რეგისტრაციის ფორმა -->
     <div id="reg-form" style="display:none">
@@ -965,19 +925,83 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
   </div>
 </div>
 <div class="modal-bg" id="depositModal" onclick="if(event.target===this)closeM('depositModal')">
-  <div class="modal">
-    <div class="modal-title">💰 თანხის შეტანა</div>
-    <div class="form-g"><label class="form-l">მეთოდი</label><select class="form-i"><option>🏦 BOG</option><option>🏦 TBC</option><option>💳 ბარათი</option><option>💵 Stripe</option></select></div>
-    <div class="form-g"><label class="form-l">თანხა (₾)</label><input class="form-i" type="number" placeholder="50"></div>
-    <div class="m-acts"><button class="btn btn-g" onclick="closeM('depositModal')">გაუქმება</button><button class="btn btn-a" onclick="doDeposit()">გადახდა</button></div>
+  <div class="modal" style="max-width:420px">
+    <div class="modal-title">💰 ბალანსის შეტანა</div>
+
+    <!-- ნაბიჯი 1: თანხა -->
+    <div id="dep-step1">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px">შეიყვანე რამდენის შეტანა გინდა</div>
+      <div class="form-g">
+        <label class="form-l">თანხა (₾)</label>
+        <input class="form-i" type="number" id="dep-amount" placeholder="20" min="1" max="5000">
+      </div>
+      <div class="m-acts">
+        <button class="btn btn-g" onclick="closeM('depositModal')">გაუქმება</button>
+        <button class="btn btn-a" onclick="depStep2()">შემდეგი →</button>
+      </div>
+    </div>
+
+    <!-- ნაბიჯი 2: ინსტრუქცია -->
+    <div id="dep-step2" style="display:none">
+      <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:14px;margin-bottom:14px">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">გადარიცხე ზუსტად</div>
+        <div style="font-size:28px;font-weight:800;color:var(--accent)" id="dep-show-amount">₾0</div>
+      </div>
+
+      <div style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--fg)">🏦 საქართველოს ბანკი (BOG)</div>
+      <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:12px;margin-bottom:12px">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">IBAN</div>
+        <div style="font-size:13px;font-weight:700;letter-spacing:1px;font-family:monospace" id="dep-iban-bog">GE62BG0000000562150681</div>
+        <button onclick="copyIban('dep-iban-bog')" style="background:none;border:none;color:var(--accent);font-size:11px;cursor:pointer;margin-top:4px;padding:0">📋 კოპირება</button>
+      </div>
+
+      <div style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--fg)">🏦 TBC ბანკი</div>
+      <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:12px;margin-bottom:14px">
+        <div style="font-size:11px;color:var(--muted);font-style:italic">მალე დაემატება</div>
+      </div>
+
+      <div style="background:#0d2a1a;border:1px solid #1a5c3220;border-radius:8px;padding:12px;margin-bottom:14px">
+        <div style="font-size:11px;font-weight:700;color:#4ade80;margin-bottom:6px">📌 მნიშვნელოვანი ინსტრუქცია</div>
+        <div style="font-size:11px;color:#86efac;line-height:1.6">
+          1. გადარიცხვისას დანიშნულებაში მიუთითე შენი <b>username: <span id="dep-username">—</span></b><br>
+          2. გადარიცხვა მხოლოდ <b>BOG/TBC-დან</b> მიიღება<br>
+          3. გადარიცხვის შემდეგ <b>1-24 საათში</b> ბალანსი განახლდება<br>
+          4. დასტურის შემდეგ ავტომატურად მიიღებ შეტყობინებას
+        </div>
+      </div>
+
+      <div style="font-size:11px;color:var(--muted);margin-bottom:14px;text-align:center">
+        კითხვის შემთხვევაში დაგვიკავშირდი:<br>
+        <span style="color:var(--accent)">support@gamerbazar.ge</span>
+      </div>
+
+      <div class="m-acts">
+        <button class="btn btn-g" onclick="depBack()">← უკან</button>
+        <button class="btn btn-a" onclick="closeM('depositModal');showToast('✅ გადარიცხვის შემდეგ 1-24სთ-ში ბალანსი განახლდება!','ok')">გავიგე ✓</button>
+      </div>
+    </div>
   </div>
 </div>
 <div class="modal-bg" id="withdrawModal" onclick="if(event.target===this)closeM('withdrawModal')">
-  <div class="modal">
-    <div class="modal-title">📤 გამოტანა</div>
-    <div class="form-g"><label class="form-l">IBAN</label><input class="form-i" placeholder="GE29TB0000000001234567"></div>
-    <div class="form-g"><label class="form-l">თანხა (₾)</label><input class="form-i" type="number" placeholder="100"></div>
-    <div class="m-acts"><button class="btn btn-g" onclick="closeM('withdrawModal')">გაუქმება</button><button class="btn btn-a" onclick="doWithdraw()">გამოტანა</button></div>
+  <div class="modal" style="max-width:420px">
+    <div class="modal-title">📤 თანხის გამოტანა</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px">თანხა გადაირიცხება შენს საბანკო ანგარიშზე 1-2 სამუშაო დღეში. საკომისიო: 2%</div>
+    <div class="form-g">
+      <label class="form-l">შენი IBAN</label>
+      <input class="form-i" id="wd-iban" placeholder="GE29TB0000000001234567" style="font-family:monospace;letter-spacing:.5px">
+      <div style="font-size:10px;color:var(--muted);margin-top:4px">BOG ან TBC ანგარიში</div>
+    </div>
+    <div class="form-g">
+      <label class="form-l">თანხა (₾)</label>
+      <input class="form-i" id="wd-amount" type="number" placeholder="მინ. ₾5">
+    </div>
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px;margin-bottom:14px;font-size:11px;color:var(--muted)">
+      💡 გამოტანის შემდეგ ადმინისტრაცია გადაამოწმებს და 1-2 სამ. დღეში გადარიცხავს
+    </div>
+    <div class="m-acts">
+      <button class="btn btn-g" onclick="closeM('withdrawModal')">გაუქმება</button>
+      <button class="btn btn-a" onclick="doWithdraw()">მოთხოვნის გაგზავნა</button>
+    </div>
   </div>
 </div>
 <div class="modal-bg" id="confirmModal" onclick="if(event.target===this)closeM('confirmModal')">
@@ -1469,36 +1493,15 @@ function googleAuth() {
 // Google callback
 function checkAuthCallback() {
   const params = new URLSearchParams(window.location.search);
-  const token      = params.get('token');
-  const status     = params.get('auth');
-  const verify     = params.get('verify');
-  const resetToken = params.get('reset_token');
-
-  if (token && status === 'success') {
+  const token  = params.get('token');
+  const status = params.get('auth');
+  if (token) {
     setToken(token);
     window.history.replaceState({}, '', window.location.pathname);
     loadCurrentUser();
     showToast('✅ Google-ით შეხვედი!', 'ok');
   } else if (status === 'error') {
     showToast('Google შესვლა ვერ მოხდა', 'err');
-  } else if (status === 'banned') {
-    showToast('❌ ეს ექაუნთი დაბლოკილია', 'err');
-  }
-
-  if (verify === 'success') {
-    window.history.replaceState({}, '', window.location.pathname);
-    showToast('✅ ემაილი დადასტურდა! ახლა შეგიძლია შეხვიდე.', 'ok');
-  } else if (verify === 'expired') {
-    window.history.replaceState({}, '', window.location.pathname);
-    showToast('⏰ ლინკის ვადა გავიდა — ხელახლა გაგზავნე', 'err');
-  } else if (verify === 'invalid') {
-    window.history.replaceState({}, '', window.location.pathname);
-    showToast('❌ არასწორი ვერიფიკაციის ლინკი', 'err');
-  }
-
-  if (resetToken) {
-    window.history.replaceState({}, '', window.location.pathname);
-    openResetPasswordModal(resetToken);
   }
 }
 
@@ -1512,76 +1515,6 @@ function doLogout() {
   showToast('გამოხვედი', 'ok');
 }
 
-// ── Email Verification Banner ─────────────────────────────
-function showEmailVerificationBanner() {
-  const banner = document.getElementById('verify-banner');
-  if (banner) banner.style.display = 'flex';
-}
-
-async function resendVerification() {
-  try {
-    await api('/api/auth/resend-verification', { method: 'POST' });
-    showToast('✅ ვერიფიკაციის ემაილი გაიგზავნა!', 'ok');
-  } catch(e) {
-    showToast('შეცდომა — სცადე მოგვიანებით', 'err');
-  }
-}
-
-// ── Forgot Password ───────────────────────────────────────
-function showForgotForm() {
-  closeM('loginModal');
-  document.getElementById('forgot-email').value = '';
-  const msg = document.getElementById('forgot-msg');
-  if (msg) { msg.style.display = 'none'; msg.textContent = ''; }
-  openM('forgotModal');
-}
-
-async function doForgotPassword() {
-  const email = document.getElementById('forgot-email').value.trim();
-  const msg   = document.getElementById('forgot-msg');
-  if (!email) { showToast('შეიყვანე ემაილი', 'err'); return; }
-
-  try {
-    await api('/api/auth/forgot-password', {
-      method: 'POST',
-      body: JSON.stringify({ email })
-    });
-    msg.textContent = '✅ თუ ეს ემაილი რეგისტრირებულია, მიიღებ ლინკს რამდენიმე წუთში.';
-    msg.style.display = 'block';
-  } catch(e) {
-    showToast('შეცდომა — სცადე მოგვიანებით', 'err');
-  }
-}
-
-// ── Reset Password ────────────────────────────────────────
-function openResetPasswordModal(token) {
-  document.getElementById('reset-token-val').value = token;
-  document.getElementById('reset-pass').value  = '';
-  document.getElementById('reset-pass2').value = '';
-  openM('resetModal');
-}
-
-async function doResetPassword() {
-  const token = document.getElementById('reset-token-val').value;
-  const pass  = document.getElementById('reset-pass').value;
-  const pass2 = document.getElementById('reset-pass2').value;
-
-  if (!pass || pass.length < 6) { showToast('პაროლი მინ. 6 სიმბოლო', 'err'); return; }
-  if (pass !== pass2) { showToast('პაროლები არ ემთხვევა', 'err'); return; }
-
-  try {
-    await api('/api/auth/reset-password', {
-      method: 'POST',
-      body: JSON.stringify({ token, password: pass })
-    });
-    closeM('resetModal');
-    showToast('✅ პაროლი წარმატებით შეიცვალა! შეგიძლია შეხვიდე.', 'ok');
-    setTimeout(() => openM('loginModal'), 1000);
-  } catch(e) {
-    showToast(e.message || 'ლინკი ვადაგასულია — ხელახლა სცადე', 'err');
-  }
-}
-
 // ══════════════════════════════════════════════════════════
 // LOAD CURRENT USER
 // ══════════════════════════════════════════════════════════
@@ -1590,10 +1523,6 @@ async function loadCurrentUser() {
   try {
     currentUser = await api('/api/auth/me');
     updateNavUser();
-    // ვერიფიცირებული არ არის — banner ვაჩვენოთ
-    if (currentUser && !currentUser.email_verified && currentUser.auth_provider === 'email') {
-      showEmailVerificationBanner();
-    }
   } catch (e) {
     clearToken();
     currentUser = null;
@@ -3569,48 +3498,60 @@ renderChats();
 
 // Auth
 
+// ── Deposit Step Functions ────────────────────────────────────
+function depStep2() {
+  const amount = parseFloat(document.getElementById('dep-amount')?.value);
+  if (!amount || amount < 1) { showToast('შეიყვანე თანხა', 'err'); return; }
+  document.getElementById('dep-show-amount').textContent = '₾' + amount.toFixed(2);
+  document.getElementById('dep-username').textContent = currentUser?.username || '—';
+  document.getElementById('dep-step1').style.display = 'none';
+  document.getElementById('dep-step2').style.display = 'block';
+}
+
+function depBack() {
+  document.getElementById('dep-step1').style.display = 'block';
+  document.getElementById('dep-step2').style.display = 'none';
+}
+
+function copyIban(elId) {
+  const text = document.getElementById(elId)?.textContent;
+  if (!text) return;
+  navigator.clipboard.writeText(text.trim()).then(() => {
+    showToast('✅ IBAN დაკოპირდა!', 'ok');
+  }).catch(() => {
+    showToast('ხელით დააკოპირე: ' + text, 'ok');
+  });
+}
+
+// deposit modal გახსნისას step1 ვაჩვენოთ
+const _origOpenM = window.openM;
+window.openM = function(id) {
+  if (id === 'depositModal') {
+    document.getElementById('dep-step1').style.display = 'block';
+    document.getElementById('dep-step2').style.display = 'none';
+    if (document.getElementById('dep-amount')) document.getElementById('dep-amount').value = '';
+  }
+  if (_origOpenM) _origOpenM(id);
+};
+
 async function doDeposit() {
-  const amountEl = document.querySelector('#depositModal input[type=number]');
-  const methodEl = document.querySelector('#depositModal select');
-  const amount = parseFloat(amountEl?.value);
-  const method = methodEl?.options[methodEl.selectedIndex]?.text?.includes('BOG') ? 'BOG' : 'TBC';
-  if (!amount || amount < 1) { showToast('თანხა სავალდ.', 'err'); return; }
-  const btn = document.querySelector('#depositModal .btn-a');
-  if (btn) { btn.textContent = '⏳...'; btn.disabled = true; }
-  try {
-    const data = await api('/api/wallet/deposit', {
-      method: 'POST', body: JSON.stringify({ amount, method })
-    });
-    closeM('depositModal');
-    // dev: simulate
-    if (data.pay_url && data.pay_url.includes('simulate')) {
-      const r = await api('/api/wallet/deposit/simulate?ref=' + data.ref + '&amount=' + amount);
-      showToast('✅ ₾' + amount + ' ბალანსზე დაემატა!', 'ok');
-      loadCurrentUser(); loadWallet();
-    } else {
-      window.open(data.pay_url, '_blank');
-      showToast('🏦 BOG-ზე გადამისამ...', 'ok');
-    }
-  } catch(e) { showToast(e.message || 'შეცდომა', 'err'); }
-  finally { if (btn) { btn.textContent = 'გადახდა'; btn.disabled = false; } }
+  // legacy — ახლა depStep2 გამოიყენება
 }
 
 async function doWithdraw() {
-  const ibanEl   = document.querySelector('#withdrawModal input[placeholder*="GE"]');
-  const amountEl = document.querySelector('#withdrawModal input[type=number]');
-  const iban   = ibanEl?.value?.trim();
-  const amount = parseFloat(amountEl?.value);
-  if (!iban)   { showToast('IBAN სავალდ.', 'err'); return; }
+  const iban   = document.getElementById('wd-iban')?.value?.trim();
+  const amount = parseFloat(document.getElementById('wd-amount')?.value);
+  if (!iban)   { showToast('IBAN სავალდებულოა', 'err'); return; }
   if (!amount || amount < 5) { showToast('მინ. ₾5', 'err'); return; }
   const btn = document.querySelector('#withdrawModal .btn-a');
   if (btn) { btn.textContent = '⏳...'; btn.disabled = true; }
   try {
     await api('/api/wallet/withdraw', { method:'POST', body: JSON.stringify({ amount, iban }) });
     closeM('withdrawModal');
-    showToast('✅ მოთხ. გაიგ.! 1-2 სამ. დღე', 'ok');
+    showToast('✅ მოთხოვნა გაიგზავნა! 1-2 სამ. დღეში გადაირიცხება', 'ok');
     loadCurrentUser(); loadWallet();
   } catch(e) { showToast(e.message || 'შეცდომა', 'err'); }
-  finally { if (btn) { btn.textContent = 'გამოტანა'; btn.disabled = false; } }
+  finally { if (btn) { btn.textContent = 'მოთხოვნის გაგზავნა'; btn.disabled = false; } }
 }
 
 

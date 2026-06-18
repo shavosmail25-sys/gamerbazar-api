@@ -331,4 +331,92 @@ router.delete('/listings/:id', async (req, res) => {
   }
 });
 
+// ══════════════════════════════════════════════════════════════
+// GET /api/admin/deposits/pending  — pending გადარიცხვები
+// ══════════════════════════════════════════════════════════════
+router.get('/deposits/pending', async (req, res) => {
+  try {
+    const { rows } = await db.query(`
+      SELECT t.*, u.username, u.email, u.display_name
+      FROM transactions t
+      JOIN users u ON u.id = t.user_id
+      WHERE t.type = 'deposit' AND t.status = 'pending'
+      ORDER BY t.created_at DESC
+    `);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// POST /api/admin/balance/add  — ბალანსის ხელით დამატება
+// ══════════════════════════════════════════════════════════════
+router.post('/balance/add', async (req, res) => {
+  try {
+    const { user_id, amount, note } = req.body;
+    if (!user_id || !amount || Number(amount) <= 0)
+      return res.status(400).json({ error: 'user_id and amount required' });
+
+    await db.transaction(async (client) => {
+      await client.query(
+        'UPDATE users SET balance_gel=balance_gel+$1 WHERE id=$2',
+        [Number(amount), user_id]
+      );
+      await client.query(
+        `INSERT INTO transactions(user_id, type, amount_gel, status, description)
+         VALUES($1, 'deposit', $2, 'completed', $3)`,
+        [user_id, Number(amount), note || 'ადმინის მიერ დამატებული ბალანსი']
+      );
+    });
+
+    res.json({ ok: true, amount, user_id });
+  } catch (err) {
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// POST /api/admin/deposits/:id/confirm  — deposit დადასტურება
+// ══════════════════════════════════════════════════════════════
+router.post('/deposits/:id/confirm', async (req, res) => {
+  try {
+    const { rows: tx } = await db.query(
+      'SELECT * FROM transactions WHERE id=$1 AND type=$2 AND status=$3',
+      [req.params.id, 'deposit', 'pending']
+    );
+    if (!tx.length) return res.status(404).json({ error: 'not_found' });
+    const t = tx[0];
+
+    await db.transaction(async (client) => {
+      await client.query(
+        "UPDATE transactions SET status='completed' WHERE id=$1", [t.id]
+      );
+      await client.query(
+        'UPDATE users SET balance_gel=balance_gel+$1 WHERE id=$2',
+        [t.amount_gel, t.user_id]
+      );
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// POST /api/admin/deposits/:id/reject  — deposit უარყოფა
+// ══════════════════════════════════════════════════════════════
+router.post('/deposits/:id/reject', async (req, res) => {
+  try {
+    await db.query(
+      "UPDATE transactions SET status='failed' WHERE id=$1 AND type='deposit' AND status='pending'",
+      [req.params.id]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
 module.exports = router;

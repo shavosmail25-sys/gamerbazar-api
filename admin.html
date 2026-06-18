@@ -260,6 +260,10 @@ input,select,textarea{font-family:var(--sans)}
         <span class="sb-item-ico">⚠</span>დავები
         <span class="sb-item-count" id="nav-disputes-count">0</span>
       </div>
+      <div class="sb-item" data-view="deposits" onclick="switchView('deposits')">
+        <span class="sb-item-ico">💰</span>შეტანები
+        <span class="sb-item-count" id="nav-deposits-count">0</span>
+      </div>
 
       <div class="sb-section-label">Population</div>
       <div class="sb-item" data-view="users" onclick="switchView('users')">
@@ -321,6 +325,29 @@ input,select,textarea{font-family:var(--sans)}
           </div>
         </div>
         <div class="list" id="disputes-list"><div class="loading">სკანირება</div></div>
+      </div>
+
+      <!-- ═══════════ DEPOSITS ═══════════ -->
+      <div class="view" id="view-deposits">
+        <div class="view-head">
+          <div><div class="view-title">💰 შეტანების მართვა</div><div class="view-sub">მომხმარებლების გადარიცხვის მოთხოვნები — გადაამოწმე და დაადასტურე</div></div>
+          <button class="btn btn-signal" onclick="loadDeposits()">↻ განახლება</button>
+        </div>
+
+        <!-- ხელით დამატება -->
+        <div class="section-block" style="margin-bottom:20px">
+          <div class="section-block-title">➕ ბალანსის ხელით დამატება</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+            <input class="filter-input" id="manual-username" placeholder="username ან email" style="flex:2;min-width:160px">
+            <input class="filter-input" id="manual-amount" type="number" placeholder="თანხა (₾)" style="flex:1;min-width:100px">
+            <input class="filter-input" id="manual-note" placeholder="შენიშვნა (სურ.)" style="flex:2;min-width:160px">
+            <button class="btn btn-signal" onclick="adminAddBalance()">+ დამატება</button>
+          </div>
+        </div>
+
+        <!-- Pending სია -->
+        <div class="section-block-title">⏳ Pending გადარიცხვები</div>
+        <div class="list" id="deposits-list"><div class="loading">სკანირება</div></div>
       </div>
 
       <!-- ═══════════ USERS ═══════════ -->
@@ -563,6 +590,7 @@ function switchView(view) {
   if (view === 'disputes') loadDisputes();
   if (view === 'users')    loadUsers();
   if (view === 'listings') loadListings();
+  if (view === 'deposits') loadDeposits();
 }
 
 function closeModal(id) {
@@ -839,6 +867,100 @@ function setListingsFilter(status) {
 function debounceListingsSearch() {
   clearTimeout(listingsSearchTimer);
   listingsSearchTimer = setTimeout(() => { listingsPage = 1; loadListings(); }, 350);
+}
+
+// ══════════════════════════════════════════════════════════
+// DEPOSITS
+// ══════════════════════════════════════════════════════════
+async function loadDeposits() {
+  const list = document.getElementById('deposits-list');
+  list.innerHTML = '<div class="loading">სკანირება</div>';
+  try {
+    const rows = await adminApi('/api/admin/deposits/pending');
+    const count = document.getElementById('nav-deposits-count');
+    if (count) count.textContent = rows.length;
+
+    if (!rows.length) {
+      list.innerHTML = '<div class="empty-state">✅ Pending შეტანები არ არის</div>';
+      return;
+    }
+
+    list.innerHTML = rows.map(t => `
+      <div class="list-row" style="flex-wrap:wrap;gap:8px">
+        <div style="flex:1;min-width:180px">
+          <div style="font-weight:700">${t.username} <span style="font-size:10px;color:var(--dim)">${t.email}</span></div>
+          <div style="font-size:11px;color:var(--dim);margin-top:2px">${new Date(t.created_at).toLocaleString('ka-GE')}</div>
+          ${t.description ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${t.description}</div>` : ''}
+        </div>
+        <div style="font-size:20px;font-weight:800;color:#4ade80">₾${Number(t.amount_gel).toFixed(2)}</div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-signal" onclick="confirmDeposit('${t.id}', '${t.username}', ${t.amount_gel})">✓ დადასტ.</button>
+          <button class="btn btn-ban" onclick="rejectDeposit('${t.id}')">✗ უარი</button>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    list.innerHTML = `<div class="empty-state">შეცდომა: ${e.message}</div>`;
+  }
+}
+
+async function confirmDeposit(id, username, amount) {
+  if (!confirm(`დაადასტურე ₾${amount} — ${username}?`)) return;
+  try {
+    await adminApi(`/api/admin/deposits/${id}/confirm`, { method: 'POST' });
+    showAdminToast(`✅ ₾${amount} — ${username}-ს ბალანსი განახლდა`);
+    loadDeposits();
+  } catch(e) {
+    showAdminToast('შეცდომა: ' + e.message, true);
+  }
+}
+
+async function rejectDeposit(id) {
+  if (!confirm('უარვყოთ ეს შეტანა?')) return;
+  try {
+    await adminApi(`/api/admin/deposits/${id}/reject`, { method: 'POST' });
+    showAdminToast('შეტანა უარყოფილია');
+    loadDeposits();
+  } catch(e) {
+    showAdminToast('შეცდომა: ' + e.message, true);
+  }
+}
+
+async function adminAddBalance() {
+  const usernameOrEmail = document.getElementById('manual-username')?.value?.trim();
+  const amount = parseFloat(document.getElementById('manual-amount')?.value);
+  const note   = document.getElementById('manual-note')?.value?.trim();
+
+  if (!usernameOrEmail) { showAdminToast('username ან email შეიყვანე', true); return; }
+  if (!amount || amount <= 0) { showAdminToast('თანხა შეიყვანე', true); return; }
+
+  try {
+    // ჯერ user_id ვიპოვოთ
+    const users = await adminApi(`/api/admin/users?search=${encodeURIComponent(usernameOrEmail)}`);
+    if (!users.rows?.length) { showAdminToast('მომხმარებელი ვერ მოიძებნა', true); return; }
+    const user = users.rows[0];
+
+    if (!confirm(`დაემატოს ₾${amount} — ${user.username}?`)) return;
+
+    await adminApi('/api/admin/balance/add', {
+      method: 'POST',
+      body: JSON.stringify({ user_id: user.id, amount, note: note || `ადმინის მიერ: ${usernameOrEmail}` })
+    });
+    showAdminToast(`✅ ₾${amount} დაემატა ${user.username}-ს`);
+    document.getElementById('manual-username').value = '';
+    document.getElementById('manual-amount').value   = '';
+    document.getElementById('manual-note').value     = '';
+  } catch(e) {
+    showAdminToast('შეცდომა: ' + e.message, true);
+  }
+}
+
+function showAdminToast(msg, isErr = false) {
+  const t = document.createElement('div');
+  t.style.cssText = `position:fixed;bottom:24px;right:24px;z-index:9999;background:${isErr?'#3a1010':'#0d2a1a'};border:1px solid ${isErr?'#ef444440':'#4ade8040'};color:${isErr?'#f87171':'#4ade80'};padding:12px 18px;border-radius:10px;font-size:13px;font-weight:600;max-width:320px`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
 }
 
 async function loadListings() {
