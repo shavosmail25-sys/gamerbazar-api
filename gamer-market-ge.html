@@ -1496,7 +1496,7 @@ function updateNavUser() {
   if (avaEl) {
     avaEl.style.display = 'flex';
     if (currentUser.avatar_url) {
-      avaEl.innerHTML = `<img src="${API_URL + currentUser.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+      avaEl.innerHTML = `<img src="${imgUrl(currentUser.avatar_url)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
     } else {
       avaEl.textContent = (currentUser.display_name || currentUser.username || '?').slice(0, 2).toUpperCase();
     }
@@ -1810,7 +1810,7 @@ async function loadMyProfile() {
 
   // ავატარი
   if (currentUser.avatar_url) {
-    const src     = API_URL + currentUser.avatar_url;
+    const src     = imgUrl(currentUser.avatar_url);
     const profAva = document.getElementById('prof-ava-display');
     const avaPrev = document.getElementById('ava-prev');
     const navAva  = document.getElementById('nav-ava');
@@ -1903,7 +1903,7 @@ async function previewAva(input) {
       currentUser.avatar_url = data.avatar_url;
       updateNavUser();
       const profAva = document.getElementById('prof-ava-display');
-      if (profAva) profAva.innerHTML = `<img src="${API_URL + data.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:14px">`;
+      if (profAva) profAva.innerHTML = `<img src="${imgUrl(data.avatar_url)}" style="width:100%;height:100%;object-fit:cover;border-radius:14px">`;
       showToast('✅ ავატარი შეიცვალა!', 'ok');
     }
   } catch (e) { showToast('ატვირთვა ვერ მოხდა', 'err'); }
@@ -1964,8 +1964,19 @@ function mapApiListing(l) {
     si: (l.seller_name || l.seller_username || '?').slice(0, 2).toUpperCase(),
     sc: 'var(--accent)', r: Number(l.seller_rating) || 0,
     rc: Number(l.seller_review_count) || 0,
-    vip: l.is_vip, cat: l.category, id: l.id
+    vip: l.is_vip, cat: l.category, id: l.id,
+    img: (l.images && l.images.length) ? l.images[0] : null, // ← პირველი სურათი card-ზე
+    avatar: l.seller_avatar || null,
   };
+}
+
+// ── სურათის URL-ის helper — Cloudinary absolute ან local relative ──
+function imgUrl(url) {
+  if (!url) return null;
+  // Cloudinary URL-ი უკვე absolute https://... — API_URL არ ვამატებთ
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  // Local /uploads/... — API_URL-ს ვამატებთ
+  return API_URL + url;
 }
 
 function buildCard(l, isMob) {
@@ -1973,10 +1984,14 @@ function buildCard(l, isMob) {
   const rate = 2.74;
   const price = g ? '₾' + l.price : '$' + (l.price / rate).toFixed(0);
   const psub  = g ? '$' + (l.price / rate).toFixed(0) : '₾' + l.price;
-  const ico = '🎮';
   const lid = l.id || '';
+  // სურათი — Cloudinary ან emoji fallback
+  const imgSrc = l.img ? imgUrl(l.img) : null;
+  const imgHtml = imgSrc
+    ? `<img src="${imgSrc}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--r) var(--r) 0 0" onerror="this.style.display='none';this.parentNode.innerHTML='<span style=\\'font-size:34px;position:relative;z-index:1\\'>🎮</span>'">`
+    : `<span style="font-size:34px;position:relative;z-index:1">🎮</span>`;
   return `<div class="lcard${l.vip ? ' vip' : ''}" onclick="openListing('${lid}','${(l.title||'').replace(/'/g,"\'")}',${l.price})">
-    <div class="lcard-img"><div class="lcard-img-bg">${ico}</div><span style="font-size:34px;position:relative;z-index:1">${ico}</span></div>
+    <div class="lcard-img"><div class="lcard-img-bg">🎮</div>${imgHtml}</div>
     <div class="lcard-body">
       <div class="lcard-game">${l.game} · ${l.type}</div>
       <div class="lcard-title">${l.title}</div>
@@ -2061,10 +2076,12 @@ function renderListingDetail(l) {
   const mainEl = document.getElementById('ld-gallery-main');
   const thumbsEl = document.getElementById('ld-gallery-thumbs');
   if (images.length) {
-    mainEl.innerHTML = `<img src="${API_URL + images[0]}" alt="${esc(l.title)}">`;
-    thumbsEl.innerHTML = images.map((img, i) =>
-      `<div class="ld-thumb${i === 0 ? ' on' : ''}" onclick="ldShowImage('${API_URL + img}', this)"><img src="${API_URL + img}"></div>`
-    ).join('');
+    const first = imgUrl(images[0]);
+    mainEl.innerHTML = `<img src="${first}" alt="${esc(l.title)}" onerror="this.parentNode.innerHTML='🎮'">`;
+    thumbsEl.innerHTML = images.map((img, i) => {
+      const src = imgUrl(img);
+      return `<div class="ld-thumb${i === 0 ? ' on' : ''}" onclick="ldShowImage('${src}', this)"><img src="${src}" onerror="this.style.display='none'"></div>`;
+    }).join('');
   } else {
     mainEl.innerHTML = '🎮';
     thumbsEl.innerHTML = '';
@@ -2116,7 +2133,7 @@ function renderListingDetail(l) {
     ' · ' + (l.seller_review_count || 0) + ' შეფ.' +
     ' · ' + (l.seller_completed || 0) + ' გაყ.';
   if (l.avatar_url) {
-    sellerAva.innerHTML = `<img src="${API_URL + l.avatar_url}">`;
+    sellerAva.innerHTML = `<img src="${imgUrl(l.avatar_url)}">`;
   } else {
     sellerAva.textContent = (l.display_name || l.username || '?').slice(0,2).toUpperCase();
   }
@@ -2299,7 +2316,7 @@ async function openSellerProfile() {
     const avaEl = document.getElementById('sm-ava');
     if (avaEl) {
       if (profile.avatar_url) {
-        avaEl.innerHTML = `<img src="${API_URL + profile.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:14px">`;
+        avaEl.innerHTML = `<img src="${imgUrl(profile.avatar_url)}" style="width:100%;height:100%;object-fit:cover;border-radius:14px">`;
       } else {
         avaEl.textContent = (profile.display_name || '?').slice(0,2).toUpperCase();
       }
