@@ -182,6 +182,87 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
 .vip-banner{background:linear-gradient(135deg,var(--gd),var(--bg2));border:1px solid var(--gd2);border-radius:var(--r2);padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
 .vb-t{font-size:13px;font-weight:700;color:var(--gold)}.vb-s{font-size:11px;color:var(--muted);margin-top:1px}
 
+/* ══════════════════════════ HOME — HOW IT WORKS ══════════════════════════ */
+.hiw-section{margin:36px 0}
+.hiw-head{text-align:center;margin-bottom:26px}
+.hiw-eyebrow{font-family:var(--mono);font-size:10.5px;color:var(--accent);text-transform:uppercase;letter-spacing:.12em;margin-bottom:7px}
+.hiw-title{font-size:21px;font-weight:800;letter-spacing:-.4px}
+.hiw-sub{font-size:12.5px;color:var(--muted);margin-top:6px;max-width:480px;margin-left:auto;margin-right:auto}
+.hiw-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden}
+.hiw-step{background:var(--bg2);padding:22px 18px;position:relative}
+.hiw-num{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--accent);background:var(--ad);border:1px solid var(--ad2);width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:13px}
+.hiw-step-ico{font-size:24px;margin-bottom:10px}
+.hiw-step-title{font-size:13px;font-weight:700;margin-bottom:6px}
+.hiw-step-desc{font-size:11.5px;color:var(--muted);line-height:1.55}
+.hiw-arrow{position:absolute;right:-13px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--border3);z-index:2;display:none}
+
+/* ══════════════════════════ HOME — TRUST / STATS STRIP ══════════════════════════ */
+.trust-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;margin:24px 0}
+.trust-cell{background:var(--bg2);padding:18px 16px;text-align:center}
+.trust-val{font-family:var(--mono);font-size:22px;font-weight:800;color:var(--accent);letter-spacing:-.5px}
+.trust-lbl{font-size:10.5px;color:var(--muted);margin-top:5px;text-transform:uppercase;letter-spacing:.04em}
+
+/* ══════════════════════════ HOME — TRUST BADGES ══════════════════════════ */
+.badges-row{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin:22px 0 8px}
+.trust-badge{display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--border);border-radius:30px;padding:8px 16px;font-size:11.5px;font-weight:600;color:var(--muted2)}
+.trust-badge .ico{font-size:14px}
+
+/* ══════════════════════════ HOME — CATEGORY SHOWCASE ══════════════════════════ */
+.showcase-cta{background:linear-gradient(135deg,var(--bg2),var(--bg3));border:1px solid var(--border);border-radius:var(--r2);padding:30px 24px;text-align:center;margin:30px 0}
+.showcase-cta-title{font-size:18px;font-weight:800;margin-bottom:7px}
+.showcase-cta-sub{font-size:12px;color:var(--muted);margin-bottom:18px;max-width:420px;margin-left:auto;margin-right:auto}
+
+@media(max-width:800px){
+  .hiw-grid{grid-template-columns:1fr 1fr}
+  .trust-strip{grid-template-columns:1fr 1fr}
+}
+@media(max-width:480px){
+  .hiw-section{margin:24px 0}
+  .hiw-title{font-size:17px}
+  .hiw-sub{font-size:11.5px}
+  .hiw-grid{grid-template-columns:1fr;gap:1px}
+  .hiw-step{padding:16px 15px}
+  .trust-strip{grid-template-columns:1fr 1fr;margin:16px 0}
+  .trust-cell{padding:14px 10px}
+  .trust-val{font-size:18px}
+  .badges-row{gap:7px}
+  .trust-badge{padding:6px 12px;font-size:10.5px}
+  .showcase-cta{padding:22px 16px}
+  .showcase-cta-title{font-size:15px}
+}
+
+/* ══════════════════════════ FOOTER ══════════════════════════ */
+.site-footer{background:var(--bg2);border-top:1px solid var(--border);margin-top:40px}
+.footer-main{max-width:1120px;margin:0 auto;padding:40px 20px 28px;display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:32px}
+.footer-brand-logo{font-size:17px;font-weight:800;letter-spacing:-.3px;margin-bottom:10px}
+.footer-brand-logo em{color:var(--accent);font-style:normal}
+.footer-brand-desc{font-size:12px;color:var(--muted);line-height:1.7;max-width:280px;margin-bottom:16px}
+.footer-social{display:flex;gap:8px}
+.footer-social a{width:32px;height:32px;border-radius:8px;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--muted);transition:all .15s;text-decoration:none}
+.footer-social a:hover{color:var(--accent);border-color:var(--ad2);background:var(--ad)}
+.footer-col-title{font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:14px}
+.footer-links{display:flex;flex-direction:column;gap:9px}
+.footer-links a{font-size:12.5px;color:var(--muted);text-decoration:none;transition:color .15s;cursor:pointer}
+.footer-links a:hover{color:var(--accent)}
+.footer-bottom{border-top:1px solid var(--border);padding:18px 20px;max-width:1120px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.footer-copy{font-size:11px;color:var(--muted)}
+.footer-bottom-badges{display:flex;align-items:center;gap:14px;font-size:11px;color:var(--muted)}
+.footer-bottom-badges span{display:flex;align-items:center;gap:5px}
+
+@media(max-width:800px){
+  .footer-main{grid-template-columns:1fr 1fr;gap:26px 18px}
+}
+@media(max-width:480px){
+  .site-footer{margin-top:26px}
+  .footer-main{grid-template-columns:1fr 1fr;gap:22px 14px;padding:28px 16px 20px}
+  .footer-brand-logo{font-size:15px}
+  .footer-brand-desc{font-size:11px;max-width:none}
+  .footer-col-title{font-size:10px;margin-bottom:11px}
+  .footer-links a{font-size:11.5px}
+  .footer-bottom{flex-direction:column;align-items:flex-start;padding:14px 16px;gap:8px}
+  .footer-bottom-badges{flex-wrap:wrap;gap:10px;font-size:10px}
+}
+
 /* LISTING DETAIL PAGE */
 .ld-back{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--muted);cursor:pointer;margin:18px 0 14px;transition:color .15s}
 .ld-back:hover{color:var(--text)}
@@ -673,18 +754,76 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
       <div class="cat-card" onclick="openM('postModal')" style="border-color:var(--ad2);background:var(--ad)">➕<div style="color:var(--accent)">განცხ. დამატება</div><div style="font-size:10px;color:var(--muted)">გამოქვეყნება</div></div>
     </div>
 
-    <div class="sec-head"><div class="sec-title">📱 მობილური თამაშების ჰაბი</div></div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-bottom:24px" id="mobile-games-grid"></div>
-
     <div class="vip-banner">
       <div><div class="vb-t">⭐ VIP განცხადებები</div><div class="vb-s">პრემიუმ გამყიდველები · Escrow დაცული</div></div>
       <button class="btn btn-a btn-sm" onclick="openM('vipModal')">VIP ყიდვა</button>
     </div>
+
+    <!-- ── HOW IT WORKS ──────────────────────────────────────── -->
+    <div class="hiw-section">
+      <div class="hiw-head">
+        <div class="hiw-eyebrow">როგორ მუშაობს</div>
+        <div class="hiw-title">გარიგება 4 ნაბიჯად — სრულად დაცული</div>
+        <div class="hiw-sub">ყველა შესყიდვა გადის Escrow სისტემაში — ფული გამყიდველს მხოლოდ მაშინ ერიცხება, როცა შენ ადასტურებ მიღებას.</div>
+      </div>
+      <div class="hiw-grid">
+        <div class="hiw-step">
+          <div class="hiw-num">1</div>
+          <div class="hiw-step-ico">🔍</div>
+          <div class="hiw-step-title">აირჩიე განცხადება</div>
+          <div class="hiw-step-desc">დაათვალიერე ვერიფიცირებული გამყიდველების შეთავაზებები — mobile, PC, ბუსტინგი თუ ვალუტა.</div>
+        </div>
+        <div class="hiw-step">
+          <div class="hiw-num">2</div>
+          <div class="hiw-step-ico">🔒</div>
+          <div class="hiw-step-title">გადახდა Escrow-ში</div>
+          <div class="hiw-step-desc">შენი თანხა გაიყინება დაცულ Escrow ანგარიშზე — გამყიდველთან არ მიდის პირდაპირ.</div>
+        </div>
+        <div class="hiw-step">
+          <div class="hiw-num">3</div>
+          <div class="hiw-step-ico">💬</div>
+          <div class="hiw-step-title">დაუკავშირდი ჩატში</div>
+          <div class="hiw-step-desc">ჩაირთვება პირადი ჩატი გამყიდველთან — მიიღე ექაუნთის დეტალები უსაფრთხოდ.</div>
+        </div>
+        <div class="hiw-step">
+          <div class="hiw-num">4</div>
+          <div class="hiw-step-ico">✅</div>
+          <div class="hiw-step-title">დაადასტურე და შეაფასე</div>
+          <div class="hiw-step-desc">დაადასტურე მიღება — თანხა გამყიდველს ერიცხება, შენ კი ტოვებ შეფასებას.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TRUST STRIP — REAL STATS ──────────────────────────── -->
+    <div class="trust-strip">
+      <div class="trust-cell"><div class="trust-val" id="trust-listings">─</div><div class="trust-lbl">აქტ. განცხადება</div></div>
+      <div class="trust-cell"><div class="trust-val" id="trust-sellers">─</div><div class="trust-lbl">გამყიდველი</div></div>
+      <div class="trust-cell"><div class="trust-val" id="trust-volume">─</div><div class="trust-lbl">ჯამური ბრუნვა</div></div>
+      <div class="trust-cell"><div class="trust-val">5%</div><div class="trust-lbl">პლატფ. საკომისიო</div></div>
+    </div>
+
+    <div class="badges-row">
+      <div class="trust-badge"><span class="ico">🔒</span> Escrow დაცვა</div>
+      <div class="trust-badge"><span class="ico">✓</span> ვერიფ. გამყიდველები</div>
+      <div class="trust-badge"><span class="ico">⚡</span> 24/7 მხარდაჭერა</div>
+      <div class="trust-badge"><span class="ico">₾</span> GEL / USD</div>
+    </div>
+
+    <div class="sec-head"><div class="sec-title">📱 მობილური თამაშების ჰაბი</div></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-bottom:24px" id="mobile-games-grid"></div>
+
     <div class="sec-head">
       <div class="sec-title">ახალი განცხადებები</div>
       <div style="display:flex;align-items:center;gap:8px"><span class="sec-count" id="home-count">24 განცხ.</span><select class="sort-sel"><option>უახლესი</option><option>ფასი ↑</option><option>ფასი ↓</option></select></div>
     </div>
     <div class="grid" id="home-grid"></div>
+
+    <!-- ── BOTTOM CTA ─────────────────────────────────────────── -->
+    <div class="showcase-cta">
+      <div class="showcase-cta-title">გაყიდე შენი ექაუნთი დღესვე</div>
+      <div class="showcase-cta-sub">დარეგისტრირდი წუთებში და განათავსე განცხადება — დაცული Escrow სისტემით, სამართლიანი 5%-იანი საკომისიოთი.</div>
+      <button class="btn btn-a" style="padding:10px 22px;font-size:13px" onclick="if(currentUser){openM('postModal')}else{openM('loginModal')}">➕ განცხადების დამატება</button>
+    </div>
   </div>
 </div>
 
@@ -1045,6 +1184,61 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
   </div>
 </div>
 
+<!-- ══════════════════════════ FOOTER ══════════════════════════ -->
+<footer class="site-footer">
+  <div class="footer-main">
+    <div>
+      <div class="footer-brand-logo">Gamer<em>Bazar</em>.ge</div>
+      <div class="footer-brand-desc">საქართველოს პირველი დაცული მარკეტფლეისი სათამაშო ექაუნთების, ბუსტინგისა და ვირტუალური ვალუტის ყიდვა-გაყიდვისთვის — Escrow დაცვით ყველა გარიგებაზე.</div>
+      <div class="footer-social">
+        <a href="#" onclick="return false" title="Discord">💬</a>
+        <a href="#" onclick="return false" title="Facebook">📘</a>
+        <a href="#" onclick="return false" title="Instagram">📷</a>
+      </div>
+    </div>
+
+    <div>
+      <div class="footer-col-title">მარკეტი</div>
+      <div class="footer-links">
+        <a onclick="pg('listings');act(document.querySelectorAll('.nl')[1])">ყველა განცხადება</a>
+        <a onclick="goCategory('mobile')">მობილური</a>
+        <a onclick="goCategory('pc')">PC / Console</a>
+        <a onclick="goCategory('boosting')">ბუსტინგი</a>
+        <a onclick="openM('vipModal')">VIP სტატუსი</a>
+      </div>
+    </div>
+
+    <div>
+      <div class="footer-col-title">ანგარიში</div>
+      <div class="footer-links">
+        <a onclick="footerGo('profile', 4)">პროფილი</a>
+        <a onclick="footerGo('wallet', 3)">საფულე</a>
+        <a onclick="footerGo('order-history', -1)">შეკვეთები</a>
+        <a onclick="footerGo('chat', 2)">ჩატი</a>
+      </div>
+    </div>
+
+    <div>
+      <div class="footer-col-title">ინფორმაცია</div>
+      <div class="footer-links">
+        <a onclick="openM('aboutModal')">როგორ მუშაობს</a>
+        <a onclick="openM('termsModal')">წესები და პირობები</a>
+        <a onclick="openM('privacyModal')">კონფიდენციალურობა</a>
+        <a onclick="openChatBot();pg('chat');act(document.querySelectorAll('.nl')[2])">დახმარება</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    <div class="footer-copy">© 2026 GamerBazar.ge — ყველა უფლება დაცულია</div>
+    <div class="footer-bottom-badges">
+      <span>🔒 SSL დაცული</span>
+      <span>🛡️ Escrow გარანტია</span>
+      <span>🇬🇪 ქართული პლატფორმა</span>
+    </div>
+  </div>
+</footer>
+
 <!-- MODALS -->
 <div class="modal-bg" id="loginModal" onclick="if(event.target===this)closeM('loginModal')">
   <div class="modal">
@@ -1155,6 +1349,56 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
     </div>
   </div>
 </div>
+
+<!-- ── INFO MODALS (Footer links) ──────────────────────────────── -->
+<div class="modal-bg" id="aboutModal" onclick="if(event.target===this)closeM('aboutModal')">
+  <div class="modal" style="max-width:480px;text-align:left">
+    <div class="modal-title">🎮 როგორ მუშაობს GamerBazar.ge</div>
+    <div style="font-size:12.5px;color:var(--muted2);line-height:1.8;max-height:60vh;overflow-y:auto;padding-right:4px">
+      <p style="margin-bottom:12px"><b style="color:var(--text)">1. დათვალიერება და არჩევანი</b><br>დაათვალიერე ასობით ვერიფიცირებული გამყიდველის განცხადება — მობილური და PC ექაუნთები, ბუსტინგი, სოციალური გვერდები და თამაშის ვალუტა.</p>
+      <p style="margin-bottom:12px"><b style="color:var(--text)">2. დაცული გადახდა (Escrow)</b><br>როცა ყიდულობ, შენი თანხა გადადის Escrow ანგარიშზე — გაყინულ მდგომარეობაში. გამყიდველი მას ვერ მიიღებს, სანამ შენ არ დაადასტურებ შეკვეთის მიღებას.</p>
+      <p style="margin-bottom:12px"><b style="color:var(--text)">3. კომუნიკაცია ჩატში</b><br>ყიდვისთანავე იხსნება პირადი ჩატი გამყიდველთან — იქ მიიღებ ექაუნთის დეტალებს უსაფრთხოდ, პლატფორმის ფარგლებში.</p>
+      <p style="margin-bottom:12px"><b style="color:var(--text)">4. დადასტურება და გადახდის გათავისუფლება</b><br>მას შემდეგ რაც დარწმუნდები, რომ ყველაფერი რიგზეა — ადასტურებ მიღებას. მხოლოდ მაშინ ირიცხება თანხა გამყიდველზე (5% საკომისიოს გამოკლებით).</p>
+      <p style="margin-bottom:0"><b style="color:var(--text)">5. დავის შემთხვევაში</b><br>თუ რამე არასწორად წავიდა, შეგიძლია დავა გახსნა — ადმინისტრაცია განიხილავს საქმეს და გადაწყვეტს თანხის ბედს სამართლიანად.</p>
+    </div>
+    <div class="m-acts" style="margin-top:16px">
+      <button class="btn btn-a" style="width:100%" onclick="closeM('aboutModal')">გასაგებია</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="termsModal" onclick="if(event.target===this)closeM('termsModal')">
+  <div class="modal" style="max-width:480px;text-align:left">
+    <div class="modal-title">📋 წესები და პირობები</div>
+    <div style="font-size:12px;color:var(--muted2);line-height:1.75;max-height:60vh;overflow-y:auto;padding-right:4px">
+      <p style="margin-bottom:11px"><b style="color:var(--text)">გამოყენების პირობები</b><br>GamerBazar.ge-ის გამოყენებით თქვენ ეთანხმებით ქვემოთ მოცემულ წესებს. პლატფორმა უზრუნველყოფს მხოლოდ შუამავალ Escrow სერვისს და არ არის გარიგების მხარე.</p>
+      <p style="margin-bottom:11px"><b style="color:var(--text)">ანგარიში და რეგისტრაცია</b><br>მომხმარებელი ვალდებულია მიაწოდოს ზუსტი ინფორმაცია რეგისტრაციისას. ერთი პირი — ერთი ანგარიში. ანგარიშის გადაცემა მესამე პირზე აკრძალულია.</p>
+      <p style="margin-bottom:11px"><b style="color:var(--text)">განცხადებები</b><br>გამყიდველი პასუხისმგებელია გამოქვეყნებული ინფორმაციის სიზუსტეზე. ყალბი ან მცდარი განცხადებები შეიძლება გახდეს ანგარიშის დაბლოკვის საფუძველი.</p>
+      <p style="margin-bottom:11px"><b style="color:var(--text)">გადახდები და საკომისიო</b><br>პლატფორმა იღებს 5%-იან საკომისიოს ყოველი წარმატებული გარიგებიდან. Escrow-ში გაყინული თანხა თავისუფლდება მხოლოდ მყიდველის დადასტურებით ან ადმინისტრაციის გადაწყვეტილებით.</p>
+      <p style="margin-bottom:0"><b style="color:var(--text)">აკრძალული ქმედებები</b><br>გარიგების პლატფორმის გარეთ გადატანა, თაღლითობა, სხვისი ანგარიშის არასანქცირებული გამოყენება — იწვევს მყისიერ დაბლოკვას.</p>
+    </div>
+    <div class="m-acts" style="margin-top:16px">
+      <button class="btn btn-a" style="width:100%" onclick="closeM('termsModal')">გასაგებია</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="privacyModal" onclick="if(event.target===this)closeM('privacyModal')">
+  <div class="modal" style="max-width:480px;text-align:left">
+    <div class="modal-title">🔒 კონფიდენციალურობის პოლიტიკა</div>
+    <div style="font-size:12px;color:var(--muted2);line-height:1.75;max-height:60vh;overflow-y:auto;padding-right:4px">
+      <p style="margin-bottom:11px"><b style="color:var(--text)">რა მონაცემებს ვაგროვებთ</b><br>რეგისტრაციისას ვინახავთ ელ-ფოსტას, username-ს და (სურვილისამებრ) პროფილის ინფორმაციას. გარიგებების ისტორია და ჩატის შეტყობინებები ინახება სერვისის ფუნქციონირებისთვის.</p>
+      <p style="margin-bottom:11px"><b style="color:var(--text)">როგორ ვიყენებთ მონაცემებს</b><br>მონაცემები გამოიყენება ანგარიშის მართვის, გარიგებების დამუშავების, უსაფრთხოების მონიტორინგისა და მომხმარებლისთვის შეტყობინებების (email/push) გაგზავნისთვის.</p>
+      <p style="margin-bottom:11px"><b style="color:var(--text)">მონაცემთა გაზიარება</b><br>თქვენი პერსონალური მონაცემები არ გადაეცემა მესამე მხარეს, გარდა კანონით გათვალისწინებული შემთხვევებისა ან თქვენი თანხმობით.</p>
+      <p style="margin-bottom:11px"><b style="color:var(--text)">უსაფრთხოება</b><br>პაროლები ინახება დაშიფრულად. გადახდის მონაცემები არ ინახება ჩვენს სერვერებზე — ყველა ტრანზაქცია გადის დაცული საბანკო არხებით.</p>
+      <p style="margin-bottom:0"><b style="color:var(--text)">თქვენი უფლებები</b><br>შეგიძლიათ ნებისმიერ დროს მოითხოვოთ თქვენი მონაცემების წაშლა ან კორექცია პროფილის პარამეტრებიდან ან მხარდაჭერასთან დაკავშირებით.</p>
+    </div>
+    <div class="m-acts" style="margin-top:16px">
+      <button class="btn btn-a" style="width:100%" onclick="closeM('privacyModal')">გასაგებია</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-bg" id="confirmModal" onclick="if(event.target===this)closeM('confirmModal')">
   <div class="modal">
     <div class="confirm-ico">🔐</div>
@@ -1496,7 +1740,7 @@ function updateNavUser() {
   if (avaEl) {
     avaEl.style.display = 'flex';
     if (currentUser.avatar_url) {
-      avaEl.innerHTML = `<img src="${imgUrl(currentUser.avatar_url)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+      avaEl.innerHTML = `<img src="${API_URL + currentUser.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
     } else {
       avaEl.textContent = (currentUser.display_name || currentUser.username || '?').slice(0, 2).toUpperCase();
     }
@@ -1810,7 +2054,7 @@ async function loadMyProfile() {
 
   // ავატარი
   if (currentUser.avatar_url) {
-    const src     = imgUrl(currentUser.avatar_url);
+    const src     = API_URL + currentUser.avatar_url;
     const profAva = document.getElementById('prof-ava-display');
     const avaPrev = document.getElementById('ava-prev');
     const navAva  = document.getElementById('nav-ava');
@@ -1903,7 +2147,7 @@ async function previewAva(input) {
       currentUser.avatar_url = data.avatar_url;
       updateNavUser();
       const profAva = document.getElementById('prof-ava-display');
-      if (profAva) profAva.innerHTML = `<img src="${imgUrl(data.avatar_url)}" style="width:100%;height:100%;object-fit:cover;border-radius:14px">`;
+      if (profAva) profAva.innerHTML = `<img src="${API_URL + data.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:14px">`;
       showToast('✅ ავატარი შეიცვალა!', 'ok');
     }
   } catch (e) { showToast('ატვირთვა ვერ მოხდა', 'err'); }
@@ -1964,19 +2208,8 @@ function mapApiListing(l) {
     si: (l.seller_name || l.seller_username || '?').slice(0, 2).toUpperCase(),
     sc: 'var(--accent)', r: Number(l.seller_rating) || 0,
     rc: Number(l.seller_review_count) || 0,
-    vip: l.is_vip, cat: l.category, id: l.id,
-    img: (l.images && l.images.length) ? l.images[0] : null, // ← პირველი სურათი card-ზე
-    avatar: l.seller_avatar || null,
+    vip: l.is_vip, cat: l.category, id: l.id
   };
-}
-
-// ── სურათის URL-ის helper — Cloudinary absolute ან local relative ──
-function imgUrl(url) {
-  if (!url) return null;
-  // Cloudinary URL-ი უკვე absolute https://... — API_URL არ ვამატებთ
-  if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  // Local /uploads/... — API_URL-ს ვამატებთ
-  return API_URL + url;
 }
 
 function buildCard(l, isMob) {
@@ -1984,14 +2217,10 @@ function buildCard(l, isMob) {
   const rate = 2.74;
   const price = g ? '₾' + l.price : '$' + (l.price / rate).toFixed(0);
   const psub  = g ? '$' + (l.price / rate).toFixed(0) : '₾' + l.price;
+  const ico = '🎮';
   const lid = l.id || '';
-  // სურათი — Cloudinary ან emoji fallback
-  const imgSrc = l.img ? imgUrl(l.img) : null;
-  const imgHtml = imgSrc
-    ? `<img src="${imgSrc}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--r) var(--r) 0 0" onerror="this.style.display='none';this.parentNode.innerHTML='<span style=\\'font-size:34px;position:relative;z-index:1\\'>🎮</span>'">`
-    : `<span style="font-size:34px;position:relative;z-index:1">🎮</span>`;
   return `<div class="lcard${l.vip ? ' vip' : ''}" onclick="openListing('${lid}','${(l.title||'').replace(/'/g,"\'")}',${l.price})">
-    <div class="lcard-img"><div class="lcard-img-bg">🎮</div>${imgHtml}</div>
+    <div class="lcard-img"><div class="lcard-img-bg">${ico}</div><span style="font-size:34px;position:relative;z-index:1">${ico}</span></div>
     <div class="lcard-body">
       <div class="lcard-game">${l.game} · ${l.type}</div>
       <div class="lcard-title">${l.title}</div>
@@ -2076,12 +2305,10 @@ function renderListingDetail(l) {
   const mainEl = document.getElementById('ld-gallery-main');
   const thumbsEl = document.getElementById('ld-gallery-thumbs');
   if (images.length) {
-    const first = imgUrl(images[0]);
-    mainEl.innerHTML = `<img src="${first}" alt="${esc(l.title)}" onerror="this.parentNode.innerHTML='🎮'">`;
-    thumbsEl.innerHTML = images.map((img, i) => {
-      const src = imgUrl(img);
-      return `<div class="ld-thumb${i === 0 ? ' on' : ''}" onclick="ldShowImage('${src}', this)"><img src="${src}" onerror="this.style.display='none'"></div>`;
-    }).join('');
+    mainEl.innerHTML = `<img src="${API_URL + images[0]}" alt="${esc(l.title)}">`;
+    thumbsEl.innerHTML = images.map((img, i) =>
+      `<div class="ld-thumb${i === 0 ? ' on' : ''}" onclick="ldShowImage('${API_URL + img}', this)"><img src="${API_URL + img}"></div>`
+    ).join('');
   } else {
     mainEl.innerHTML = '🎮';
     thumbsEl.innerHTML = '';
@@ -2133,7 +2360,7 @@ function renderListingDetail(l) {
     ' · ' + (l.seller_review_count || 0) + ' შეფ.' +
     ' · ' + (l.seller_completed || 0) + ' გაყ.';
   if (l.avatar_url) {
-    sellerAva.innerHTML = `<img src="${imgUrl(l.avatar_url)}">`;
+    sellerAva.innerHTML = `<img src="${API_URL + l.avatar_url}">`;
   } else {
     sellerAva.textContent = (l.display_name || l.username || '?').slice(0,2).toUpperCase();
   }
@@ -2316,7 +2543,7 @@ async function openSellerProfile() {
     const avaEl = document.getElementById('sm-ava');
     if (avaEl) {
       if (profile.avatar_url) {
-        avaEl.innerHTML = `<img src="${imgUrl(profile.avatar_url)}" style="width:100%;height:100%;object-fit:cover;border-radius:14px">`;
+        avaEl.innerHTML = `<img src="${API_URL + profile.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:14px">`;
       } else {
         avaEl.textContent = (profile.display_name || '?').slice(0,2).toUpperCase();
       }
@@ -2513,6 +2740,17 @@ document.addEventListener('click', (e) => {
   const sbox = e.target.closest('.sbox');
   if (!sbox) hideSearchSuggest();
 });
+
+// ── Footer ნავიგაცია — auth-დაცული გვერდებზე გადასვლა ──────────
+function footerGo(page, navIndex) {
+  if (!currentUser) { openM('loginModal'); return; }
+  if (page === 'order-history') {
+    pg('order-history');
+    return;
+  }
+  pg(page);
+  if (navIndex >= 0) act(document.querySelectorAll('.nl')[navIndex]);
+}
 
 function goCategory(cat) {
   pg('listings'); act(document.querySelectorAll('.nl')[1]);
@@ -3702,6 +3940,17 @@ async function loadHomeStats() {
         : '₾' + Math.round(v) + '+';
     } else if (sV) {
       sV.textContent = '₾0';
+    }
+
+    // trust strip (igivve მონაც., calke seqsia)
+    const tL = document.getElementById('trust-listings');
+    const tS = document.getElementById('trust-sellers');
+    const tV = document.getElementById('trust-volume');
+    if (tL) tL.textContent = stats.listings_active > 0 ? stats.listings_active + '+' : '0';
+    if (tS) tS.textContent = stats.sellers_active > 0 ? stats.sellers_active + '+' : '0';
+    if (tV) {
+      const v = stats.volume_gel || 0;
+      tV.textContent = v >= 1000 ? '₾' + (v / 1000).toFixed(1) + 'k+' : '₾' + Math.round(v) + '+';
     }
   } catch(e) { /* silent */ }
 }
