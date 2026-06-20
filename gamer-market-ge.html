@@ -728,7 +728,8 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
         <p class="hero-sub">საქართველოს პირველი დაცული მარკეტფლეისი — Escrow, ვერიფიცირებული გამყიდველები, GEL/USD ბილინგი.</p>
         <div class="hero-cta">
           <button class="btn btn-a" style="padding:9px 20px;font-size:13px" onclick="pg('listings');act(document.querySelectorAll('.nl')[1])">განცხადებები →</button>
-          <button class="btn btn-g" style="padding:9px 16px;font-size:13px" onclick="openM('loginModal')">უფასო რეგისტრაცია</button>
+          <button class="btn btn-g" id="hero-cta-guest" style="padding:9px 16px;font-size:13px" onclick="openM('loginModal')">უფასო რეგისტრაცია</button>
+          <button class="btn btn-g" id="hero-cta-user" style="padding:9px 16px;font-size:13px;display:none" onclick="openM('postModal')">➕ განცხადების დამატება</button>
         </div>
         <div class="hero-stats">
           <div><div class="hs-n" id="stat-listings">─</div><div class="hs-l">განცხადება</div></div>
@@ -751,7 +752,7 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
       <div class="cat-card" onclick="goCategory('social')">📲<div>სოციალური</div><div style="font-size:10px;color:var(--muted)" id="cnt-social">─</div></div>
       <div class="cat-card" onclick="goCategory('boosting')">⚡<div>ბუსტინგი</div><div style="font-size:10px;color:var(--muted)" id="cnt-boosting">─</div></div>
       <div class="cat-card" onclick="goCategory('currency')">💎<div>ვალუტა</div><div style="font-size:10px;color:var(--muted)" id="cnt-currency">─</div></div>
-      <div class="cat-card" onclick="openM('postModal')" style="border-color:var(--ad2);background:var(--ad)">➕<div style="color:var(--accent)">განცხ. დამატება</div><div style="font-size:10px;color:var(--muted)">გამოქვეყნება</div></div>
+      <div class="cat-card" onclick="if(currentUser){openM('postModal')}else{openM('loginModal')}" style="border-color:var(--ad2);background:var(--ad)" id="cat-card-post">➕<div style="color:var(--accent)" id="cat-card-post-label">განცხ. დამატება</div><div style="font-size:10px;color:var(--muted)" id="cat-card-post-sub">გამოქვეყნება</div></div>
     </div>
 
     <div class="vip-banner">
@@ -820,9 +821,9 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
 
     <!-- ── BOTTOM CTA ─────────────────────────────────────────── -->
     <div class="showcase-cta">
-      <div class="showcase-cta-title">გაყიდე შენი ექაუნთი დღესვე</div>
-      <div class="showcase-cta-sub">დარეგისტრირდი წუთებში და განათავსე განცხადება — დაცული Escrow სისტემით, სამართლიანი 5%-იანი საკომისიოთი.</div>
-      <button class="btn btn-a" style="padding:10px 22px;font-size:13px" onclick="if(currentUser){openM('postModal')}else{openM('loginModal')}">➕ განცხადების დამატება</button>
+      <div class="showcase-cta-title" id="bottom-cta-title">გაყიდე შენი ექაუნთი დღესვე</div>
+      <div class="showcase-cta-sub" id="bottom-cta-sub">დარეგისტრირდი წუთებში და განათავსე განცხადება — დაცული Escrow სისტემით, სამართლიანი 5%-იანი საკომისიოთი.</div>
+      <button class="btn btn-a" style="padding:10px 22px;font-size:13px" onclick="if(currentUser){openM('postModal')}else{openM('loginModal')}" id="bottom-cta-btn">➕ განცხადების დამატება</button>
     </div>
   </div>
 </div>
@@ -1719,10 +1720,24 @@ function updateNavUser() {
   const loginBtn = document.getElementById('nav-login-btn');
   const avaEl    = document.getElementById('nav-ava');
 
+  // hero / bottom CTA — auth-status-ის მიხედვით toggling
+  const heroGuest = document.getElementById('hero-cta-guest');
+  const heroUser  = document.getElementById('hero-cta-user');
+  const bottomTitle = document.getElementById('bottom-cta-title');
+  const bottomSub    = document.getElementById('bottom-cta-sub');
+  const bottomBtn    = document.getElementById('bottom-cta-btn');
+
   if (!currentUser) {
     if (balChip)  balChip.style.display  = 'none';
     if (loginBtn) loginBtn.style.display = 'flex';
     if (avaEl)    avaEl.style.display    = 'none';
+
+    if (heroGuest) heroGuest.style.display = 'inline-flex';
+    if (heroUser)  heroUser.style.display  = 'none';
+    if (bottomTitle) bottomTitle.textContent = 'გაყიდე შენი ექაუნთი დღესვე';
+    if (bottomSub)   bottomSub.textContent   = 'დარეგისტრირდი წუთებში და განათავსე განცხადება — დაცული Escrow სისტემით, სამართლიანი 5%-იანი საკომისიოთი.';
+    if (bottomBtn)   bottomBtn.textContent   = '➕ განცხადების დამატება';
+
     // profile/wallet guards
     const pg_el = document.getElementById('profile-guest');
     const pl_el = document.getElementById('profile-logged');
@@ -1737,6 +1752,13 @@ function updateNavUser() {
 
   if (balChip)  balChip.style.display  = 'flex';
   if (loginBtn) loginBtn.style.display = 'none';
+
+  if (heroGuest) heroGuest.style.display = 'none';
+  if (heroUser)  heroUser.style.display  = 'inline-flex';
+  if (bottomTitle) bottomTitle.textContent = 'განათავსე კიდევ ერთი განცხადება';
+  if (bottomSub)   bottomSub.textContent   = 'მართე შენი გაყიდვები ერთ ადგილას — დაცული Escrow სისტემით, სამართლიანი 5%-იანი საკომისიოთი.';
+  if (bottomBtn)   bottomBtn.textContent   = '➕ ახალი განცხადება';
+
   if (avaEl) {
     avaEl.style.display = 'flex';
     if (currentUser.avatar_url) {
