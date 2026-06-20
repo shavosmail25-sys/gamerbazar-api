@@ -4,10 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GamerBazar.ge</title>
-<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-50%{opacity:1}}
-
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#07080c;--bg2:#0d0f15;--bg3:#13151e;--bg4:#1a1d27;--bg5:#21253200;
@@ -21,7 +19,7 @@
   --neon-green:0 0 8px #00ffb3,0 0 20px #00ffb360;
   --neon-blue:0 0 8px #5b9cf6,0 0 20px #5b9cf660;
   --neon-gold:0 0 8px #ffcc00,0 0 20px #ffcc0060;
-  --font:'Lexend',sans-serif;--mono:'JetBrains Mono',monospace;
+  --font:'Lexend',sans-serif;--display:'Space Grotesk',sans-serif;--mono:'JetBrains Mono',monospace;
   --r:8px;--r2:14px;
 }
 html{scroll-behavior:smooth}
@@ -29,10 +27,17 @@ body{
   background:var(--bg);color:var(--text);font-family:var(--font);
   font-size:14px;line-height:1.6;overflow-x:hidden;
   background-image:
-    radial-gradient(ellipse 80% 50% at 50% -10%, #00ffb308 0%, transparent 60%),
-    radial-gradient(ellipse 40% 40% at 90% 20%, #5b9cf608 0%, transparent 50%),
-    radial-gradient(ellipse 30% 30% at 10% 80%, #b57bee06 0%, transparent 50%);
+    /* ნეონ orbs — გასწორებული, მეტი სიღრმე */
+    radial-gradient(ellipse 55% 45% at 12% -8%, #00ffb314 0%, transparent 58%),
+    radial-gradient(ellipse 40% 38% at 92% 8%, #5b9cf612 0%, transparent 55%),
+    radial-gradient(ellipse 35% 35% at 100% 60%, #b57bee0d 0%, transparent 52%),
+    radial-gradient(ellipse 45% 40% at 5% 75%, #ffcc000a 0%, transparent 55%),
+    radial-gradient(ellipse 30% 30% at 50% 100%, #00ffb30c 0%, transparent 50%),
+    /* hex/grid pattern — gaming-texture sიგრძე */
+    repeating-linear-gradient(120deg, #ffffff03 0px, #ffffff03 1px, transparent 1px, transparent 68px),
+    repeating-linear-gradient(60deg, #ffffff03 0px, #ffffff03 1px, transparent 1px, transparent 68px);
   background-attachment:fixed;
+  background-size:auto,auto,auto,auto,auto,140px 140px,140px 140px;
 }
 button{font-family:var(--font);cursor:pointer;border:none;outline:none}
 input,select,textarea{font-family:var(--font)}
@@ -40,6 +45,9 @@ input,select,textarea{font-family:var(--font)}
 .page{display:none;animation:pageFadeIn .3s ease}
 .page.active{display:block}
 @keyframes pageFadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* DISPLAY TYPE — ლათინური ბრენდი/სათაურები */
+.brand-display,.nav-logo{font-family:var(--display)}
 
 /* NAV */
 nav{position:fixed;top:0;left:0;right:0;z-index:200;height:56px;background:#08090de8;backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:0}
@@ -234,7 +242,7 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
 /* ══════════════════════════ FOOTER ══════════════════════════ */
 .site-footer{background:var(--bg2);border-top:1px solid var(--border);margin-top:40px}
 .footer-main{max-width:1120px;margin:0 auto;padding:40px 20px 28px;display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:32px}
-.footer-brand-logo{font-size:17px;font-weight:800;letter-spacing:-.3px;margin-bottom:10px}
+.footer-brand-logo{font-family:var(--display);font-size:17px;font-weight:800;letter-spacing:-.3px;margin-bottom:10px}
 .footer-brand-logo em{color:var(--accent);font-style:normal}
 .footer-brand-desc{font-size:12px;color:var(--muted);line-height:1.7;max-width:280px;margin-bottom:16px}
 .footer-social{display:flex;gap:8px}
