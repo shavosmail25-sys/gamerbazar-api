@@ -319,55 +319,34 @@ router.post('/:id/vip', requireAuth, async (req, res) => {
 });
 
 // ══════════════════════════════════════════════════════════════
-// POST /api/listings/:id/images  — სურათების ატვირთვა
-// Cloudinary (production) ან local disk (dev, fallback)
-// მაქს. 5 სურათი, თითო 5MB, jpeg/png/webp
+// POST /api/listings/:id/images  — სურათების ატვირთვა (Cloudinary)
+// მაქს. 5 სურათი, თითო 3MB, jpeg/png/webp
+// Render-ის filesystem ephemeral-ია — დისკზე აღარ ვინახავთ,
+// ფაილი მეხსიერებიდან (multer memoryStorage) პირდაპირ Cloudinary-ში იტვირთება
 // ══════════════════════════════════════════════════════════════
-const multer   = require('multer');
-const path     = require('path');
-const fs       = require('fs');
-const cldUtil  = require('../utils/cloudinary');
+const multer     = require('multer');
+const cloudinary = require('../utils/cloudinary');
 
-// memoryStorage — Cloudinary-ზე buffer-ით ვაგზავნით (disk-ს არ ვეხებით)
-// diskStorage fallback — თუ Cloudinary არ არის კონფ. (local dev)
-function buildImgUpload() {
-  const useCloud = !!process.env.CLOUDINARY_CLOUD_NAME;
-
-  const storage = useCloud
-    ? multer.memoryStorage()
-    : multer.diskStorage({
-        destination: (req, file, cb) => {
-          const dir = path.resolve(process.env.UPLOAD_DIR || './uploads', 'listings');
-          fs.mkdirSync(dir, { recursive: true });
-          cb(null, dir);
-        },
-        filename: (req, file, cb) => {
-          const ext = path.extname(file.originalname).toLowerCase();
-          cb(null, `listing_${req.params.id}_${Date.now()}_${Math.random().toString(36).slice(2,7)}${ext}`);
-        },
-      });
-
-  return multer({
-    storage,
-    limits: {
-      fileSize: (Number(process.env.MAX_FILE_SIZE_MB) || 5) * 1024 * 1024,
-      files: 5,
-    },
-    fileFilter: (req, file, cb) => {
-      const ok = /image\/(jpeg|png|webp)/.test(file.mimetype);
-      cb(ok ? null : new Error('only_images'), ok);
-    },
-  });
-}
-
-const imgUpload = buildImgUpload();
+const imgUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: (Number(process.env.MAX_FILE_SIZE_MB) || 3) * 1024 * 1024,
+    files: 5,
+  },
+  fileFilter: (req, file, cb) => {
+    const ok = /image\/(jpeg|png|webp)/.test(file.mimetype);
+    cb(ok ? null : new Error('only_images'), ok);
+  },
+});
 
 router.post('/:id/images', requireAuth, imgUpload.array('images', 5), async (req, res) => {
   try {
+    if (!cloudinary.isConfigured())
+      return res.status(503).json({ error: 'image_upload_not_configured' });
     if (!req.files || !req.files.length)
       return res.status(400).json({ error: 'no_files' });
 
-    // ownership check
+    // ownership check — ატვირთვამდე, რომ ფუჭად არ დავხარჯოთ Cloudinary quota
     const { rows } = await db.query(
       'SELECT seller_id, images FROM listings WHERE id=$1', [req.params.id]
     );
@@ -375,29 +354,16 @@ router.post('/:id/images', requireAuth, imgUpload.array('images', 5), async (req
     if (rows[0].seller_id !== req.user.id && req.user.role !== 'admin')
       return res.status(403).json({ error: 'forbidden' });
 
-    // ── Cloudinary ან local upload ────────────────────────────
-    const newUrls = [];
-    const useCloud = !!process.env.CLOUDINARY_CLOUD_NAME;
-
-    for (const file of req.files) {
-      if (useCloud) {
-        // Cloudinary-ზე ატვირთვა — persistent URL
-        const url = await cldUtil.uploadFile(
-          file,
-          `gamerbazar/listings/${req.params.id}`
-        );
-        if (url) {
-          newUrls.push(url);
-        } else {
-          // Cloudinary-ს return-ი null-ია (unexpected) — local fallback
-          const localUrl = `/uploads/listings/${file.filename || file.originalname}`;
-          newUrls.push(localUrl);
-        }
-      } else {
-        // local dev — disk-ზე ინახება
-        newUrls.push(`/uploads/listings/${file.filename}`);
-      }
-    }
+    // Cloudinary-ში ატვირთვა — თითოეული ფაილი ცალკე, პარალელურად
+    const uploaded = await Promise.all(req.files.map((f, i) => {
+      const publicId = `listing_${req.params.id}_${Date.now()}_${i}_${Math.random().toString(36).slice(2,7)}`;
+      return cloudinary.uploadBuffer(f.buffer, {
+        folder: 'gamerbazar/listings',
+        public_id: publicId,
+        resource_type: 'image',
+      });
+    }));
+    const newUrls = uploaded.map(r => r.secure_url);
 
     // არსებულ სურ-ებს ვამატებთ (მაქს. 5 სულ)
     const existing = rows[0].images || [];
@@ -413,13 +379,13 @@ router.post('/:id/images', requireAuth, imgUpload.array('images', 5), async (req
     if (err.message === 'only_images')
       return res.status(400).json({ error: 'only_images_allowed' });
     if (err.code === 'LIMIT_FILE_SIZE')
-      return res.status(400).json({ error: 'file_too_large', max_mb: process.env.MAX_FILE_SIZE_MB || 5 });
+      return res.status(400).json({ error: 'file_too_large', max_mb: process.env.MAX_FILE_SIZE_MB || 3 });
     console.error('image upload:', err.message);
     res.status(500).json({ error: 'server_error' });
   }
 });
 
-// DELETE /api/listings/:id/images  — სურათის წაშლა
+// DELETE /api/listings/:id/images  — სურათის წაშლა (Cloudinary-დანაც)
 router.delete('/:id/images', requireAuth, async (req, res) => {
   try {
     const { url } = req.body;
@@ -438,15 +404,9 @@ router.delete('/:id/images', requireAuth, async (req, res) => {
       [updated, req.params.id]
     );
 
-    // Cloudinary-დან წაშლა
-    if (url.includes('cloudinary.com')) {
-      cldUtil.deleteFile(url).catch(() => {}); // async, response-ს არ ვაყოვნებთ
-    } else {
-      // local disk-დან წაშლა
-      try {
-        const diskPath = path.resolve('.' + url);
-        if (fs.existsSync(diskPath)) fs.unlinkSync(diskPath);
-      } catch(e) { /* silent */ }
+    // Cloudinary-დანაც წავშალოთ (ძველი /uploads/... ლოკალური ბმულები — silent skip)
+    if (url.includes('res.cloudinary.com')) {
+      cloudinary.destroyByUrl(url).catch(() => {});
     }
 
     res.json({ ok: true, images: updated });

@@ -1,95 +1,66 @@
 // src/utils/cloudinary.js
-// სურათების ატვირთვა Cloudinary-ზე — Render-ის ephemeral disk-ის ნაცვლად
-// უფასო tier: 25GB storage, 25GB bandwidth/თვე
+// Cloudinary კონფიგ. + დამხმარე ფუნქციები სურათების ასატვირთად.
+// Render-ის filesystem ephemeral-ია (deploy/restart/sleep შემდეგ ყველაფერი იშლება),
+// ამიტომ ყველა listing/avatar სურათი ახლა პირდაპირ Cloudinary-ში იტვირთება.
 //
-// Setup (ერთჯერადი):
-//   1. cloudinary.com → Sign Up → Dashboard-ში Cloud Name, API Key, API Secret
-//   2. Render env-ში დაამატე:
-//        CLOUDINARY_CLOUD_NAME=...
-//        CLOUDINARY_API_KEY=...
-//        CLOUDINARY_API_SECRET=...
-//
-// npm install cloudinary
+// საჭირო ENV ცვლადები (.env ლოკალურად / Render → Environment tab production-ში):
+//   CLOUDINARY_CLOUD_NAME
+//   CLOUDINARY_API_KEY
+//   CLOUDINARY_API_SECRET
+// (იხ. NEW_ENV_VARS.md)
 
 'use strict';
 
-let cloudinaryConfigured = false;
+const cloudinary = require('cloudinary').v2;
 
-function getCloudinary() {
-  if (!process.env.CLOUDINARY_CLOUD_NAME) return null;
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key:    process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  secure:     true,
+});
 
-  const cloudinary = require('cloudinary').v2;
-
-  if (!cloudinaryConfigured) {
-    cloudinary.config({
-      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-      api_key:    process.env.CLOUDINARY_API_KEY,
-      api_secret: process.env.CLOUDINARY_API_SECRET,
-      secure:     true,
-    });
-    cloudinaryConfigured = true;
-  }
-
-  return cloudinary;
+// ── კონფიგურაციის შემოწმება ─────────────────────────────────
+// route-ებში გამოვიყენებთ, რომ ნათელი 503 დავაბრუნოთ env vars-ის
+// დადგენამდე (cloudinary-ის SDK-ი ჩუმად "ვერაფერს ვშლი/ვტვირთავ"
+// აბრუნებს, ეს ცუდი UX იქნებოდა debug-ისთვის)
+function isConfigured() {
+  return !!(
+    process.env.CLOUDINARY_CLOUD_NAME &&
+    process.env.CLOUDINARY_API_KEY &&
+    process.env.CLOUDINARY_API_SECRET
+  );
 }
 
-// ── Buffer/Stream → Cloudinary upload ─────────────────────────
-// file: multer file object (buffer ან path)
-// folder: 'gamerbazar/avatars' ან 'gamerbazar/listings'
-// publicId: optional — null = Cloudinary ავტომ. განსაზ.
-async function uploadFile(file, folder = 'gamerbazar', publicId = null) {
-  const cld = getCloudinary();
-
-  if (!cld) {
-    // Cloudinary არ არის კონფ. — local path ვიყენებთ (dev)
-    return null; // caller ამოწმებს და local-ს გამოიყენებს
-  }
-
+// ── ბუფერის ატვირთვა (multer memoryStorage-დან) ──────────────
+// არ ვწერთ დისკზე საერთოდ — file.buffer პირდაპირ stream-დება Cloudinary-ში
+function uploadBuffer(buffer, options = {}) {
   return new Promise((resolve, reject) => {
-    const opts = {
-      folder,
-      resource_type: 'image',
-      transformation: [
-        { quality: 'auto', fetch_format: 'auto' }, // WebP/AVIF ავტო
-      ],
-    };
-    if (publicId) opts.public_id = publicId;
-
-    const stream = cld.uploader.upload_stream(opts, (error, result) => {
-      if (error) reject(error);
-      else resolve(result.secure_url); // https://res.cloudinary.com/...
+    const stream = cloudinary.uploader.upload_stream(options, (err, result) => {
+      if (err) return reject(err);
+      resolve(result);
     });
-
-    // multer memoryStorage-დან buffer
-    if (file.buffer) {
-      const { Readable } = require('stream');
-      Readable.from(file.buffer).pipe(stream);
-    } else if (file.path) {
-      // diskStorage-დან path
-      const fs = require('fs');
-      fs.createReadStream(file.path).pipe(stream);
-      // ატვირთვის შემდეგ local ფაილი წაიშლება caller-ში
-    } else {
-      reject(new Error('file has neither buffer nor path'));
-    }
+    stream.end(buffer);
   });
 }
 
-// ── Cloudinary URL-ის წაშლა ────────────────────────────────────
-async function deleteFile(url) {
-  const cld = getCloudinary();
-  if (!cld || !url || !url.includes('cloudinary.com')) return;
+// ── public_id-ის ამოღება secure_url-დან (წასაშლელად საჭირო) ──
+// მაგ: https://res.cloudinary.com/demo/image/upload/v1718000000/gamerbazar/listings/listing_x.jpg
+//   →  gamerbazar/listings/listing_x
+function publicIdFromUrl(url) {
+  const m = String(url).match(/\/upload\/(?:v\d+\/)?(.+)\.[a-zA-Z0-9]+(?:\?.*)?$/);
+  return m ? m[1] : null;
+}
 
+// ── URL-ით წაშლა ──────────────────────────────────────────────
+async function destroyByUrl(url) {
+  const publicId = publicIdFromUrl(url);
+  if (!publicId) return;
   try {
-    // URL-დან public_id ამოვიღოთ
-    // მაგ: https://res.cloudinary.com/demo/image/upload/v123/gamerbazar/listings/abc.webp
-    const match = url.match(/\/upload\/(?:v\d+\/)?(.+?)(?:\.\w+)?$/);
-    if (match) {
-      await cld.uploader.destroy(match[1]);
-    }
+    await cloudinary.uploader.destroy(publicId);
   } catch (e) {
-    console.error('cloudinary delete error:', e.message);
+    console.error('cloudinary destroy error:', e.message);
   }
 }
 
-module.exports = { uploadFile, deleteFile, getCloudinary };
+module.exports = { cloudinary, isConfigured, uploadBuffer, publicIdFromUrl, destroyByUrl };
