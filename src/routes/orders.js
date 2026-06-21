@@ -39,8 +39,8 @@ router.post('/', requireAuth, async (req, res) => {
       const { rows: o } = await client.query(`
         INSERT INTO orders
           (listing_id,buyer_id,seller_id,amount_gel,platform_fee_pct,seller_receives,
-           escrow_status,status,confirm_deadline)
-        VALUES ($1,$2,$3,$4,5,$5,'held','active', NOW() + INTERVAL '48 hours')
+           escrow_status,status)
+        VALUES ($1,$2,$3,$4,5,$5,'held','active')
         RETURNING *
       `, [listing_id, req.user.id, listing.seller_id, listing.price_gel, receives]);
       order = o[0];
@@ -50,7 +50,6 @@ router.post('/', requireAuth, async (req, res) => {
         'UPDATE users SET balance_gel=balance_gel-$1, escrow_hold_gel=escrow_hold_gel+$1 WHERE id=$2',
         [listing.price_gel, req.user.id]
       );
-      // ტრანზაქცია
       await client.query(
         "INSERT INTO transactions(user_id,order_id,type,amount_gel,description) VALUES($1,$2,'escrow_hold',$3,'Escrow გაყინვა')",
         [req.user.id, order.id, -Number(listing.price_gel)]
@@ -60,7 +59,6 @@ router.post('/', requireAuth, async (req, res) => {
         'INSERT INTO chat_rooms(order_id,participant_a,participant_b) VALUES($1,$2,$3)',
         [order.id, req.user.id, listing.seller_id]
       );
-      // listing orders_count
       await client.query(
         'UPDATE listings SET orders_count=orders_count+1 WHERE id=$1', [listing_id]
       );
@@ -68,7 +66,7 @@ router.post('/', requireAuth, async (req, res) => {
 
     res.status(201).json(order);
 
-    // შეტყობ. გამყიდველს — async, response-ს არ აყოვნებს
+    // შეტყობ. გამყიდველს
     (async () => {
       try {
         const { rows: sellerRows } = await db.query(
@@ -92,7 +90,75 @@ router.post('/', requireAuth, async (req, res) => {
 });
 
 // ══════════════════════════════════════════════════════════════
-// GET /api/orders/me  — საკუთარი შეკვეთები
+// POST /api/orders/:id/deliver  — გამყიდველი: „მონაცემები გადავეცი"
+// სტატუსი: active → delivered | ირთვება 48სთ countdown
+// ══════════════════════════════════════════════════════════════
+router.post('/:id/deliver', requireAuth, async (req, res) => {
+  try {
+    const { rows } = await db.query('SELECT * FROM orders WHERE id=$1', [req.params.id]);
+    if (!rows.length) return res.status(404).json({ error: 'not_found' });
+    const order = rows[0];
+
+    if (order.seller_id !== req.user.id)
+      return res.status(403).json({ error: 'only_seller' });
+    if (order.status !== 'active')
+      return res.status(400).json({ error: 'cannot_deliver', current: order.status });
+    if (order.escrow_status !== 'held')
+      return res.status(400).json({ error: 'escrow_not_held' });
+
+    // delivered_at → confirm_deadline = delivered_at + 48სთ
+    const deliveredAt = new Date();
+    const deadline    = new Date(deliveredAt.getTime() + 48 * 60 * 60 * 1000);
+
+    await db.query(`
+      UPDATE orders SET
+        status             = 'delivered',
+        delivered_at       = $1,
+        confirm_deadline   = $2,
+        reminder_24h_sent  = FALSE,
+        updated_at         = NOW()
+      WHERE id = $3
+    `, [deliveredAt, deadline, order.id]);
+
+    const updated = { ...order, status: 'delivered', delivered_at: deliveredAt, confirm_deadline: deadline };
+    res.json({ ok: true, order: updated });
+
+    // შეტყობ. მყიდველს — ნივთი გადაეცა, 48სთ დარჩა
+    (async () => {
+      try {
+        const { rows: listingRows } = await db.query('SELECT title FROM listings WHERE id=$1', [order.listing_id]);
+        const listing = listingRows[0] || { title: 'განცხადება' };
+        const { rows: buyerRows } = await db.query('SELECT id, email, notif_email FROM users WHERE id=$1', [order.buyer_id]);
+
+        // ჩატში სისტემური შეტყობინება
+        const { rows: roomRows } = await db.query('SELECT id FROM chat_rooms WHERE order_id=$1', [order.id]);
+        if (roomRows.length) {
+          await db.query(`
+            INSERT INTO messages(room_id, sender_id, content, content_type)
+            VALUES($1, $2, $3, 'system')
+          `, [roomRows[0].id, order.seller_id,
+              `✅ გამყიდველმა ნივთი/მონაცემები გადასცა. თქვენ გაქვთ 48 საათი შეამოწმოთ და დაადასტუროთ (ვადა: ${deadline.toLocaleString('ka-GE')}). თუ პრობლემაა — გახსენით დავა.`]);
+        }
+
+        if (buyerRows.length) {
+          await mailer.sendDeliveredEmail(buyerRows[0], order, listing, deadline);
+        }
+        await push.sendToUser(order.buyer_id, {
+          title: '📦 ნივთი გადაგეცათ',
+          body: `${listing.title} — 48სთ-ში დაადასტ. ან გახსენი დავა`,
+          url: `/?order=${order.id}`,
+          tag: `order-${order.id}-delivered`,
+        });
+      } catch (e) { console.error('deliver notify error:', e.message); }
+    })();
+  } catch (err) {
+    console.error('deliver:', err.message);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// GET /api/orders/me  — საკუთარი შეკვეთები (profile mini-list)
 // ══════════════════════════════════════════════════════════════
 router.get('/me', requireAuth, async (req, res) => {
   try {
@@ -107,6 +173,7 @@ router.get('/me', requireAuth, async (req, res) => {
       JOIN users s ON s.id=o.seller_id
       WHERE o.buyer_id=$1 OR o.seller_id=$1
       ORDER BY o.created_at DESC
+      LIMIT 10
     `, [req.user.id]);
     res.json(rows);
   } catch (err) {
@@ -115,58 +182,55 @@ router.get('/me', requireAuth, async (req, res) => {
 });
 
 // ══════════════════════════════════════════════════════════════
-// GET /api/orders/history  — სრული ისტ. სტატუს-ფილტრით + pagination
-// ?status=active|completed|cancelled|disputed|pending  &page=1 &limit=10
+// GET /api/orders/history  — სრული ისტ. + ფილტრი + pagination
 // ══════════════════════════════════════════════════════════════
 router.get('/history', requireAuth, async (req, res) => {
   try {
-    const ALLOWED_STATUSES = ['pending', 'active', 'completed', 'cancelled', 'disputed'];
-    const { status } = req.query;
-    const statusFilter = ALLOWED_STATUSES.includes(status) ? status : null;
+    const { status, page = 1, limit = 10 } = req.query;
+    const offset = (Number(page) - 1) * Number(limit);
 
-    const pageNum  = Math.max(1, parseInt(req.query.page, 10)  || 1);
-    const limitNum = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 10));
-    const offset   = (pageNum - 1) * limitNum;
-
-    const { rows: countRows } = await db.query(`
-      SELECT COUNT(*) AS n
-      FROM orders o
-      WHERE (o.buyer_id=$1 OR o.seller_id=$1)
-        AND ($2::varchar IS NULL OR o.status=$2)
-    `, [req.user.id, statusFilter]);
-    const total = Number(countRows[0].n);
+    const params = [req.user.id, req.user.id];
+    let statusClause = '';
+    if (status) {
+      statusClause = `AND o.status = $3`;
+      params.push(status);
+    }
 
     const { rows } = await db.query(`
       SELECT
         o.*,
-        l.title AS listing_title, l.game, l.listing_type,
+        l.title AS listing_title, l.game, l.category,
         b.username AS buyer_username, b.avatar_url AS buyer_avatar,
         s.username AS seller_username, s.avatar_url AS seller_avatar,
         cr.id AS chat_room_id,
-        d.id AS dispute_id, d.reason AS dispute_reason, d.status AS dispute_status,
-        d.resolution AS dispute_resolution, d.created_at AS dispute_created_at,
-        d.resolved_at AS dispute_resolved_at,
-        rv.id AS review_id, rv.rating AS review_rating
+        d.id AS dispute_id, d.reason AS dispute_reason,
+        d.status AS dispute_status, d.resolution AS dispute_resolution,
+        d.created_at AS dispute_created_at, d.resolved_at AS dispute_resolved_at,
+        d.evidence_urls AS dispute_evidence_urls,
+        r.id AS review_id, r.rating AS review_rating, r.comment AS review_comment
       FROM orders o
-      JOIN listings l        ON l.id=o.listing_id
-      JOIN users b            ON b.id=o.buyer_id
-      JOIN users s            ON s.id=o.seller_id
+      JOIN listings l ON l.id=o.listing_id
+      JOIN users b ON b.id=o.buyer_id
+      JOIN users s ON s.id=o.seller_id
       LEFT JOIN chat_rooms cr ON cr.order_id=o.id
-      LEFT JOIN disputes d    ON d.order_id=o.id
-      LEFT JOIN reviews rv    ON rv.order_id=o.id
-      WHERE (o.buyer_id=$1 OR o.seller_id=$1)
-        AND ($2::varchar IS NULL OR o.status=$2)
-      ORDER BY o.created_at DESC
-      LIMIT $3 OFFSET $4
-    `, [req.user.id, statusFilter, limitNum, offset]);
+      LEFT JOIN disputes d ON d.order_id=o.id
+      LEFT JOIN reviews r ON r.order_id=o.id
+      WHERE (o.buyer_id=$1 OR o.seller_id=$2)
+      ${statusClause}
+      ORDER BY o.updated_at DESC
+      LIMIT $${params.length + 1} OFFSET $${params.length + 2}
+    `, [...params, Number(limit), offset]);
 
-    res.json({
-      orders: rows,
-      page: pageNum,
-      limit: limitNum,
-      total,
-      total_pages: Math.max(1, Math.ceil(total / limitNum)),
-    });
+    const { rows: cnt } = await db.query(`
+      SELECT COUNT(*) FROM orders o
+      WHERE (o.buyer_id=$1 OR o.seller_id=$2)
+      ${statusClause}
+    `, params);
+
+    const total      = Number(cnt[0].count);
+    const totalPages = Math.ceil(total / Number(limit));
+
+    res.json({ orders: rows, total, page: Number(page), total_pages: totalPages });
   } catch (err) {
     console.error('orders history:', err.message);
     res.status(500).json({ error: 'server_error' });
@@ -182,11 +246,15 @@ router.get('/:id', requireAuth, async (req, res) => {
       SELECT o.*,
         l.title AS listing_title, l.game, l.price_gel,
         b.username AS buyer_username,
-        s.username AS seller_username
+        s.username AS seller_username,
+        cr.id AS chat_room_id,
+        d.id AS dispute_id, d.status AS dispute_status
       FROM orders o
       JOIN listings l ON l.id=o.listing_id
       JOIN users b ON b.id=o.buyer_id
       JOIN users s ON s.id=o.seller_id
+      LEFT JOIN chat_rooms cr ON cr.order_id=o.id
+      LEFT JOIN disputes d ON d.order_id=o.id
       WHERE o.id=$1
     `, [req.params.id]);
     if (!rows.length) return res.status(404).json({ error: 'not_found' });
@@ -212,26 +280,32 @@ router.post('/:id/confirm', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'only_buyer' });
     if (order.escrow_status !== 'held')
       return res.status(400).json({ error: 'not_in_escrow', current: order.escrow_status });
+    // status უნდა იყოს active ან delivered
+    if (!['active', 'delivered'].includes(order.status))
+      return res.status(400).json({ error: 'cannot_confirm', current: order.status });
 
     await db.transaction(async (client) => {
-      // მყიდველის escrow_hold შემცირება
       await client.query(
         'UPDATE users SET escrow_hold_gel=escrow_hold_gel-$1 WHERE id=$2',
         [order.amount_gel, order.buyer_id]
       );
-      // გამყიდველს ჩარიცხვა (კომ. გამოკლებით)
-      await client.query(
-        'UPDATE users SET balance_gel=balance_gel+$1 WHERE id=$2',
-        [order.seller_receives, order.seller_id]
-      );
-      // Order სტატუსი
+      // გამყიდველის ბალანსი + 24სთ hold (ანტი-ფროდ cooldown)
+      // balance_available_at = NOW() + 24h → withdraw-ი მანამდე ბლოკირებულია
+      await client.query(`
+        UPDATE users SET
+          balance_gel         = balance_gel + $1,
+          balance_available_at = GREATEST(
+            COALESCE(balance_available_at, NOW()),
+            NOW() + INTERVAL '24 hours'
+          )
+        WHERE id=$2
+      `, [order.seller_receives, order.seller_id]);
       await client.query(`
         UPDATE orders SET
           escrow_status='released', status='completed',
-          buyer_confirmed=TRUE, completed_at=NOW()
+          buyer_confirmed=TRUE, completed_at=NOW(), updated_at=NOW()
         WHERE id=$1
       `, [order.id]);
-      // ტრანზაქციები
       await client.query(
         "INSERT INTO transactions(user_id,order_id,type,amount_gel,description) VALUES($1,$2,'sale_income',$3,'გაყიდვის შემოსავალი')",
         [order.seller_id, order.id, order.seller_receives]
@@ -240,29 +314,23 @@ router.post('/:id/confirm', requireAuth, async (req, res) => {
         "INSERT INTO transactions(user_id,order_id,type,amount_gel,description) VALUES($1,$2,'platform_fee',$3,'პლატფ. კომ.')",
         [order.seller_id, order.id, -(order.amount_gel - order.seller_receives)]
       );
-      // Listing → sold
-      await client.query(
-        "UPDATE listings SET status='sold' WHERE id=$1", [order.listing_id]
-      );
+      await client.query("UPDATE listings SET status='sold' WHERE id=$1", [order.listing_id]);
     });
 
     res.json({ ok: true, show_review: true });
 
-    // შეტყობ. გამყიდველს — ჩარიცხვა
     (async () => {
       try {
         const { rows: sellerRows } = await db.query(
           'SELECT id, email, notif_email FROM users WHERE id=$1', [order.seller_id]
         );
-        const { rows: listingRows } = await db.query(
-          'SELECT title FROM listings WHERE id=$1', [order.listing_id]
-        );
+        const { rows: listingRows } = await db.query('SELECT title FROM listings WHERE id=$1', [order.listing_id]);
         const listing = listingRows[0] || { title: 'განცხადება' };
         if (sellerRows.length) {
           await mailer.sendOrderConfirmedEmail(sellerRows[0], order, listing);
         }
         await push.sendToUser(order.seller_id, {
-          title: '✅ შეკვეთა დადასტურდა',
+          title: '✅ შეკვეთა დადასტ.',
           body: `${listing.title} — ₾${Number(order.seller_receives).toFixed(2)} ბალანსზე`,
           url: `/?page=wallet`,
           tag: `order-${order.id}-confirmed`,
@@ -298,37 +366,32 @@ router.post('/:id/cancel', requireAuth, async (req, res) => {
           [order.amount_gel, order.buyer_id]
         );
         await client.query(
-          "INSERT INTO transactions(user_id,order_id,type,amount_gel,description) VALUES($1,$2,'escrow_refund',$3,'გაუქმება/დაბრუნება')",
+          "INSERT INTO transactions(user_id,order_id,type,amount_gel,description) VALUES($1,$2,'escrow_refund',$3,'გაუქმება/დაბრ.')",
           [order.buyer_id, order.id, order.amount_gel]
         );
       }
       await client.query(`
         UPDATE orders SET escrow_status='refunded', status='cancelled',
-          cancelled_at=NOW(), cancel_reason=$1 WHERE id=$2
+          cancelled_at=NOW(), cancel_reason=$1, updated_at=NOW() WHERE id=$2
       `, [reason, order.id]);
-      await client.query(
-        "UPDATE listings SET status='active' WHERE id=$1", [order.listing_id]
-      );
+      await client.query("UPDATE listings SET status='active' WHERE id=$1", [order.listing_id]);
     });
 
     res.json({ ok: true, refunded: order.amount_gel });
 
-    // შეტყობ. მყიდველს — refund
     (async () => {
       try {
         const { rows: buyerRows } = await db.query(
           'SELECT id, email, notif_email FROM users WHERE id=$1', [order.buyer_id]
         );
-        const { rows: listingRows } = await db.query(
-          'SELECT title FROM listings WHERE id=$1', [order.listing_id]
-        );
+        const { rows: listingRows } = await db.query('SELECT title FROM listings WHERE id=$1', [order.listing_id]);
         const listing = listingRows[0] || { title: 'განცხადება' };
         if (buyerRows.length) {
           await mailer.sendOrderCancelledEmail(buyerRows[0], order, listing, reason);
         }
         await push.sendToUser(order.buyer_id, {
           title: '↩️ შეკვეთა გაუქმდა',
-          body: `${listing.title} — ₾${Number(order.amount_gel).toFixed(2)} დაბრუნდა`,
+          body: `${listing.title} — ₾${Number(order.amount_gel).toFixed(2)} დაბრ.`,
           url: `/?page=wallet`,
           tag: `order-${order.id}-cancelled`,
         });

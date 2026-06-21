@@ -14,9 +14,8 @@ function getTransporter() {
 
   transporter = nodemailer.createTransport({
     host: SMTP_HOST || 'smtp.gmail.com',
-    port: Number(SMTP_PORT) || 587,
-    secure: false,
-    requireTLS: true,
+    port: Number(SMTP_PORT) || 465,
+    secure: true,
     auth: { user: SMTP_USER, pass: SMTP_PASS },
   });
 
@@ -125,6 +124,46 @@ async function sendOrderExpiredEmail(buyer, order, listing) {
 }
 
 // ══════════════════════════════════════════════════════════════
+// DELIVERY EMAILS
+// ══════════════════════════════════════════════════════════════
+async function sendDeliveredEmail(buyer, order, listing, deadline) {
+  if (!buyer.notif_email || !buyer.email) return;
+  const deadlineStr = new Date(deadline).toLocaleString('ka-GE', {
+    dateStyle: 'medium', timeStyle: 'short',
+  });
+  return sendMail({
+    to: buyer.email,
+    subject: `📦 ნივთი გადაგეცათ — ${listing.title}`,
+    html: wrap(
+      'გამყიდველმა ნივთი გადასცა',
+      `<b>${listing.title}</b>-ის გამყიდველმა ნივთი/მონაცემები გადაგცათ.<br><br>
+       თქვენ გაქვთ <b>48 საათი</b> (ვადა: ${deadlineStr}) შეამოწმოთ და:
+       <ul style="margin:10px 0;padding-left:18px">
+         <li>დაადასტუროთ მიღება — ფული გამყიდველს გადაეცემა</li>
+         <li>გახსნათ დავა — თუ რამე პრობლემაა, მოგვაწოდეთ სქრინშოტი/ვიდეო</li>
+       </ul>
+       <b>48 საათის შემდეგ სისტემა ავტომატურად დაადასტ. შეკვეთას.</b>`,
+      'შეკვეთის ნახვა', `${FRONTEND}/?order=${order.id}`
+    ),
+  });
+}
+
+async function send24hReminderEmail(buyer, order, listing) {
+  if (!buyer.notif_email || !buyer.email) return;
+  return sendMail({
+    to: buyer.email,
+    subject: `⏰ შეახსენება — 24 საათი დარჩა · ${listing.title}`,
+    html: wrap(
+      'შეახსენება: 24 საათი დარჩა',
+      `<b>${listing.title}</b>-ის შეკვეთაზე <b>დარჩა მხოლოდ 24 საათი</b>.<br><br>
+       დაადასტ. მიღება ან გახსენი დავა (სქრინშოტით/ვიდეოთი), წინააღმდეგ შემთხვევაში
+       ფული ავტომატურად გამყიდველს გადაეცემა.`,
+      'შეკვეთის ნახვა', `${FRONTEND}/?order=${order.id}`
+    ),
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
 // DISPUTE EMAILS
 // ══════════════════════════════════════════════════════════════
 async function sendDisputeOpenedEmail(recipient, dispute, order, listing) {
@@ -160,50 +199,14 @@ async function sendDisputeResolvedEmail(recipient, dispute, order, listing, outc
   });
 }
 
-// ══════════════════════════════════════════════════════════════
-// EMAIL VERIFICATION
-// ══════════════════════════════════════════════════════════════
-async function sendVerificationEmail(user, token) {
-  if (!user.email) return;
-  const verifyUrl = `${FRONTEND}/api/auth/verify-email?token=${token}`;
-  return sendMail({
-    to: user.email,
-    subject: '✉️ GamerBazar.ge — ემაილის დადასტურება',
-    html: wrap(
-      'დაადასტურე შენი ემაილი',
-      `გამარჯობა <b>${user.username}</b>!<br><br>
-       GamerBazar.ge-ზე რეგისტრაციისთვის დაადასტურე შენი ემაილი.<br><br>
-       ლინკი მოქმედებს <b>24 საათის</b> განმავლობაში.`,
-      '✅ ემაილის დადასტურება', verifyUrl
-    ),
-  });
-}
-
-async function sendPasswordResetEmail(user, token) {
-  if (!user.email) return;
-  const resetUrl = `${FRONTEND}/?reset_token=${token}`;
-  return sendMail({
-    to: user.email,
-    subject: '🔐 GamerBazar.ge — პაროლის აღდგენა',
-    html: wrap(
-      'პაროლის აღდგენა',
-      `გამარჯობა <b>${user.username}</b>!<br><br>
-       პაროლის შესაცვლელად დააჭირე ღილაკს.<br><br>
-       ლინკი მოქმედებს <b>1 საათის</b> განმავლობაში.<br>
-       თუ ეს შენ არ მოითხოვე — უგულებელყავი ეს ემაილი.`,
-      '🔐 პაროლის შეცვლა', resetUrl
-    ),
-  });
-}
-
 module.exports = {
   sendMail,
   sendOrderCreatedEmail,
   sendOrderConfirmedEmail,
   sendOrderCancelledEmail,
   sendOrderExpiredEmail,
+  sendDeliveredEmail,
+  send24hReminderEmail,
   sendDisputeOpenedEmail,
   sendDisputeResolvedEmail,
-  sendVerificationEmail,
-  sendPasswordResetEmail,
 };

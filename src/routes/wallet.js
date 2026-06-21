@@ -12,19 +12,29 @@ const router  = express.Router();
 router.get('/balance', requireAuth, async (req, res) => {
   try {
     const { rows } = await db.query(
-      'SELECT balance_gel, balance_usd, escrow_hold_gel FROM users WHERE id=$1',
+      'SELECT balance_gel, balance_usd, escrow_hold_gel, balance_available_at FROM users WHERE id=$1',
       [req.user.id]
     );
-    const b = rows[0];
-    // GEL/USD კურსი — ფიქსირებული (NBG API-ს შეგიძლია შეუერთო)
+    const b    = rows[0];
     const rate = 2.74;
+    const now  = new Date();
+
+    // hold პერიოდი: balance_available_at > NOW() → ბალანსი გაყინული
+    const holdUntil     = b.balance_available_at ? new Date(b.balance_available_at) : null;
+    const isOnHold      = holdUntil && holdUntil > now;
+    const holdSecondsLeft = isOnHold ? Math.ceil((holdUntil - now) / 1000) : 0;
+
     res.json({
-      balance_gel:     Number(b.balance_gel),
-      balance_usd:     Number(b.balance_usd),
-      escrow_hold_gel: Number(b.escrow_hold_gel),
-      available_gel:   Number(b.balance_gel),
-      exchange_rate:   rate,
-      available_usd:   +(Number(b.balance_gel) / rate).toFixed(2),
+      balance_gel:        Number(b.balance_gel),
+      balance_usd:        Number(b.balance_usd),
+      escrow_hold_gel:    Number(b.escrow_hold_gel),
+      available_gel:      Number(b.balance_gel),
+      exchange_rate:      rate,
+      available_usd:      +(Number(b.balance_gel) / rate).toFixed(2),
+      // Hold info — frontend-ი ამ ველებს იყენებს countdown-ისთვის
+      balance_available_at: b.balance_available_at || null,
+      withdraw_on_hold:     isOnHold,
+      withdraw_hold_seconds_left: holdSecondsLeft,
     });
   } catch (err) {
     res.status(500).json({ error: 'server_error' });
@@ -56,7 +66,6 @@ router.get('/transactions', requireAuth, async (req, res) => {
 
 // ══════════════════════════════════════════════════════════════
 // POST /api/wallet/deposit  — შეტანის მოთხოვნა
-// (BOG/TBC გადახდა → BOG Webhook-ი ამატებს ბალანსს)
 // ══════════════════════════════════════════════════════════════
 router.post('/deposit', requireAuth, async (req, res) => {
   try {
@@ -66,15 +75,12 @@ router.post('/deposit', requireAuth, async (req, res) => {
     if (Number(amount) > 5000)
       return res.status(400).json({ error: 'max_5000_gel' });
 
-    // pending ტრანზ. შექმ. (ბანკი დაადასტ. შემდ.)
     const ref = `DEP-${Date.now()}-${req.user.id.slice(0,8)}`;
     await db.query(
       "INSERT INTO transactions(user_id,type,amount_gel,status,payment_method,external_ref,description) VALUES($1,'deposit',$2,'pending',$3,$4,'ბალანსის შეტანა')",
       [req.user.id, Number(amount), method, ref]
     );
 
-    // გადახდის URL — production-ში BOG API-ს გამოიძახებ
-    // https://developer.bog.ge
     const payUrl = process.env.NODE_ENV === 'production'
       ? `https://checkout.bog.ge/pay?ref=${ref}&amount=${amount}`
       : `http://localhost:${process.env.PORT}/api/wallet/deposit/simulate?ref=${ref}&amount=${amount}`;
@@ -86,8 +92,7 @@ router.post('/deposit', requireAuth, async (req, res) => {
 });
 
 // ══════════════════════════════════════════════════════════════
-// GET /api/wallet/deposit/simulate  — DEV-ში ტესტი
-// production-ში ამ route-ს წაშლი!
+// GET /api/wallet/deposit/simulate  — DEV ტესტი
 // ══════════════════════════════════════════════════════════════
 router.get('/deposit/simulate', requireAuth, async (req, res) => {
   if (process.env.NODE_ENV === 'production')
@@ -97,8 +102,7 @@ router.get('/deposit/simulate', requireAuth, async (req, res) => {
     const { ref, amount } = req.query;
     await db.transaction(async (client) => {
       await client.query(
-        "UPDATE transactions SET status='completed' WHERE external_ref=$1",
-        [ref]
+        "UPDATE transactions SET status='completed' WHERE external_ref=$1", [ref]
       );
       await client.query(
         'UPDATE users SET balance_gel=balance_gel+$1 WHERE id=$2',
@@ -123,13 +127,29 @@ router.post('/withdraw', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'min_5_gel' });
 
     const { rows } = await db.query(
-      'SELECT balance_gel FROM users WHERE id=$1', [req.user.id]
+      'SELECT balance_gel, balance_available_at FROM users WHERE id=$1', [req.user.id]
     );
+    const b = rows[0];
+
+    // ── 24სთ Hold შემოწმება ──────────────────────────────────
+    const now       = new Date();
+    const holdUntil = b.balance_available_at ? new Date(b.balance_available_at) : null;
+    if (holdUntil && holdUntil > now) {
+      const secsLeft = Math.ceil((holdUntil - now) / 1000);
+      const hoursLeft = (secsLeft / 3600).toFixed(1);
+      return res.status(403).json({
+        error: 'balance_on_hold',
+        message: `ბალანსი ${hoursLeft} საათით დაბლოკილია (ანტი-ფროდ დაცვა)`,
+        available_at: holdUntil.toISOString(),
+        seconds_left: secsLeft,
+      });
+    }
+
     const commission = +(Number(amount) * 0.02).toFixed(2);
     const total      = Number(amount) + commission;
 
-    if (Number(rows[0].balance_gel) < total)
-      return res.status(402).json({ error: 'insufficient_balance', available: rows[0].balance_gel });
+    if (Number(b.balance_gel) < total)
+      return res.status(402).json({ error: 'insufficient_balance', available: b.balance_gel });
 
     await db.transaction(async (client) => {
       await client.query(

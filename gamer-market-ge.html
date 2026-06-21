@@ -1005,8 +1005,9 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
           <div class="order-pill">
             <div class="opill-dot"></div>
             <span id="chat-pill-text">Escrow · ₾0</span>
-            <button class="btn btn-a btn-sm" id="chat-confirm-btn" onclick="confirmCurrentOrder()" style="margin-left:4px">✅ დადასტ.</button>
-            <button class="btn btn-g btn-sm" onclick="disputeCurrentOrder()" style="margin-left:4px">⚑ დავა</button>
+            <button class="btn btn-a btn-sm" id="chat-deliver-btn" onclick="markDelivered(currentOrderId)" style="margin-left:4px;display:none">📦 გადავეცი</button>
+            <button class="btn btn-a btn-sm" id="chat-confirm-btn" onclick="confirmCurrentOrder()" style="margin-left:4px;display:none">✅ დადასტ.</button>
+            <button class="btn btn-g btn-sm" id="chat-dispute-btn" onclick="disputeCurrentOrder()" style="margin-left:4px;display:none">⚑ დავა</button>
           </div>
         </div>
       </div>
@@ -2953,21 +2954,28 @@ async function openChatRoom(el) {
   if (avaEl)   avaEl.textContent   = (partner||'?').slice(0,2).toUpperCase();
 
   // escrow pill
-  const pillEl    = document.getElementById('chat-escrow-pill');
-  const pillText  = document.getElementById('chat-pill-text');
-  const confirmBtn= document.getElementById('chat-confirm-btn');
+  const pillEl     = document.getElementById('chat-escrow-pill');
+  const pillText   = document.getElementById('chat-pill-text');
+  const deliverBtn = document.getElementById('chat-deliver-btn');
+  const confirmBtn = document.getElementById('chat-confirm-btn');
+  const disputeBtn = document.getElementById('chat-dispute-btn');
   if (pillEl) {
     const showPill = escrow === 'held';
     pillEl.style.display = showPill ? 'block' : 'none';
-    if (pillText)   pillText.textContent  = `Escrow · ₾${Number(amount).toFixed(2)}`;
-    // confirm ღილაკი მხოლოდ მყიდველს
-    if (confirmBtn) {
+    if (pillText) pillText.textContent = `Escrow · ₾${Number(amount).toFixed(2)}`;
+    if (showPill) {
       const order = await api('/api/orders/' + orderId).catch(()=>null);
-      if (order && order.buyer_id === currentUser.id && escrow === 'held') {
-        confirmBtn.style.display = 'inline-block';
-      } else {
-        confirmBtn.style.display = 'none';
-      }
+      const isBuyer  = order && order.buyer_id  === currentUser.id;
+      const isSeller = order && order.seller_id === currentUser.id;
+      const status   = order ? order.status : null;
+      const isDisputed = status === 'disputed';
+      if (deliverBtn) deliverBtn.style.display = (isSeller && status === 'active' && !isDisputed) ? 'inline-block' : 'none';
+      if (confirmBtn) confirmBtn.style.display = (isBuyer && ['active','delivered'].includes(status) && !isDisputed) ? 'inline-block' : 'none';
+      if (disputeBtn) disputeBtn.style.display = (isBuyer && ['active','delivered'].includes(status) && !isDisputed) ? 'inline-block' : 'none';
+    } else {
+      if (deliverBtn) deliverBtn.style.display = 'none';
+      if (confirmBtn) confirmBtn.style.display = 'none';
+      if (disputeBtn) disputeBtn.style.display = 'none';
     }
   }
 
@@ -3192,27 +3200,188 @@ async function sendMsgToRoom() {
   }
 }
 
-// ── Order Confirm/Dispute ჩატიდან ─────────────────────────────
+// ── Order Confirm/Dispute/Deliver ჩატიდან ─────────────────────
 async function confirmCurrentOrder() {
   if (!currentOrderId) return;
-  if (!confirm('დაადასტ. მიღება? ₾ გამყიდველს ჩაერიცხება.')) return;
   try {
-    await api('/api/orders/' + currentOrderId + '/confirm', { method: 'POST' });
+    const o = await api('/api/orders/' + currentOrderId);
+    openConfirmModal(o);
+  } catch(e) {
+    if (!confirm('დაადასტ. მიღება? ₾ გამყიდველს ჩაერიცხება.')) return;
+    doConfirmOrder(currentOrderId);
+  }
+}
+
+function openConfirmModal(order) {
+  const m = document.getElementById('confirmModal');
+  if (!m) return;
+  m.dataset.orderId = order.id;
+  const amt = document.getElementById('confirm-modal-amt');
+  if (amt) amt.textContent = '₾' + Number(order.amount_gel).toFixed(2);
+  const txt = document.getElementById('confirm-modal-text');
+  if (txt) txt.textContent = '"' + (order.listing_title || 'განცხადება') + '" — ნივთი/მონაცემები მიიღე?';
+  openM('confirmModal');
+}
+
+async function confirmFromModal() {
+  const m = document.getElementById('confirmModal');
+  const orderId = m?.dataset.orderId;
+  if (!orderId) return;
+  closeM('confirmModal');
+  await doConfirmOrder(orderId);
+}
+
+async function doConfirmOrder(orderId) {
+  try {
+    await api('/api/orders/' + orderId + '/confirm', { method: 'POST' });
     showToast('✅ დადასტ.! Escrow გათავისუფლდა', 'ok');
     const pill = document.getElementById('chat-escrow-pill');
     if (pill) pill.style.display = 'none';
     loadChatRooms();
     loadCurrentUser();
-    setTimeout(() => openM('ratingModal'), 600);
+    loadWallet();
+    refreshOrderViews();
+    setTimeout(() => {
+      const rm = document.getElementById('ratingModal');
+      if (rm) {
+        rm.dataset.orderId = orderId;
+        api('/api/orders/' + orderId).then(o => {
+          const sn = document.getElementById('rating-seller-name');
+          if (sn) sn.textContent = 'გამყიდველი: ' + (o.seller_username || '?');
+        }).catch(()=>{});
+      }
+      setStars(5);
+      openM('ratingModal');
+    }, 700);
+  } catch(e) { showToast(e.message || 'შეცდომა', 'err'); }
+}
+
+async function markDelivered(orderId) {
+  if (!orderId) return;
+  if (!confirm('დაადასტ. რომ ნივთი/მონაცემები გადასცე მყიდველს?')) return;
+  try {
+    await api('/api/orders/' + orderId + '/deliver', { method: 'POST' });
+    showToast('📦 გადაცემა დადასტ.! მყიდველს 48სთ ეძლევა.', 'ok');
+    refreshOrderViews();
+    loadChatRooms();
   } catch(e) { showToast(e.message || 'შეცდომა', 'err'); }
 }
 
 function disputeCurrentOrder() {
   if (!currentOrderId) return;
+  openDisputeFor(currentOrderId);
+}
+
+let disputeFiles = [];
+function handleDisputeFiles(fileList) {
+  disputeFiles = Array.from(fileList).slice(0, 5);
+  updateDisputeFileNames();
+}
+function handleDisputeDrop(e) {
+  e.preventDefault();
+  document.getElementById('dispute-evidence-zone').style.borderColor = 'var(--border2)';
+  disputeFiles = Array.from(e.dataTransfer.files)
+    .filter(f => /image\/|video\/(mp4|webm|quicktime)/.test(f.type))
+    .slice(0, 5);
+  updateDisputeFileNames();
+}
+function updateDisputeFileNames() {
+  const el = document.getElementById('dispute-file-names');
+  if (!el) return;
+  if (!disputeFiles.length) { el.textContent = ''; return; }
+  el.innerHTML = disputeFiles.map(f =>
+    '<span style="display:inline-block;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:2px 7px;margin:2px;font-size:10px">📎 ' + f.name + '</span>'
+  ).join('');
+}
+
+async function submitDispute() {
+  const orderId = document.getElementById('disputeModal')?.dataset.orderId;
+  const reason  = document.getElementById('dispute-reason')?.value || 'other';
+  const desc    = document.getElementById('dispute-desc')?.value?.trim();
+  if (!orderId) { showToast('ორდ. ID ვერ მოვძებნე', 'err'); return; }
+  if (!desc)    { showToast('პრობლემის აღწ. სავალდებულოა', 'err'); return; }
+  if (!disputeFiles.length) { showToast('მინ. 1 სქრინშოტი/ვიდეო საჭიროა', 'err'); return; }
+
+  const btn = document.getElementById('dispute-submit-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ იტვირთება...'; }
+  try {
+    const fd = new FormData();
+    fd.append('order_id', orderId);
+    fd.append('reason', reason);
+    fd.append('description', desc);
+    disputeFiles.forEach(f => fd.append('evidence', f));
+    const token = localStorage.getItem('gb_token');
+    const resp  = await fetch(API_URL + '/api/disputes', {
+      method: 'POST',
+      headers: token ? { 'Authorization': 'Bearer ' + token } : {},
+      body: fd,
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(()=>({}));
+      throw new Error(err.message || err.error || 'dispute_error');
+    }
+    closeM('disputeModal');
+    showToast('⚑ დავა გაიხსნა · ადმინი 24სთ-ში განიხ.', 'ok');
+    disputeFiles = [];
+    const dd = document.getElementById('dispute-desc');
+    if (dd) dd.value = '';
+    const dn = document.getElementById('dispute-file-names');
+    if (dn) dn.textContent = '';
+    refreshOrderViews();
+  } catch(e) {
+    showToast(e.message || 'შეცდომა', 'err');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '⚑ გახსნა'; }
+  }
+}
+
+async function openDisputeFor(orderId) {
   const modal = document.getElementById('disputeModal');
-  if (modal) modal.dataset.orderId = currentOrderId;
+  if (modal) modal.dataset.orderId = orderId;
+  disputeFiles = [];
+  const dn = document.getElementById('dispute-file-names');
+  if (dn) dn.textContent = '';
+  const dd = document.getElementById('dispute-desc');
+  if (dd) dd.value = '';
   openM('disputeModal');
 }
+
+let currentRating = 5;
+const STAR_LABELS = ['','😞 ცუდი','😐 ნორმ.','🙂 კარგი','😊 ძალიან კარგი','🤩 შესანიშნავი'];
+function setStars(n) {
+  currentRating = n;
+  document.querySelectorAll('.star-b').forEach((b, i) => { b.classList.toggle('on', i < n); });
+  const lbl = document.getElementById('star-label-text');
+  if (lbl) lbl.textContent = STAR_LABELS[n] + ' ' + '★'.repeat(n);
+}
+
+async function submitRating() {
+  const m       = document.getElementById('ratingModal');
+  const orderId = m?.dataset.orderId;
+  const comment = document.getElementById('rating-comment')?.value?.trim();
+  if (!orderId) { closeM('ratingModal'); return; }
+  const btn = document.getElementById('rating-submit-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳...'; }
+  try {
+    await api('/api/reviews', {
+      method: 'POST',
+      body: JSON.stringify({ order_id: orderId, rating: currentRating, comment: comment || null })
+    });
+    closeM('ratingModal');
+    showToast('⭐ შეფასება გამოქვეყნდა! მადლობა!', 'ok');
+    refreshOrderViews();
+  } catch(e) {
+    if (e.message === 'already_reviewed') {
+      closeM('ratingModal');
+      showToast('ამ შეკვეთაზე შეფ. უკვე დაწერილია', 'ok');
+    } else {
+      showToast(e.message || 'შეცდომა', 'err');
+      if (btn) { btn.disabled = false; btn.textContent = '⭐ გაგზ.'; }
+    }
+  }
+}
+
+function disputeCurrentOrder_OLD() { /* merged above */ }
 
 // ── renderChats (legacy alias) ─────────────────────────────────
 function renderChats() { loadChatRooms(); }
@@ -3501,30 +3670,32 @@ async function loadMyOrders() {
       return;
     }
     el.innerHTML = orders.map(o => {
-      const isBuyer  = o.buyer_id === currentUser.id;
-      const role     = isBuyer ? '🛒 მყიდველი' : '💰 გამყიდველი';
-      const partner  = isBuyer ? o.seller_username : o.buyer_username;
       const statusMap = {
         pending:'⏳ მოლოდინი', active:'🔒 Escrow',
+        delivered:'📦 გადაცემული',
         completed:'✅ დასრულებული', cancelled:'❌ გაუქმებული', disputed:'⚑ დავა'
       };
       const sColor = {
         pending:'var(--muted)', active:'var(--gold)',
+        delivered:'#22c55e',
         completed:'var(--accent)', cancelled:'var(--red)', disputed:'var(--red)'
       };
-      const canConfirm = isBuyer && o.escrow_status === 'held';
+      const isBuyer    = o.buyer_id === currentUser.id;
+      const canConfirm = isBuyer && ['active','delivered'].includes(o.status) && o.escrow_status === 'held';
+      const canDeliver = !isBuyer && o.status === 'active' && o.escrow_status === 'held';
       return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;margin-bottom:10px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
           <div style="font-size:12px;font-weight:600">${o.listing_title || 'განცხ. #' + o.id.slice(0,8)}</div>
           <span style="font-size:10px;padding:2px 8px;border-radius:4px;background:var(--bg3);color:${sColor[o.status]||'var(--muted)'}">${statusMap[o.status]||o.status}</span>
         </div>
         <div style="display:flex;gap:16px;font-size:11px;color:var(--muted);margin-bottom:10px">
-          <span>${role}</span>
-          <span>👤 ${partner || '?'}</span>
+          <span>${isBuyer ? '🛒 მყიდველი' : '💰 გამყიდველი'}</span>
+          <span>👤 ${isBuyer ? o.seller_username : o.buyer_username || '?'}</span>
           <span style="font-family:var(--mono);color:var(--accent);font-weight:700">₾${Number(o.amount_gel).toFixed(2)}</span>
           <span>${new Date(o.created_at).toLocaleDateString('ka-GE')}</span>
         </div>
         <div style="display:flex;gap:8px">
+          ${canDeliver ? `<button class="btn btn-a btn-sm" onclick="markDelivered('${o.id}')">📦 გადავეცი</button>` : ''}
           ${canConfirm ? `<button class="btn btn-a btn-sm" onclick="confirmOrder('${o.id}',${o.amount_gel})">✅ მიღება დადასტ.</button>` : ''}
           ${canConfirm ? `<button class="btn btn-g btn-sm" onclick="openDisputeFor('${o.id}')">⚑ დავა</button>` : ''}
         </div>
@@ -3551,24 +3722,6 @@ async function openDisputeFor(orderId) {
   const modal = document.getElementById('disputeModal');
   if (modal) modal.dataset.orderId = orderId;
   openM('disputeModal');
-}
-
-async function submitDispute() {
-  const modal  = document.getElementById('disputeModal');
-  const orderId= modal ? modal.dataset.orderId : null;
-  const reason = (document.querySelector('#disputeModal select') || {}).value || 'other';
-  const desc   = (document.querySelector('#disputeModal textarea') || {}).value?.trim();
-  if (!orderId) { showToast('ორდ. ID ვერ მოვძებნე', 'err'); return; }
-  if (!desc)    { showToast('აღწ. სავალდ.', 'err'); return; }
-  try {
-    await api('/api/disputes', {
-      method: 'POST',
-      body: JSON.stringify({ order_id: orderId, reason, description: desc })
-    });
-    closeM('disputeModal');
-    showToast('⚑ დავა გაიხსნა · ადმინი 24სთ-ში განიხ.', 'ok');
-    refreshOrderViews();
-  } catch(e) { showToast(e.message || 'შეცდომა', 'err'); }
 }
 
 // ── ორივე ორდერების view-ის განახლება (profile-ის mini-list + history page) ──
@@ -3632,9 +3785,27 @@ async function loadOrderHistory() {
     }
     el.innerHTML = orders.map(renderOhCard).join('');
     renderOhPagination(data.total_pages || 1, data.page || 1);
+    startOhCountdowns();
   } catch(e) {
     el.innerHTML = '<div class="empty"><div class="empty-ico">⚠️</div><div class="empty-t">ჩატვირთვა ვერ მოხდა</div></div>';
   }
+}
+
+let _ohCdownInterval = null;
+function startOhCountdowns() {
+  if (_ohCdownInterval) clearInterval(_ohCdownInterval);
+  const tick = () => {
+    document.querySelectorAll('.oh-cdown[data-deadline]').forEach(el => {
+      const left = Math.max(0, new Date(el.dataset.deadline) - Date.now());
+      if (left === 0) { el.textContent = '00:00:00'; return; }
+      const h = String(Math.floor(left / 3600000)).padStart(2,'0');
+      const m = String(Math.floor((left % 3600000) / 60000)).padStart(2,'0');
+      const s = String(Math.floor((left % 60000) / 1000)).padStart(2,'0');
+      el.textContent = h + ':' + m + ':' + s;
+    });
+  };
+  tick();
+  _ohCdownInterval = setInterval(tick, 1000);
 }
 
 function ohFmtDT(iso) {
@@ -3658,8 +3829,19 @@ function buildOhTimeline(o) {
   steps += ohStep('done', '🛒', 'შეკვეთა შექმნილი', ohFmtDT(o.created_at));
   steps += ohStep('done', '🔒', `Escrow-ში ₾${Number(o.amount_gel).toFixed(2)} გაიყინა`, ohFmtDT(o.created_at));
 
-  if (o.dispute_id) {
+  if (o.status === 'delivered' && !o.dispute_id) {
+    const deadline = o.confirm_deadline ? new Date(o.confirm_deadline) : null;
+    const left     = deadline ? Math.max(0, deadline - Date.now()) : 0;
+    const h = String(Math.floor(left / 3600000)).padStart(2,'0');
+    const m = String(Math.floor((left % 3600000) / 60000)).padStart(2,'0');
+    const s = String(Math.floor((left % 60000) / 1000)).padStart(2,'0');
+    steps += ohStep('done', '📦', 'გამყიდველმა ნივთი გადასცა', ohFmtDT(o.delivered_at));
+    steps += ohStep('current', '⏳', 'მყიდველის დადასტ. / დავის მოლოდინში',
+      deadline ? `ვადა: ${ohFmtDT(o.confirm_deadline)} · <span class="oh-cdown" data-deadline="${deadline.toISOString()}" style="font-family:var(--mono);color:var(--gold)">${h}:${m}:${s}</span>` : null
+    );
+  } else if (o.dispute_id) {
     const reasonLabel = OH_DISPUTE_REASONS[o.dispute_reason] || o.dispute_reason || '';
+    if (o.delivered_at) steps += ohStep('done', '📦', 'გამყიდველმა ნივთი გადასცა', ohFmtDT(o.delivered_at));
     steps += ohStep('flag', '⚑', 'დავა გაიხსნა' + (reasonLabel ? ' — ' + reasonLabel : ''), ohFmtDT(o.dispute_created_at));
     if (o.dispute_status === 'resolved') {
       const outcome = o.dispute_resolution === 'release' ? 'თანხა გამყიდველს გადაირიცხა' : 'თანხა მყიდველს დაუბრუნდა';
@@ -3668,10 +3850,10 @@ function buildOhTimeline(o) {
       steps += ohStep('current', '⏳', 'ადმინისტრაცია განიხილავს', null);
     }
   } else if (o.status === 'active' && o.escrow_status === 'held') {
-    const deadline = ohFmtDT(o.confirm_deadline);
-    steps += ohStep('current', '⏳', 'მყიდველის დადასტურების მოლოდინში', deadline ? 'ვადა: ' + deadline : null);
+    steps += ohStep('current', '⏳', 'გამყიდველი ნივთს გადასცემს', null);
   } else if (o.status === 'completed') {
-    steps += ohStep('done', '✅', 'მყიდველმა დაადასტურა — Escrow გათავ.', ohFmtDT(o.completed_at));
+    if (o.delivered_at) steps += ohStep('done', '📦', 'გამყიდველმა ნივთი გადასცა', ohFmtDT(o.delivered_at));
+    steps += ohStep('done', '✅', 'მიღება დადასტ. — Escrow გათავ.', ohFmtDT(o.completed_at));
   } else if (o.status === 'cancelled') {
     steps += ohStep('cancelled', '↩️', 'გაუქმდა, თანხა დაბრუნდა' + (o.cancel_reason ? ' — ' + o.cancel_reason : ''), ohFmtDT(o.cancelled_at));
   } else {
@@ -3681,16 +3863,36 @@ function buildOhTimeline(o) {
 }
 
 function renderOhCard(o) {
-  const isBuyer = o.buyer_id === currentUser.id;
-  const role    = isBuyer ? '🛒 მყიდველი' : '💰 გამყიდველი';
-  const partner = isBuyer ? o.seller_username : o.buyer_username;
-  const canAct  = isBuyer && o.escrow_status === 'held' && !o.dispute_id;
-  const canReview = o.status === 'completed' && isBuyer && !o.review_id;
+  const isBuyer    = o.buyer_id === currentUser.id;
+  const role       = isBuyer ? '🛒 მყიდველი' : '💰 გამყიდველი';
+  const partner    = isBuyer ? o.seller_username : o.buyer_username;
+  const canConfirm = isBuyer && ['active','delivered'].includes(o.status) && o.escrow_status === 'held' && !o.dispute_id;
+  const canDeliver = !isBuyer && o.status === 'active' && o.escrow_status === 'held' && !o.dispute_id;
+  const canReview  = o.status === 'completed' && isBuyer && !o.review_id;
+
+  const statusMapExt = { ...OH_STATUS_MAP, delivered: '📦 გადაცემული' };
+  const statusColorExt = { ...OH_STATUS_COLOR, delivered: '#22c55e' };
+
+  let countdownHtml = '';
+  if (o.status === 'delivered' && o.confirm_deadline && !o.dispute_id) {
+    const deadline = new Date(o.confirm_deadline);
+    const left = Math.max(0, deadline - Date.now());
+    const h = String(Math.floor(left / 3600000)).padStart(2,'0');
+    const m = String(Math.floor((left % 3600000) / 60000)).padStart(2,'0');
+    const s = String(Math.floor((left % 60000) / 1000)).padStart(2,'0');
+    countdownHtml = `<div style="background:linear-gradient(135deg,#0a1a0a,#0f2a10);border:1px solid #22c55e30;border-radius:8px;padding:10px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:18px">📦</span>
+      <div>
+        <div style="font-size:11px;color:#86efac;font-weight:600">ნივთი გადაგეცათ — ${ohFmtDT(o.delivered_at)}</div>
+        <div style="font-size:11px;color:var(--muted)">${isBuyer ? 'შეამოწმე · ავტო-დასტ.:' : 'მყიდველი ამოწმებს · ავტო-დასტ.:'} <span class="oh-cdown" data-deadline="${deadline.toISOString()}" style="font-family:var(--mono);color:var(--gold);font-weight:700">${h}:${m}:${s}</span></div>
+      </div>
+    </div>`;
+  }
 
   return `<div class="oh-card">
     <div class="oh-top">
       <div class="oh-title" onclick="openListingDetail('${o.listing_id}')">${o.listing_title || 'განცხ. #' + o.id.slice(0,8)}</div>
-      <span style="font-size:10px;padding:2px 9px;border-radius:4px;background:var(--bg3);color:${OH_STATUS_COLOR[o.status]||'var(--muted)'};font-weight:600">${OH_STATUS_MAP[o.status]||o.status}</span>
+      <span style="font-size:10px;padding:2px 9px;border-radius:4px;background:var(--bg3);color:${statusColorExt[o.status]||'var(--muted)'};font-weight:600">${statusMapExt[o.status]||o.status}</span>
     </div>
     <div class="oh-meta">
       <span>${role}</span>
@@ -3699,12 +3901,14 @@ function renderOhCard(o) {
       <span>${new Date(o.created_at).toLocaleDateString('ka-GE')}</span>
       <span class="oh-orderid">#${o.id.slice(0,8)}</span>
     </div>
+    ${countdownHtml}
     <div class="oh-timeline">${buildOhTimeline(o)}</div>
     <div class="oh-acts">
-      ${canAct ? `<button class="btn btn-a btn-sm" onclick="confirmOrder('${o.id}',${o.amount_gel})">✅ მიღება დადასტ.</button>` : ''}
-      ${canAct ? `<button class="btn btn-g btn-sm" onclick="openDisputeFor('${o.id}')">⚑ დავა</button>` : ''}
+      ${canDeliver ? `<button class="btn btn-a btn-sm" onclick="markDelivered('${o.id}')">📦 გადავეცი</button>` : ''}
+      ${canConfirm ? `<button class="btn btn-a btn-sm" onclick="confirmOrder('${o.id}',${o.amount_gel})">✅ მიღება დადასტ.</button>` : ''}
+      ${canConfirm ? `<button class="btn btn-g btn-sm" onclick="openDisputeFor('${o.id}')">⚑ დავა</button>` : ''}
       ${o.chat_room_id ? `<button class="btn btn-g btn-sm" onclick="openOrderChat('${o.id}')">💬 ჩატი</button>` : ''}
-      ${canReview ? `<button class="btn btn-g btn-sm" onclick="document.getElementById('ratingModal').dataset.orderId='${o.id}';openM('ratingModal')">⭐ შეფასება</button>` : ''}
+      ${canReview ? `<button class="btn btn-g btn-sm" onclick="(()=>{const rm=document.getElementById('ratingModal');if(rm)rm.dataset.orderId='${o.id}';api('/api/orders/${o.id}').then(ord=>{const sn=document.getElementById('rating-seller-name');if(sn)sn.textContent='გამყიდველი: '+(ord.seller_username||'?');}).catch(()=>{});setStars(5);openM('ratingModal')})()">⭐ შეფასება</button>` : ''}
     </div>
   </div>`;
 }

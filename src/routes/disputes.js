@@ -1,15 +1,33 @@
 // src/routes/disputes.js
 'use strict';
 
-const express = require('express');
-const db      = require('../db');
+const express    = require('express');
+const multer     = require('multer');
+const db         = require('../db');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
-const mailer  = require('../utils/mailer');
-const push    = require('../utils/push');
-const router  = express.Router();
+const mailer     = require('../utils/mailer');
+const push       = require('../utils/push');
+const cloudinary = require('../utils/cloudinary');
+const router     = express.Router();
 
-// POST /api/disputes  — დავის გახსნა
-router.post('/', requireAuth, async (req, res) => {
+// multer — memoryStorage, Cloudinary-ში ასატვირთად
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: (Number(process.env.MAX_FILE_SIZE_MB) || 10) * 1024 * 1024, // 10MB
+    files: 5, // მაქს. 5 ფაილი ერთ დავაში
+  },
+  fileFilter: (req, file, cb) => {
+    const ok = /image\/(jpeg|png|webp|gif)|video\/(mp4|webm|quicktime)/.test(file.mimetype);
+    cb(ok ? null : new Error('only_images_or_videos'), ok);
+  },
+});
+
+// ══════════════════════════════════════════════════════════════
+// POST /api/disputes  — დავის გახსნა (± evidence ფაილები)
+// multipart/form-data: reason, description, order_id + files[]
+// ══════════════════════════════════════════════════════════════
+router.post('/', requireAuth, upload.array('evidence', 5), async (req, res) => {
   try {
     const { order_id, reason, description } = req.body;
     if (!order_id || !reason || !description)
@@ -21,35 +39,52 @@ router.post('/', requireAuth, async (req, res) => {
 
     if (order.buyer_id !== req.user.id && order.seller_id !== req.user.id)
       return res.status(403).json({ error: 'forbidden' });
-    if (!['active','pending'].includes(order.status))
-      return res.status(400).json({ error: 'cannot_dispute_this_order' });
+    if (!['active', 'delivered'].includes(order.status))
+      return res.status(400).json({ error: 'cannot_dispute_this_order', current: order.status });
 
-    const { rows: ex } = await db.query(
-      'SELECT id FROM disputes WHERE order_id=$1', [order_id]
-    );
+    const { rows: ex } = await db.query('SELECT id FROM disputes WHERE order_id=$1', [order_id]);
     if (ex.length) return res.status(409).json({ error: 'dispute_exists' });
 
-    const { rows } = await db.query(`
-      INSERT INTO disputes(order_id,opened_by,reason,description)
-      VALUES($1,$2,$3,$4) RETURNING *
-    `, [order_id, req.user.id, reason, description]);
+    // ── Evidence ფაილების ატვირთვა Cloudinary-ში ───────────
+    const evidenceUrls = [];
+    if (req.files && req.files.length > 0) {
+      if (!cloudinary.isConfigured()) {
+        return res.status(503).json({ error: 'file_upload_not_configured' });
+      }
+      for (const file of req.files) {
+        const isVideo   = file.mimetype.startsWith('video/');
+        const result    = await cloudinary.uploadBuffer(file.buffer, {
+          folder:        'gamerbazar/disputes',
+          resource_type: isVideo ? 'video' : 'image',
+          public_id:     `dispute_${order_id}_${Date.now()}_${evidenceUrls.length}`,
+        });
+        evidenceUrls.push(result.secure_url);
+      }
+    }
 
-    // order → disputed
-    await db.query(
-      "UPDATE orders SET status='disputed', escrow_status='disputed' WHERE id=$1",
-      [order_id]
-    );
+    // ── DB: dispute შექმნა + order → disputed ──────────────
+    const { rows } = await db.query(`
+      INSERT INTO disputes(order_id, opened_by, reason, description, evidence_urls)
+      VALUES($1, $2, $3, $4, $5) RETURNING *
+    `, [order_id, req.user.id, reason, description, evidenceUrls]);
+
+    await db.query(`
+      UPDATE orders SET
+        status        = 'disputed',
+        escrow_status = 'disputed',
+        disputed_at   = NOW(),
+        updated_at    = NOW()
+      WHERE id=$1
+    `, [order_id]);
 
     res.status(201).json(rows[0]);
 
-    // შეტყობ. — მეორე მონაწ. + ადმინები
+    // ── შეტყობ. ─────────────────────────────────────────────
     (async () => {
       try {
-        const dispute = rows[0];
+        const dispute      = rows[0];
         const otherPartyId = order.buyer_id === req.user.id ? order.seller_id : order.buyer_id;
-        const { rows: listingRows } = await db.query(
-          'SELECT title FROM listings WHERE id=$1', [order.listing_id]
-        );
+        const { rows: listingRows } = await db.query('SELECT title FROM listings WHERE id=$1', [order.listing_id]);
         const listing = listingRows[0] || { title: 'განცხადება' };
 
         const { rows: recipients } = await db.query(
@@ -58,6 +93,15 @@ router.post('/', requireAuth, async (req, res) => {
            SELECT id, email, notif_email FROM users WHERE role='admin'`,
           [otherPartyId]
         );
+
+        // ჩატში სისტ. შეტყობინება — ტაიმერი გაიყინა
+        const { rows: roomRows } = await db.query('SELECT id FROM chat_rooms WHERE order_id=$1', [order_id]);
+        if (roomRows.length) {
+          await db.query(`
+            INSERT INTO messages(room_id, sender_id, content, content_type)
+            VALUES($1, $2, '⚠️ დავა გაიხსნა — 48-საათიანი ტაიმერი გაჩერებულია. ადმინისტრაცია განიხილავს საქმეს.', 'system')
+          `, [roomRows[0].id, req.user.id]);
+        }
 
         for (const recipient of recipients) {
           await mailer.sendDisputeOpenedEmail(recipient, dispute, order, listing);
@@ -71,11 +115,16 @@ router.post('/', requireAuth, async (req, res) => {
       } catch (e) { console.error('dispute open notify error:', e.message); }
     })();
   } catch (err) {
+    if (err.message === 'only_images_or_videos')
+      return res.status(400).json({ error: 'only_images_or_videos_allowed' });
+    console.error('dispute create:', err.message);
     res.status(500).json({ error: 'server_error' });
   }
 });
 
+// ══════════════════════════════════════════════════════════════
 // GET /api/disputes/:id
+// ══════════════════════════════════════════════════════════════
 router.get('/:id', requireAuth, async (req, res) => {
   try {
     const { rows } = await db.query(`
@@ -99,53 +148,56 @@ router.get('/:id', requireAuth, async (req, res) => {
   }
 });
 
-// PUT /api/disputes/:id/resolve  — Admin-ის გადაწ.
+// ══════════════════════════════════════════════════════════════
+// PUT /api/disputes/:id/resolve  — Admin-ის გადაწყვეტილება
+// ══════════════════════════════════════════════════════════════
 router.put('/:id/resolve', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { resolution, admin_note } = req.body;
     if (!['release','refund'].includes(resolution))
       return res.status(400).json({ error: 'resolution must be release or refund' });
 
-    const { rows: d } = await db.query(
-      'SELECT * FROM disputes WHERE id=$1', [req.params.id]
-    );
+    const { rows: d } = await db.query('SELECT * FROM disputes WHERE id=$1', [req.params.id]);
     if (!d.length) return res.status(404).json({ error: 'not_found' });
 
-    const { rows: o } = await db.query(
-      'SELECT * FROM orders WHERE id=$1', [d[0].order_id]
-    );
+    const { rows: o } = await db.query('SELECT * FROM orders WHERE id=$1', [d[0].order_id]);
     const order = o[0];
 
     await db.transaction(async (client) => {
       if (resolution === 'release') {
-        // გამყ-ს გადახდა
-        await client.query(
-          'UPDATE users SET balance_gel=balance_gel+$1 WHERE id=$2',
-          [order.seller_receives, order.seller_id]
-        );
+        // გამყიდველს + 24სთ hold (ადმინის გადაწყვეტილებაზეც ვრცელდება)
+        await client.query(`
+          UPDATE users SET
+            balance_gel          = balance_gel + $1,
+            balance_available_at = GREATEST(
+              COALESCE(balance_available_at, NOW()),
+              NOW() + INTERVAL '24 hours'
+            )
+          WHERE id=$2
+        `, [order.seller_receives, order.seller_id]);
         await client.query(
           'UPDATE users SET escrow_hold_gel=escrow_hold_gel-$1 WHERE id=$2',
           [order.amount_gel, order.buyer_id]
         );
         await client.query(
-          "UPDATE orders SET escrow_status='released',status='completed',completed_at=NOW() WHERE id=$1",
+          "UPDATE orders SET escrow_status='released',status='completed',completed_at=NOW(),updated_at=NOW() WHERE id=$1",
           [order.id]
         );
       } else {
-        // მყიდვ-ს დაბრ.
+        // მყიდველს დაბრ. — deposit-ი hold-ის გარეშე (მყიდველი არ სჯდება hold-ზე)
         await client.query(
           'UPDATE users SET balance_gel=balance_gel+$1, escrow_hold_gel=escrow_hold_gel-$1 WHERE id=$2',
           [order.amount_gel, order.buyer_id]
         );
         await client.query(
-          "UPDATE orders SET escrow_status='refunded',status='cancelled',cancelled_at=NOW() WHERE id=$1",
+          "UPDATE orders SET escrow_status='refunded',status='cancelled',cancelled_at=NOW(),updated_at=NOW() WHERE id=$1",
           [order.id]
         );
       }
       await client.query(`
         UPDATE disputes SET
           status='resolved', resolution=$1, admin_note=$2,
-          resolved_by=$3, resolved_at=NOW()
+          resolved_by=$3, resolved_at=NOW(), updated_at=NOW()
         WHERE id=$4
       `, [resolution, admin_note || '', req.user.id, req.params.id]);
     });
@@ -155,9 +207,7 @@ router.put('/:id/resolve', requireAuth, requireAdmin, async (req, res) => {
     // შეტყობ. — მყიდველი + გამყიდველი
     (async () => {
       try {
-        const { rows: listingRows } = await db.query(
-          'SELECT title FROM listings WHERE id=$1', [order.listing_id]
-        );
+        const { rows: listingRows } = await db.query('SELECT title FROM listings WHERE id=$1', [order.listing_id]);
         const listing = listingRows[0] || { title: 'განცხადება' };
         const dispute = { ...d[0], resolution, admin_note: admin_note || '' };
 
@@ -170,7 +220,7 @@ router.put('/:id/resolve', requireAuth, requireAdmin, async (req, res) => {
           await mailer.sendDisputeResolvedEmail(recipient, dispute, order, listing, resolution);
           await push.sendToUser(recipient.id, {
             title: '🛡️ დავა გადაწყდა',
-            body: `${listing.title} — ${resolution === 'release' ? 'თანხა გამყიდველს' : 'თანხა მყიდველს'}`,
+            body: `${listing.title} — ${resolution === 'release' ? 'თანხა გამყ-ს' : 'თანხა მყიდ-ს'}`,
             url: `/?order=${order.id}`,
             tag: `dispute-${dispute.id}-resolved`,
           });

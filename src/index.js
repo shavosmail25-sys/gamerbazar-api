@@ -121,7 +121,9 @@ if (process.env.NODE_ENV !== 'production') {
         'POST   /api/listings/:id/vip',
         'POST   /api/orders',
         'GET    /api/orders/me',
+        'GET    /api/orders/history',
         'GET    /api/orders/:id',
+        'POST   /api/orders/:id/deliver',
         'POST   /api/orders/:id/confirm',
         'POST   /api/orders/:id/cancel',
         'GET    /api/wallet/balance',
@@ -176,6 +178,165 @@ setupWebSocket(server);
 // ══════════════════════════════════════════════════════════════
 // ⏰ CRON — Order-ების ავტო-გაუქმება (48სთ deadline)
 // ══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+// ⏰ CRON 1 — „Delivered" შეკვეთების ავტო-დასრულება
+// status='delivered' + confirm_deadline < NOW() → completed
+// გამყიდველს ფული ჩაირიცხება + 24სთ hold
+// ══════════════════════════════════════════════════════════════
+async function expireDelivered() {
+  try {
+    const { rows } = await db.query(`
+      SELECT o.id, o.buyer_id, o.seller_id, o.listing_id,
+             o.amount_gel, o.seller_receives, o.escrow_status,
+             l.title AS listing_title
+      FROM orders o
+      JOIN listings l ON l.id = o.listing_id
+      WHERE o.status = 'delivered'
+        AND o.escrow_status = 'held'
+        AND o.confirm_deadline IS NOT NULL
+        AND o.confirm_deadline < NOW()
+    `);
+
+    if (!rows.length) return;
+    console.log(`📦 Auto-completing ${rows.length} delivered order(s)...`);
+
+    for (const order of rows) {
+      try {
+        await db.transaction(async (client) => {
+          // buyer-ის escrow_hold გათავისუფლება
+          await client.query(
+            'UPDATE users SET escrow_hold_gel=escrow_hold_gel-$1 WHERE id=$2',
+            [order.amount_gel, order.buyer_id]
+          );
+          // გამყიდველს ბალანსი + 24სთ hold
+          await client.query(`
+            UPDATE users SET
+              balance_gel          = balance_gel + $1,
+              balance_available_at = GREATEST(
+                COALESCE(balance_available_at, NOW()),
+                NOW() + INTERVAL '24 hours'
+              )
+            WHERE id = $2
+          `, [order.seller_receives, order.seller_id]);
+
+          await client.query(`
+            UPDATE orders SET
+              status        = 'completed',
+              escrow_status = 'released',
+              buyer_confirmed = FALSE,
+              completed_at  = NOW(),
+              updated_at    = NOW()
+            WHERE id = $1
+          `, [order.id]);
+
+          await client.query(
+            "INSERT INTO transactions(user_id,order_id,type,amount_gel,description) VALUES($1,$2,'sale_income',$3,'ავტო-დასრ.: 48სთ ტაიმერი')",
+            [order.seller_id, order.id, order.seller_receives]
+          );
+          await client.query(
+            "INSERT INTO transactions(user_id,order_id,type,amount_gel,description) VALUES($1,$2,'platform_fee',$3,'პლატფ. კომ.')",
+            [order.seller_id, order.id, -(order.amount_gel - order.seller_receives)]
+          );
+          await client.query("UPDATE listings SET status='sold' WHERE id=$1", [order.listing_id]);
+        });
+
+        console.log(`  ✅ Order ${order.id} auto-completed → seller +₾${order.seller_receives} (24h hold)`);
+
+        try {
+          const listing = { title: order.listing_title };
+          const { rows: sellerRows } = await db.query('SELECT id, email, notif_email FROM users WHERE id=$1', [order.seller_id]);
+          const { rows: buyerRows }  = await db.query('SELECT id, email, notif_email FROM users WHERE id=$1', [order.buyer_id]);
+
+          // Chat-ში სისტ. შეტყობ.
+          const { rows: roomRows } = await db.query('SELECT id FROM chat_rooms WHERE order_id=$1', [order.id]);
+          if (roomRows.length) {
+            await db.query(`
+              INSERT INTO messages(room_id, sender_id, content, content_type)
+              VALUES($1, $2, '✅ 48-საათიანი ვადა გავიდა — შეკვეთა ავტომატურად დასრულდა. ფული გამყიდველს გადაეცა.', 'system')
+            `, [roomRows[0].id, order.seller_id]);
+          }
+
+          if (sellerRows.length) await mailer.sendOrderConfirmedEmail(sellerRows[0], order, listing);
+          await push.sendToUser(order.seller_id, {
+            title: '✅ ავტო-დასტური',
+            body: `${listing.title} — ₾${Number(order.seller_receives).toFixed(2)} ბალანსზე (24სთ hold)`,
+            url: `/?page=wallet`, tag: `order-${order.id}-auto-completed`,
+          });
+          if (buyerRows.length) await mailer.sendOrderExpiredEmail(buyerRows[0], order, listing);
+          await push.sendToUser(order.buyer_id, {
+            title: '⏰ ავტო-დასტური',
+            body: `${listing.title} — 48სთ ვადა გავიდა, შეკვ. დასრულდა`,
+            url: `/?order=${order.id}`, tag: `order-${order.id}-auto-buyer`,
+          });
+        } catch (e) { console.error(`  ⚠️ auto-complete notify failed:`, e.message); }
+      } catch (e) {
+        console.error(`  ❌ auto-complete failed for ${order.id}:`, e.message);
+      }
+    }
+  } catch (err) {
+    console.error('expireDelivered error:', err.message);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// ⏰ CRON 2 — 24სთ შეხსენება (მყიდველს ჩატში + email + push)
+// გაიშვება: delivered_at + 24სთ < NOW() AND reminder_24h_sent=FALSE
+// ══════════════════════════════════════════════════════════════
+async function send24hReminders() {
+  try {
+    const { rows } = await db.query(`
+      SELECT o.id, o.buyer_id, o.seller_id, o.listing_id,
+             o.amount_gel, o.confirm_deadline, l.title AS listing_title
+      FROM orders o
+      JOIN listings l ON l.id = o.listing_id
+      WHERE o.status = 'delivered'
+        AND o.reminder_24h_sent = FALSE
+        AND o.delivered_at IS NOT NULL
+        AND o.delivered_at + INTERVAL '24 hours' < NOW()
+        AND o.confirm_deadline > NOW()
+    `);
+
+    if (!rows.length) return;
+    console.log(`⏰ Sending 24h reminders for ${rows.length} order(s)...`);
+
+    for (const order of rows) {
+      try {
+        const listing = { title: order.listing_title };
+
+        // ჩატში სისტ. შეტყობ.
+        const { rows: roomRows } = await db.query('SELECT id FROM chat_rooms WHERE order_id=$1', [order.id]);
+        if (roomRows.length) {
+          await db.query(`
+            INSERT INTO messages(room_id, sender_id, content, content_type)
+            VALUES($1, $2, '⏰ შეახსენება: დარჩა 24 საათი! დაადასტ. მიღება ან გახსენი დავა, წინ. შემთხ. ფული ავტომ. გამყ-ს გადაეცემა.', 'system')
+          `, [roomRows[0].id, order.seller_id]);
+        }
+
+        const { rows: buyerRows } = await db.query('SELECT id, email, notif_email FROM users WHERE id=$1', [order.buyer_id]);
+        if (buyerRows.length) await mailer.send24hReminderEmail(buyerRows[0], order, listing);
+        await push.sendToUser(order.buyer_id, {
+          title: '⏰ 24 საათი დარჩა',
+          body: `${listing.title} — დაადასტ. ან გახსენი დავა`,
+          url: `/?order=${order.id}`, tag: `order-${order.id}-reminder`,
+        });
+
+        // flag → TRUE
+        await db.query('UPDATE orders SET reminder_24h_sent=TRUE, updated_at=NOW() WHERE id=$1', [order.id]);
+        console.log(`  ✅ Reminder sent for ${order.id}`);
+      } catch (e) {
+        console.error(`  ⚠️ reminder failed for ${order.id}:`, e.message);
+      }
+    }
+  } catch (err) {
+    console.error('send24hReminders error:', err.message);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// ⏰ CRON 3 — Legacy: „active" შეკვეთები (გამყ. ჯერ არ მიუწვდენია)
+// active + escrow=held + deadline < NOW() → გაუქმება + refund მყიდველს
+// (ეს ხდება მაშინ, როცა deliver-ი საერთოდ არ მომხდარა)
+// ══════════════════════════════════════════════════════════════
 async function expireOrders() {
   try {
     const { rows } = await db.query(`
@@ -184,66 +345,51 @@ async function expireOrders() {
       JOIN listings l ON l.id = o.listing_id
       WHERE o.status = 'active'
         AND o.escrow_status = 'held'
-        AND o.confirm_deadline IS NOT NULL
-        AND o.confirm_deadline < NOW()
+        AND o.created_at + INTERVAL '5 days' < NOW()
     `);
 
     if (!rows.length) return;
-
-    console.log(`⏰ Expiring ${rows.length} order(s)...`);
+    console.log(`↩️ Expiring ${rows.length} stale active order(s)...`);
 
     for (const order of rows) {
       try {
         await db.transaction(async (client) => {
-          // Escrow დაბრუნება მყიდველს
           if (order.escrow_status === 'held') {
             await client.query(
               'UPDATE users SET balance_gel=balance_gel+$1, escrow_hold_gel=escrow_hold_gel-$1 WHERE id=$2',
               [order.amount_gel, order.buyer_id]
             );
             await client.query(
-              `INSERT INTO transactions(user_id, order_id, type, amount_gel, description)
-               VALUES($1, $2, 'escrow_refund', $3, 'ავტო-გაუქმება: 48სთ გავიდა')`,
+              "INSERT INTO transactions(user_id,order_id,type,amount_gel,description) VALUES($1,$2,'escrow_refund',$3,'ავტო-გაუქმება: გამყ. 5 დღეში ვერ მიაწვდინა')",
               [order.buyer_id, order.id, order.amount_gel]
             );
           }
-
           await client.query(`
             UPDATE orders SET
-              status       = 'cancelled',
+              status        = 'cancelled',
               escrow_status = 'refunded',
-              cancelled_at = NOW(),
-              cancel_reason = 'ავტომ. გაუქმება — მყიდვ. 48სთ-ში არ დაადასტ.'
+              cancelled_at  = NOW(),
+              cancel_reason = 'ავტომ. გაუქმება — გამყ. 5 დღეში ვერ მიაწვდინა',
+              updated_at    = NOW()
             WHERE id = $1
           `, [order.id]);
-
-          // listing → active (ისევ გამოჩნდეს)
-          await client.query(
-            "UPDATE listings SET status='active' WHERE id=(SELECT listing_id FROM orders WHERE id=$1)",
-            [order.id]
-          );
+          await client.query("UPDATE listings SET status='active' WHERE id=$1", [order.listing_id]);
         });
 
-        console.log(`  ✅ Order ${order.id} expired + refunded ₾${order.amount_gel}`);
+        console.log(`  ✅ Stale order ${order.id} refunded ₾${order.amount_gel}`);
 
-        // შეტყობ. მყიდველს — email + push
         try {
-          const { rows: buyerRows } = await db.query(
-            'SELECT id, email, notif_email FROM users WHERE id=$1', [order.buyer_id]
-          );
+          const { rows: buyerRows } = await db.query('SELECT id, email, notif_email FROM users WHERE id=$1', [order.buyer_id]);
           const listing = { title: order.listing_title };
-          if (buyerRows.length) {
-            await mailer.sendOrderExpiredEmail(buyerRows[0], order, listing);
-          }
+          if (buyerRows.length) await mailer.sendOrderExpiredEmail(buyerRows[0], order, listing);
           await push.sendToUser(order.buyer_id, {
-            title: '⏰ შეკვეთის ვადა გავიდა',
-            body: `${listing.title} — ₾${Number(order.amount_gel).toFixed(2)} დაბრუნდა`,
-            url: `/?page=wallet`,
-            tag: `order-${order.id}-expired`,
+            title: '↩️ შეკვ. გაუქმდა',
+            body: `${listing.title} — გამყ. ვერ მიაწვდინა, ₾${Number(order.amount_gel).toFixed(2)} დაბრ.`,
+            url: `/?page=wallet`, tag: `order-${order.id}-expired`,
           });
-        } catch (e) { console.error(`  ⚠️ notify failed for ${order.id}:`, e.message); }
+        } catch (e) { console.error(`  ⚠️ notify failed:`, e.message); }
       } catch (e) {
-        console.error(`  ❌ Order ${order.id} expire failed:`, e.message);
+        console.error(`  ❌ expire failed for ${order.id}:`, e.message);
       }
     }
   } catch (err) {
@@ -280,10 +426,17 @@ async function start() {
     }
     console.log('\n👉 Frontend: gamer-market-ge.html\n');
 
-    // ── Cron: ყოველ 15 წუთში expired orders-ის შემოწ. ──────
-    expireOrders(); // გაშვებისთანავე ერთხელ
-    setInterval(expireOrders, 15 * 60 * 1000);
-    console.log('⏰ Order expiry cron: ყოველ 15 წუთში');
+    // ── Cron-ები ─────────────────────────────────────────────
+    // 1. Delivered → auto-complete (48სთ ვადა)
+    expireDelivered();
+    setInterval(expireDelivered, 10 * 60 * 1000); // ყოველ 10 წუთში
+    // 2. 24სთ reminder (delivered-ის 24სთ შემდეგ)
+    send24hReminders();
+    setInterval(send24hReminders, 10 * 60 * 1000);
+    // 3. Stale active orders (გამყ. 5 დღეში ვერ მიაწვდინა)
+    expireOrders();
+    setInterval(expireOrders, 30 * 60 * 1000); // ყოველ 30 წუთში
+    console.log('⏰ Order crons: expireDelivered + 24hReminder (10წთ), expireOrders (30წთ)');
   });
 }
 
