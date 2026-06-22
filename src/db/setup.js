@@ -20,13 +20,14 @@ CREATE TABLE IF NOT EXISTS users (
   bio               TEXT,
   avatar_url        VARCHAR(500),
   gmail_id          VARCHAR(255) UNIQUE,
-  auth_provider     VARCHAR(20)  NOT NULL DEFAULT 'email' CHECK (auth_provider IN ('email','google')),
+  auth_provider     VARCHAR(20)  NOT NULL DEFAULT 'email',
   password_hash     VARCHAR(255),
   email_verified    BOOLEAN      NOT NULL DEFAULT FALSE,
-  balance_gel       NUMERIC(12,2) NOT NULL DEFAULT 0.00,
-  balance_usd       NUMERIC(12,2) NOT NULL DEFAULT 0.00,
-  escrow_hold_gel   NUMERIC(12,2) NOT NULL DEFAULT 0.00,
-  role              VARCHAR(20)  NOT NULL DEFAULT 'user' CHECK (role IN ('user','seller','admin','banned')),
+  balance_gel           NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+  balance_usd           NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+  escrow_hold_gel       NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+  balance_available_at  TIMESTAMPTZ,   -- გამყიდველის hold: confirm + 24სთ შემდეგ გამოტანა შეიძლება
+  role              VARCHAR(20)  NOT NULL DEFAULT 'user',
   is_verified_seller BOOLEAN    NOT NULL DEFAULT FALSE,
   discord_handle    VARCHAR(100),
   steam_id          VARCHAR(50),
@@ -44,15 +45,15 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS listings (
   id             UUID         PRIMARY KEY DEFAULT uuid_generate_v4(),
   seller_id      UUID         NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  category       VARCHAR(30)  NOT NULL CHECK (category IN ('mobile','pc','social','boosting','currency')),
+  category       VARCHAR(30)  NOT NULL,
   game           VARCHAR(100) NOT NULL,
-  listing_type   VARCHAR(20)  NOT NULL CHECK (listing_type IN ('account','item','currency','boosting','service')),
+  listing_type   VARCHAR(20)  NOT NULL,
   title          VARCHAR(200) NOT NULL,
   description    TEXT,
   tags           TEXT[]       DEFAULT '{}',
   images         TEXT[]       DEFAULT '{}',
   price_gel      NUMERIC(10,2) NOT NULL,
-  status         VARCHAR(20)  NOT NULL DEFAULT 'active' CHECK (status IN ('active','pending','sold','blocked','deleted')),
+  status         VARCHAR(20)  NOT NULL DEFAULT 'active',
   is_vip         BOOLEAN      NOT NULL DEFAULT FALSE,
   vip_expires_at TIMESTAMPTZ,
   views_count    INT          NOT NULL DEFAULT 0,
@@ -70,13 +71,16 @@ CREATE TABLE IF NOT EXISTS orders (
   amount_gel        NUMERIC(10,2) NOT NULL,
   platform_fee_pct  NUMERIC(4,2) NOT NULL DEFAULT 5.00,
   seller_receives   NUMERIC(10,2) NOT NULL,
-  escrow_status     VARCHAR(20)  NOT NULL DEFAULT 'pending' CHECK (escrow_status IN ('pending','held','released','refunded','disputed')),
+  escrow_status     VARCHAR(20)  NOT NULL DEFAULT 'pending',
   confirm_deadline  TIMESTAMPTZ,
-  status            VARCHAR(20)  NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','active','completed','cancelled','disputed')),
+  status            VARCHAR(20)  NOT NULL DEFAULT 'pending',
   buyer_confirmed   BOOLEAN      DEFAULT NULL,
+  delivered_at      TIMESTAMPTZ,
+  disputed_at       TIMESTAMPTZ,
   completed_at      TIMESTAMPTZ,
   cancelled_at      TIMESTAMPTZ,
   cancel_reason     TEXT,
+  reminder_24h_sent BOOLEAN      NOT NULL DEFAULT FALSE,
   created_at        TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
   updated_at        TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
@@ -129,18 +133,19 @@ CREATE TABLE IF NOT EXISTS reviews (
 
 -- ── DISPUTES ─────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS disputes (
-  id          UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
-  order_id    UUID        NOT NULL UNIQUE REFERENCES orders(id),
-  opened_by   UUID        NOT NULL REFERENCES users(id),
-  reason      VARCHAR(50) NOT NULL,
-  description TEXT        NOT NULL,
-  status      VARCHAR(20) NOT NULL DEFAULT 'open' CHECK (status IN ('open','resolved')),
-  resolution  VARCHAR(20) CHECK (resolution IN ('release','refund')),
-  admin_note  TEXT,
-  resolved_by UUID        REFERENCES users(id),
-  resolved_at TIMESTAMPTZ,
-  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  id            UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+  order_id      UUID        NOT NULL UNIQUE REFERENCES orders(id),
+  opened_by     UUID        NOT NULL REFERENCES users(id),
+  reason        VARCHAR(50) NOT NULL,
+  description   TEXT        NOT NULL,
+  evidence_urls TEXT[]      DEFAULT '{}',
+  status        VARCHAR(20) NOT NULL DEFAULT 'open',
+  resolution    VARCHAR(20),
+  admin_note    TEXT,
+  resolved_by   UUID        REFERENCES users(id),
+  resolved_at   TIMESTAMPTZ,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- ── VIP PURCHASES ─────────────────────────────────────────────
@@ -237,6 +242,25 @@ async function setupDatabase() {
     await client.query(SCHEMA);
     console.log('✅ ყველა ცხრილი შეიქმნა');
 
+    // ── Migration: ახალი სვეტები (IF NOT EXISTS — უსაფრთხო განახლება) ──
+    const migrations = [
+      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivered_at      TIMESTAMPTZ`,
+      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS disputed_at       TIMESTAMPTZ`,
+      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS reminder_24h_sent BOOLEAN NOT NULL DEFAULT FALSE`,
+      `ALTER TABLE disputes ADD COLUMN IF NOT EXISTS evidence_urls   TEXT[] DEFAULT '{}'`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS balance_available_at TIMESTAMPTZ`,
+    ];
+    for (const sql of migrations) {
+      try {
+        await client.query(sql);
+        const col = sql.match(/ADD COLUMN IF NOT EXISTS (\S+)/)?.[1] || '?';
+        console.log(`  ✅ migration: ${col}`);
+      } catch (e) {
+        console.error(`  ⚠️ migration skip (${e.message.split('\n')[0]})`);
+      }
+    }
+    console.log('✅ Migrations დასრულდა');
+
     // Admin user (პირველი გაშვებისას)
     const existing = await client.query(
       "SELECT id FROM users WHERE email = 'admin@gamerbazar.ge'"
@@ -270,45 +294,7 @@ async function setupDatabase() {
 
 // ← ამ ფაილს პირდაპირ არ ვუშვებთ production-ში
 // index.js-ის start()-ი ამოწმებს ცხრილებს
-// ეს ფუნქცია migration-ად გამოიყენება უკვე არსებულ DB-ზე
-async function runMigrations() {
-  const client = await pool.connect();
-  try {
-    // email_verifications ცხრილი
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS email_verifications (
-        id         UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
-        user_id    UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        token      VARCHAR(64) NOT NULL UNIQUE,
-        expires_at TIMESTAMPTZ NOT NULL,
-        used       BOOLEAN     NOT NULL DEFAULT FALSE,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-      CREATE INDEX IF NOT EXISTS idx_email_ver_token ON email_verifications(token);
-    `);
-
-    // password_resets ცხრილი
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS password_resets (
-        id         UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
-        user_id    UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        token      VARCHAR(64) NOT NULL UNIQUE,
-        expires_at TIMESTAMPTZ NOT NULL,
-        used       BOOLEAN     NOT NULL DEFAULT FALSE,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-      CREATE INDEX IF NOT EXISTS idx_pwd_reset_token ON password_resets(token);
-    `);
-
-    console.log('✅ Migrations გაიარა');
-  } catch(err) {
-    console.error('Migration error:', err.message);
-  } finally {
-    client.release();
-  }
-}
-
 if (require.main === module) {
-  setupDatabase().then(() => runMigrations());
+  setupDatabase();
 }
-module.exports = { setupDatabase, runMigrations };
+module.exports = { setupDatabase };
