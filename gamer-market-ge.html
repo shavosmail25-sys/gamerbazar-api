@@ -711,7 +711,7 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
   <div class="nav-links">
     <div class="nl on" onclick="pg('home');act(this)">მთავარი</div>
     <div class="nl" onclick="pg('listings');act(this)">განცხადებები</div>
-    <div class="nl" onclick="pg('chat');act(this)">ჩატი</div>
+    <div class="nl" onclick="pg('chat');act(this)" style="position:relative">ჩატი<span id="nav-chat-badge" style="display:none;position:absolute;top:-4px;right:-8px;background:var(--red,#ef4444);color:#fff;font-size:9px;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:none;align-items:center;justify-content:center;padding:0 4px;line-height:16px"></span></div>
     <div class="nl" onclick="pg('wallet');act(this)">საფულე</div>
     <div class="nl" onclick="pg('profile');act(this)">პროფილი</div>
     <div class="nl" onclick="pg('edit');act(this)">⚙️ პარამეტრები</div>
@@ -1008,14 +1008,6 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
             <button class="btn btn-a btn-sm" id="chat-deliver-btn" onclick="markDelivered(currentOrderId)" style="margin-left:4px;display:none">📦 გადავეცი</button>
             <button class="btn btn-a btn-sm" id="chat-confirm-btn" onclick="confirmCurrentOrder()" style="margin-left:4px;display:none">✅ დადასტ.</button>
             <button class="btn btn-g btn-sm" id="chat-dispute-btn" onclick="disputeCurrentOrder()" style="margin-left:4px;display:none">⚑ დავა</button>
-          </div>
-        </div>
-        <!-- Delivered countdown banner — ჩანს მხოლოდ delivered სტატუსზე -->
-        <div id="chat-delivered-banner" style="display:none;margin:0 0 4px 0;background:linear-gradient(135deg,#0a1a0a,#0f2a10);border-bottom:1px solid #22c55e30;padding:8px 14px;display:none;align-items:center;gap:10px">
-          <span style="font-size:16px">📦</span>
-          <div style="flex:1;min-width:0">
-            <div style="font-size:11px;color:#86efac;font-weight:600" id="chat-delivered-msg">ნივთი გადაგეცათ</div>
-            <div style="font-size:11px;color:var(--muted)">ავტო-დადასტ.: <span id="chat-cdown" style="font-family:var(--mono);color:var(--gold);font-weight:700">--:--:--</span></div>
           </div>
         </div>
       </div>
@@ -1427,6 +1419,48 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
     <div class="m-acts"><button class="btn btn-g" onclick="closeM('confirmModal');openM('disputeModal')">⚑ დავა</button><button class="btn btn-a" onclick="closeM('confirmModal');openM('ratingModal')">✓ დადასტ.</button></div>
   </div>
 </div>
+<!-- ── Deliver Confirmation Modal ─────────────────────────────── -->
+<div class="modal-bg" id="deliverModal" onclick="if(event.target===this)closeM('deliverModal')">
+  <div class="modal" style="max-width:380px;text-align:center">
+    <div style="font-size:36px;margin-bottom:8px">📦</div>
+    <div class="modal-title" style="font-size:16px">ნივთის/მონაცემების გადაცემა</div>
+    <div style="font-size:12px;color:var(--muted);margin:6px 0 16px">დაადასტ. რომ მყიდველს გადასცე?</div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:14px;text-align:left">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:600">რას ნიშნავს ეს:</div>
+      <div style="font-size:11px;color:var(--text2);line-height:1.7">
+        📋 მყიდველს ეგზავნება შეტყობინება<br>
+        ⏰ მყიდველს ეძლევა <b>48 საათი</b> შესამოწმებლად<br>
+        ✅ 48სთ-ში — ფული ავტომ. ჩაირიცხება<br>
+        ⚑ პრობლემის შემთხვევაში — შეუძლია დავა გახსნას
+      </div>
+    </div>
+    <div class="m-acts">
+      <button class="btn btn-g" onclick="closeM('deliverModal')">გაუქმება</button>
+      <button class="btn btn-a" id="deliver-confirm-btn" onclick="executeMarkDelivered()">📦 დიახ, გადავეცი</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="buyConfirmModal" onclick="if(event.target===this)closeM('buyConfirmModal')">
+  <div class="modal" style="max-width:380px;text-align:center">
+    <div style="font-size:36px;margin-bottom:8px">🛒</div>
+    <div class="modal-title" style="font-size:16px" id="bcm-title">განცხადების შეძენა</div>
+    <div style="font-size:12px;color:var(--muted);margin:6px 0 16px" id="bcm-subtitle">გსურს ეს განცხადება შეიძინო?</div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:4px">გადასახდელი თანხა</div>
+      <div style="font-size:28px;font-weight:700;color:var(--gold);font-family:var(--mono)" id="bcm-price">₾0.00</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px">Escrow-ში გაიყინება · გამყიდველს გადაეცემა მიღების დადასტ. შემდეგ</div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(124,92,255,.08);border:1px solid rgba(124,92,255,.2);border-radius:8px;padding:10px;margin-bottom:16px;font-size:11px;color:var(--muted)">
+      🛡️ <span>გადახდა Escrow-ით — ფული დაცულია სანამ ნივთს არ მიიღებ</span>
+    </div>
+    <div class="m-acts">
+      <button class="btn btn-g" onclick="closeM('buyConfirmModal')">❌ არა</button>
+      <button class="btn btn-a" id="bcm-confirm-btn" onclick="executeBuyListing()">✅ დიახ, ყიდვა</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-bg" id="ratingModal" onclick="if(event.target===this)closeM('ratingModal')">
   <div class="modal">
     <div class="modal-title">⭐ შეფასება</div>
@@ -1684,6 +1718,14 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
 // CONFIG
 // ══════════════════════════════════════════════════════════
 const API_URL = 'https://gamerbazar-api.onrender.com';
+
+// სურათის URL helper — Cloudinary URL-ები პირდაპირ გამოიყენება,
+// ლოკალური /uploads/... path-ებს API_URL ეწინება
+function imgUrl(url) {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  return API_URL + url;
+}
 let currentUser  = null;
 let CUR          = 'GEL';
 let FILT         = 'ყველა';
@@ -1779,7 +1821,7 @@ function updateNavUser() {
   if (avaEl) {
     avaEl.style.display = 'flex';
     if (currentUser.avatar_url) {
-      avaEl.innerHTML = `<img src="${API_URL + currentUser.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+      avaEl.innerHTML = `<img src="${imgUrl(currentUser.avatar_url)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
     } else {
       avaEl.textContent = (currentUser.display_name || currentUser.username || '?').slice(0, 2).toUpperCase();
     }
@@ -2093,7 +2135,7 @@ async function loadMyProfile() {
 
   // ავატარი
   if (currentUser.avatar_url) {
-    const src     = API_URL + currentUser.avatar_url;
+    const src     = imgUrl(currentUser.avatar_url);
     const profAva = document.getElementById('prof-ava-display');
     const avaPrev = document.getElementById('ava-prev');
     const navAva  = document.getElementById('nav-ava');
@@ -2186,7 +2228,7 @@ async function previewAva(input) {
       currentUser.avatar_url = data.avatar_url;
       updateNavUser();
       const profAva = document.getElementById('prof-ava-display');
-      if (profAva) profAva.innerHTML = `<img src="${API_URL + data.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:14px">`;
+      if (profAva) profAva.innerHTML = `<img src="${imgUrl(data.avatar_url)}" style="width:100%;height:100%;object-fit:cover;border-radius:14px">`;
       showToast('✅ ავატარი შეიცვალა!', 'ok');
     }
   } catch (e) { showToast('ატვირთვა ვერ მოხდა', 'err'); }
@@ -2344,9 +2386,9 @@ function renderListingDetail(l) {
   const mainEl = document.getElementById('ld-gallery-main');
   const thumbsEl = document.getElementById('ld-gallery-thumbs');
   if (images.length) {
-    mainEl.innerHTML = `<img src="${API_URL + images[0]}" alt="${esc(l.title)}">`;
+    mainEl.innerHTML = `<img src="${imgUrl(images[0])}" alt="${esc(l.title)}">`;
     thumbsEl.innerHTML = images.map((img, i) =>
-      `<div class="ld-thumb${i === 0 ? ' on' : ''}" onclick="ldShowImage('${API_URL + img}', this)"><img src="${API_URL + img}"></div>`
+      `<div class="ld-thumb${i === 0 ? ' on' : ''}" onclick="ldShowImage('${imgUrl(img)}', this)"><img src="${imgUrl(img)}"></div>`
     ).join('');
   } else {
     mainEl.innerHTML = '🎮';
@@ -2399,7 +2441,7 @@ function renderListingDetail(l) {
     ' · ' + (l.seller_review_count || 0) + ' შეფ.' +
     ' · ' + (l.seller_completed || 0) + ' გაყ.';
   if (l.avatar_url) {
-    sellerAva.innerHTML = `<img src="${API_URL + l.avatar_url}">`;
+    sellerAva.innerHTML = `<img src="${imgUrl(l.avatar_url)}">`;
   } else {
     sellerAva.textContent = (l.display_name || l.username || '?').slice(0,2).toUpperCase();
   }
@@ -2455,12 +2497,16 @@ async function loadSellerReviewsForListing(sellerId) {
 }
 
 // ── Buy Listing (detail page) ────────────────────────────────────
-async function buyListingDetail() {
+function buyListingDetail() {
   if (!currentUser) { openM('loginModal'); return; }
   if (!currentListing) return;
 
   const price = Number(currentListing.price_gel);
   const bal   = Number(currentUser.balance_gel) || 0;
+
+  if (currentListing.seller_id === currentUser.id) {
+    showToast('საკუთარ განცხადებას ვერ ყიდულობ', 'err'); return;
+  }
 
   if (bal < price) {
     showToast(`ბალანსი არ კმარა. გჭირდება ₾${price.toFixed(2)}, გაქვს ₾${bal.toFixed(2)}`, 'err');
@@ -2468,12 +2514,24 @@ async function buyListingDetail() {
     return;
   }
 
-  if (currentListing.seller_id === currentUser.id) {
-    showToast('საკუთარ განცხადებას ვერ ყიდულობ', 'err'); return;
-  }
+  // confirmation modal გახსნა
+  const titleEl = document.getElementById('bcm-title');
+  const subEl   = document.getElementById('bcm-subtitle');
+  const priceEl = document.getElementById('bcm-price');
+  if (titleEl)  titleEl.textContent = currentListing.title || 'განცხადების შეძენა';
+  if (subEl)    subEl.textContent   = 'გსურს ეს განცხადება შეიძინო?';
+  if (priceEl)  priceEl.textContent = '₾' + price.toFixed(2);
+  openM('buyConfirmModal');
+}
 
+async function executeBuyListing() {
+  if (!currentListing || !currentUser) return;
+  closeM('buyConfirmModal');
+
+  const price = Number(currentListing.price_gel);
   const btn = document.getElementById('ld-buy-btn');
-  if (btn) { btn.textContent = '⏳ იქმნება...'; btn.disabled = true; }
+  const confirmBtn = document.getElementById('bcm-confirm-btn');
+  if (confirmBtn) { confirmBtn.textContent = '⏳...'; confirmBtn.disabled = true; }
 
   try {
     const order = await api('/api/orders', {
@@ -2489,11 +2547,17 @@ async function buyListingDetail() {
 
     await loadCurrentUser();
     loadWallet();
+    // listing განახლება — sold status-ი დაუყოვნებლივ
+    currentListing = null;
+    loadListingsFromAPI('home-grid');
+    loadListingsFromAPI('l-grid');
 
   } catch(e) {
     showToast(e.message || 'შეკვეთა ვერ შეიქმნა', 'err');
   } finally {
     if (btn) { btn.textContent = '🛒 ყიდვა — ₾' + price.toFixed(2); btn.disabled = false; }
+    const cb = document.getElementById('bcm-confirm-btn');
+    if (cb) { cb.textContent = '✅ დიახ, ყიდვა'; cb.disabled = false; }
   }
 }
 
@@ -2582,7 +2646,7 @@ async function openSellerProfile() {
     const avaEl = document.getElementById('sm-ava');
     if (avaEl) {
       if (profile.avatar_url) {
-        avaEl.innerHTML = `<img src="${API_URL + profile.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:14px">`;
+        avaEl.innerHTML = `<img src="${imgUrl(profile.avatar_url)}" style="width:100%;height:100%;object-fit:cover;border-radius:14px">`;
       } else {
         avaEl.textContent = (profile.display_name || '?').slice(0,2).toUpperCase();
       }
@@ -2906,6 +2970,18 @@ async function loadChatRooms() {
       return;
     }
 
+    // nav badge — სულ unread count
+    const totalUnread = rooms.reduce((s, r) => s + (Number(r.unread_count) || 0), 0);
+    const navBadge = document.getElementById('nav-chat-badge');
+    if (navBadge) {
+      if (totalUnread > 0) {
+        navBadge.textContent = totalUnread > 99 ? '99+' : totalUnread;
+        navBadge.style.display = 'flex';
+      } else {
+        navBadge.style.display = 'none';
+      }
+    }
+
     el.innerHTML = rooms.map(r => {
       const isA      = r.participant_a === currentUser.id;
       const partner  = isA ? r.participant_b_name : r.participant_a_name;
@@ -2977,51 +3053,9 @@ async function openChatRoom(el) {
       const isSeller = order && order.seller_id === currentUser.id;
       const status   = order ? order.status : null;
       const isDisputed = status === 'disputed';
-
-      // pill ტექსტი — სტატუსის + role-ის მიხედვით
-      if (pillText) {
-        let pillMsg = `Escrow · ₾${Number(amount).toFixed(2)}`;
-        if (isDisputed) {
-          pillMsg += ' · ⚑ დავა განიხილება';
-        } else if (status === 'active') {
-          pillMsg += isSeller ? ' · 📦 გადასცე ნივთი/მონაცემები' : ' · ⏳ გამყიდველი ამზადებს';
-        } else if (status === 'delivered') {
-          pillMsg += isBuyer ? ' · 📦 ნივთი გადაგეცათ — შეამოწმე!' : ' · ⏳ მყიდველი ამოწმებს';
-        }
-        pillText.textContent = pillMsg;
-      }
-
-      // delivered countdown banner
-      const banner    = document.getElementById('chat-delivered-banner');
-      const cdownEl   = document.getElementById('chat-cdown');
-      const delivMsg  = document.getElementById('chat-delivered-msg');
-      if (banner) {
-        if (status === 'delivered' && order.confirm_deadline && !isDisputed) {
-          banner.style.display = 'flex';
-          const deadline = new Date(order.confirm_deadline);
-          if (delivMsg) delivMsg.textContent = isBuyer
-            ? '📦 ნივთი გადაგეცათ — შეამოწმე და დაადასტ. ან გახსენი დავა'
-            : '📦 ნივთი გადასცემდი — მყიდველი ამოწმებს';
-          // start/restart countdown
-          if (window._chatCdownInterval) clearInterval(window._chatCdownInterval);
-          const tick = () => {
-            const left = Math.max(0, deadline - Date.now());
-            const h = String(Math.floor(left / 3600000)).padStart(2,'0');
-            const m = String(Math.floor((left % 3600000) / 60000)).padStart(2,'0');
-            const s = String(Math.floor((left % 60000) / 1000)).padStart(2,'0');
-            if (cdownEl) cdownEl.textContent = `${h}:${m}:${s}`;
-          };
-          tick();
-          window._chatCdownInterval = setInterval(tick, 1000);
-        } else {
-          banner.style.display = 'none';
-          if (window._chatCdownInterval) { clearInterval(window._chatCdownInterval); window._chatCdownInterval = null; }
-        }
-      }
-
       if (deliverBtn) deliverBtn.style.display = (isSeller && status === 'active' && !isDisputed) ? 'inline-block' : 'none';
-      if (confirmBtn) confirmBtn.style.display = (isBuyer && status === 'delivered' && !isDisputed) ? 'inline-block' : 'none';
-      if (disputeBtn) disputeBtn.style.display = (isBuyer && status === 'delivered' && !isDisputed) ? 'inline-block' : 'none';
+      if (confirmBtn) confirmBtn.style.display = (isBuyer && ['active','delivered'].includes(status) && !isDisputed) ? 'inline-block' : 'none';
+      if (disputeBtn) disputeBtn.style.display = (isBuyer && ['active','delivered'].includes(status) && !isDisputed) ? 'inline-block' : 'none';
     } else {
       if (deliverBtn) deliverBtn.style.display = 'none';
       if (confirmBtn) confirmBtn.style.display = 'none';
@@ -3306,15 +3340,39 @@ async function doConfirmOrder(orderId) {
   } catch(e) { showToast(e.message || 'შეცდომა', 'err'); }
 }
 
-async function markDelivered(orderId) {
+function markDelivered(orderId) {
   if (!orderId) return;
-  if (!confirm('დაადასტ. რომ ნივთი/მონაცემები გადასცე მყიდველს?')) return;
+  window._deliverOrderId = orderId;
+  openM('deliverModal');
+}
+
+async function executeMarkDelivered() {
+  const orderId = window._deliverOrderId;
+  if (!orderId) return;
+
+  const btn = document.getElementById('deliver-confirm-btn');
+  if (btn) { btn.textContent = '⏳...'; btn.disabled = true; }
+
   try {
     await api('/api/orders/' + orderId + '/deliver', { method: 'POST' });
-    showToast('📦 გადაცემა დადასტ.! მყიდველს 48სთ ეძლევა.', 'ok');
+    closeM('deliverModal');
+    showToast('📦 გადაცემა დადასტ.! მყიდველს 48სთ ეძლევა შესამოწმებლად.', 'ok');
     refreshOrderViews();
     loadChatRooms();
-  } catch(e) { showToast(e.message || 'შეცდომა', 'err'); }
+    // chat panel განახლება
+    if (currentOrderId === orderId) {
+      const statusBadge = document.getElementById('chat-status-badge');
+      const confirmBtn  = document.getElementById('chat-confirm-btn');
+      const deliverBtn  = document.getElementById('chat-deliver-btn');
+      if (statusBadge) { statusBadge.textContent = '📦 გადაცემულია'; statusBadge.style.color = 'var(--accent)'; statusBadge.style.display = 'block'; }
+      if (deliverBtn)  deliverBtn.style.display = 'none';
+      if (confirmBtn)  confirmBtn.style.display = 'inline-block';
+    }
+  } catch(e) {
+    showToast(e.message || 'შეცდომა — სცადე კვლავ', 'err');
+  } finally {
+    if (btn) { btn.textContent = '📦 დიახ, გადავეცი'; btn.disabled = false; }
+  }
 }
 
 function disputeCurrentOrder() {
