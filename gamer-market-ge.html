@@ -1010,6 +1010,14 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
             <button class="btn btn-g btn-sm" id="chat-dispute-btn" onclick="disputeCurrentOrder()" style="margin-left:4px;display:none">⚑ დავა</button>
           </div>
         </div>
+        <!-- Delivered countdown banner — ჩანს მხოლოდ delivered სტატუსზე -->
+        <div id="chat-delivered-banner" style="display:none;margin:0 0 4px 0;background:linear-gradient(135deg,#0a1a0a,#0f2a10);border-bottom:1px solid #22c55e30;padding:8px 14px;display:none;align-items:center;gap:10px">
+          <span style="font-size:16px">📦</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:11px;color:#86efac;font-weight:600" id="chat-delivered-msg">ნივთი გადაგეცათ</div>
+            <div style="font-size:11px;color:var(--muted)">ავტო-დადასტ.: <span id="chat-cdown" style="font-family:var(--mono);color:var(--gold);font-weight:700">--:--:--</span></div>
+          </div>
+        </div>
       </div>
       <!-- Messages -->
       <div class="chat-msgs" id="chat-msgs">
@@ -2969,9 +2977,51 @@ async function openChatRoom(el) {
       const isSeller = order && order.seller_id === currentUser.id;
       const status   = order ? order.status : null;
       const isDisputed = status === 'disputed';
+
+      // pill ტექსტი — სტატუსის + role-ის მიხედვით
+      if (pillText) {
+        let pillMsg = `Escrow · ₾${Number(amount).toFixed(2)}`;
+        if (isDisputed) {
+          pillMsg += ' · ⚑ დავა განიხილება';
+        } else if (status === 'active') {
+          pillMsg += isSeller ? ' · 📦 გადასცე ნივთი/მონაცემები' : ' · ⏳ გამყიდველი ამზადებს';
+        } else if (status === 'delivered') {
+          pillMsg += isBuyer ? ' · 📦 ნივთი გადაგეცათ — შეამოწმე!' : ' · ⏳ მყიდველი ამოწმებს';
+        }
+        pillText.textContent = pillMsg;
+      }
+
+      // delivered countdown banner
+      const banner    = document.getElementById('chat-delivered-banner');
+      const cdownEl   = document.getElementById('chat-cdown');
+      const delivMsg  = document.getElementById('chat-delivered-msg');
+      if (banner) {
+        if (status === 'delivered' && order.confirm_deadline && !isDisputed) {
+          banner.style.display = 'flex';
+          const deadline = new Date(order.confirm_deadline);
+          if (delivMsg) delivMsg.textContent = isBuyer
+            ? '📦 ნივთი გადაგეცათ — შეამოწმე და დაადასტ. ან გახსენი დავა'
+            : '📦 ნივთი გადასცემდი — მყიდველი ამოწმებს';
+          // start/restart countdown
+          if (window._chatCdownInterval) clearInterval(window._chatCdownInterval);
+          const tick = () => {
+            const left = Math.max(0, deadline - Date.now());
+            const h = String(Math.floor(left / 3600000)).padStart(2,'0');
+            const m = String(Math.floor((left % 3600000) / 60000)).padStart(2,'0');
+            const s = String(Math.floor((left % 60000) / 1000)).padStart(2,'0');
+            if (cdownEl) cdownEl.textContent = `${h}:${m}:${s}`;
+          };
+          tick();
+          window._chatCdownInterval = setInterval(tick, 1000);
+        } else {
+          banner.style.display = 'none';
+          if (window._chatCdownInterval) { clearInterval(window._chatCdownInterval); window._chatCdownInterval = null; }
+        }
+      }
+
       if (deliverBtn) deliverBtn.style.display = (isSeller && status === 'active' && !isDisputed) ? 'inline-block' : 'none';
-      if (confirmBtn) confirmBtn.style.display = (isBuyer && ['active','delivered'].includes(status) && !isDisputed) ? 'inline-block' : 'none';
-      if (disputeBtn) disputeBtn.style.display = (isBuyer && ['active','delivered'].includes(status) && !isDisputed) ? 'inline-block' : 'none';
+      if (confirmBtn) confirmBtn.style.display = (isBuyer && status === 'delivered' && !isDisputed) ? 'inline-block' : 'none';
+      if (disputeBtn) disputeBtn.style.display = (isBuyer && status === 'delivered' && !isDisputed) ? 'inline-block' : 'none';
     } else {
       if (deliverBtn) deliverBtn.style.display = 'none';
       if (confirmBtn) confirmBtn.style.display = 'none';
