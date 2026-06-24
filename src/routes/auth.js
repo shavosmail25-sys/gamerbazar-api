@@ -387,13 +387,18 @@ router.get('/google/callback', async (req, res) => {
 router.get('/me', requireAuth, async (req, res) => {
   try {
     const { rows } = await db.query(`
-      SELECT id, email, username, display_name, bio, avatar_url,
-             role, is_verified_seller, discord_handle, steam_id,
-             balance_gel, balance_usd, escrow_hold_gel,
-             notif_email, notif_push, notif_chat,
-             profile_public, show_online,
-             email_verified, created_at, last_seen_at
-      FROM users WHERE id=$1
+      SELECT u.id, u.email, u.username, u.display_name, u.bio, u.avatar_url,
+             u.role, u.is_verified_seller, u.discord_handle, u.steam_id,
+             u.balance_gel, u.balance_usd, u.escrow_hold_gel,
+             u.notif_email, u.notif_push, u.notif_chat,
+             u.profile_public, u.show_online,
+             u.email_verified, u.created_at, u.last_seen_at,
+             COALESCE(ss.completed_orders, 0) AS completed_orders,
+             COALESCE(ss.avg_rating, 0)       AS avg_rating,
+             COALESCE(ss.review_count, 0)     AS review_count
+      FROM users u
+      LEFT JOIN seller_stats ss ON ss.seller_id = u.id
+      WHERE u.id=$1
     `, [req.user.id]);
     res.json(rows[0]);
   } catch (err) {
