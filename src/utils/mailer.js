@@ -199,6 +199,37 @@ async function sendDisputeResolvedEmail(recipient, dispute, order, listing, outc
   });
 }
 
+// ══════════════════════════════════════════════════════════════
+// WALLET EMAILS — ადმინს შეტყობინება
+// ══════════════════════════════════════════════════════════════
+async function sendDepositRequestEmail(adminEmail, user, amount, ref) {
+  return sendMail({
+    to: adminEmail,
+    subject: `💰 შეტანის მოთხ. — @${user.username} — ₾${Number(amount).toFixed(2)}`,
+    html: wrap(
+      `შეტანის მოთხოვნა — ₾${Number(amount).toFixed(2)}`,
+      `მომხმარებელი <b>@${user.username}</b> (${user.email}) ითხოვს ₾${Number(amount).toFixed(2)}-ის ბალანსზე შეტანას.<br><br>
+       REF კოდი: <b style="font-family:monospace;color:#7c5cff">${ref}</b><br><br>
+       გადაამოწმე BOG-ში გადარიცხვა და ადმინ პანელში დაადასტ. ან უარყავი.`,
+      'ადმინ პანელი', `${FRONTEND}/admin.html`
+    ),
+  });
+}
+
+async function sendWithdrawRequestEmail(adminEmail, user, amount, iban) {
+  return sendMail({
+    to: adminEmail,
+    subject: `📤 გამოტანის მოთხ. — @${user.username} — ₾${Number(amount).toFixed(2)}`,
+    html: wrap(
+      `გამოტანის მოთხოვნა — ₾${Number(amount).toFixed(2)}`,
+      `მომხმარებელი <b>@${user.username}</b> (${user.email}) ითხოვს ₾${Number(amount).toFixed(2)}-ის გამოტანას.<br><br>
+       IBAN: <b style="font-family:monospace">${iban}</b><br><br>
+       გადარიცხე BOG-ით და ადმინ პანელში დაადასტ.`,
+      'ადმინ პანელი', `${FRONTEND}/admin.html`
+    ),
+  });
+}
+
 module.exports = {
   sendMail,
   sendOrderCreatedEmail,
@@ -209,4 +240,6 @@ module.exports = {
   send24hReminderEmail,
   sendDisputeOpenedEmail,
   sendDisputeResolvedEmail,
+  sendDepositRequestEmail,
+  sendWithdrawRequestEmail,
 };

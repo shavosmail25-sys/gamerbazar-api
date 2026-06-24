@@ -268,6 +268,10 @@ input,select,textarea{font-family:var(--sans)}
       <div class="sb-item" data-view="listings" onclick="switchView('listings')">
         <span class="sb-item-ico">▣</span>განცხადებები
       </div>
+      <div class="sb-item" data-view="wallet" onclick="switchView('wallet')" style="position:relative">
+        <span class="sb-item-ico">₾</span>გადახდები
+        <span id="wallet-nav-badge" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);background:#ef4444;color:#fff;font-size:9px;font-weight:700;min-width:16px;height:16px;border-radius:8px;text-align:center;line-height:16px;padding:0 4px"></span>
+      </div>
     </nav>
 
     <div class="sb-foot">
@@ -342,6 +346,32 @@ input,select,textarea{font-family:var(--sans)}
       </div>
 
       <!-- ═══════════ LISTINGS ═══════════ -->
+      <!-- ═══════════ WALLET ═══════════ -->
+      <div class="view" id="view-wallet">
+        <div class="view-head">
+          <div><div class="view-title">გადახდების მართვა</div><div class="view-sub">შეტანები და გამოტანები — დაადასტ. ან უარყვი</div></div>
+          <button class="btn btn-ghost" onclick="loadWalletRequests()">↺ განახლება</button>
+        </div>
+
+        <!-- Deposits -->
+        <div style="margin-bottom:24px">
+          <div style="font-size:13px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px">
+            💰 შეტანის მოთხოვნები
+            <span id="dep-count-badge" style="display:none;background:#f59e0b;color:#000;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px"></span>
+          </div>
+          <div id="deposits-list"><div class="loading">იტვირთება</div></div>
+        </div>
+
+        <!-- Withdrawals -->
+        <div>
+          <div style="font-size:13px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px">
+            📤 გამოტანის მოთხოვნები
+            <span id="wd-count-badge" style="display:none;background:#ef4444;color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px"></span>
+          </div>
+          <div id="withdrawals-list"><div class="loading">იტვირთება</div></div>
+        </div>
+      </div>
+
       <div class="view" id="view-listings">
         <div class="view-head">
           <div><div class="view-title">განცხადებების მოდერაცია</div><div class="view-sub">pending — საჭიროებს დადასტ. · ბლოკვა ან წაშლა</div></div>
@@ -565,6 +595,7 @@ function switchView(view) {
   if (view === 'disputes') loadDisputes();
   if (view === 'users')    loadUsers();
   if (view === 'listings') loadListings();
+  if (view === 'wallet')   loadWalletRequests();
 }
 
 function closeModal(id) {
@@ -589,8 +620,14 @@ async function loadOverview() {
     const bDot = document.getElementById('pulse-dot-banned');
     bDot.className = 'pulse-dot ' + (d.users.banned > 0 ? 'warn' : 'live');
 
-    // pending listings badge — nav-ში
-    const pendingBadge = document.getElementById('pending-listings-badge');
+    // wallet pending badge — async
+    api('/api/admin/deposits').then(deps => {
+      api('/api/admin/withdrawals').then(wds => {
+        const total = (deps||[]).length + (wds||[]).length;
+        const nb = document.getElementById('wallet-nav-badge');
+        if (nb) { nb.textContent = total; nb.style.display = total ? 'inline-block' : 'none'; }
+      });
+    }).catch(()=>{});
     if (pendingBadge) {
       const pendingCount = d.listings.pending || 0;
       if (pendingCount > 0) {
@@ -953,6 +990,114 @@ async function confirmModerate() {
   } finally {
     btn.disabled = false;
   }
+}
+
+// ══════════════════════════════════════════════════════════
+// WALLET — DEPOSITS + WITHDRAWALS
+// ══════════════════════════════════════════════════════════
+async function loadWalletRequests() {
+  try {
+    const [deposits, withdrawals] = await Promise.all([
+      api('/api/admin/deposits'),
+      api('/api/admin/withdrawals'),
+    ]);
+
+    // badges
+    const depBadge = document.getElementById('dep-count-badge');
+    const wdBadge  = document.getElementById('wd-count-badge');
+    const navBadge = document.getElementById('wallet-nav-badge');
+    const total    = deposits.length + withdrawals.length;
+
+    if (depBadge) { depBadge.textContent = deposits.length; depBadge.style.display = deposits.length ? 'inline-block' : 'none'; }
+    if (wdBadge)  { wdBadge.textContent  = withdrawals.length; wdBadge.style.display = withdrawals.length ? 'inline-block' : 'none'; }
+    if (navBadge) { navBadge.textContent = total; navBadge.style.display = total ? 'inline-block' : 'none'; }
+
+    // Deposits
+    const depEl = document.getElementById('deposits-list');
+    if (depEl) {
+      depEl.innerHTML = deposits.length ? deposits.map(t => `
+        <div class="row" style="border-left:3px solid #f59e0b">
+          <div class="row-main">
+            <div class="row-title">@${esc(t.username)} <span class="tag tag-warn">DEPOSIT</span></div>
+            <div class="row-meta">
+              <span><b>თანხა</b> <span style="color:#4ade80;font-weight:700">₾${Number(t.amount_gel).toFixed(2)}</span></span>
+              <span><b>REF</b> <span style="font-family:monospace;color:var(--signal)">${esc(t.external_ref || '—')}</span></span>
+              <span><b>Email</b> ${esc(t.email)}</span>
+              <span><b>თარიღი</b> ${fmtDate(t.created_at)}</span>
+            </div>
+          </div>
+          <div class="row-actions">
+            <button class="btn btn-ok" onclick="confirmDeposit('${t.id}','${esc(t.username)}',${Number(t.amount_gel)})">✅ დადასტ.</button>
+            <button class="btn btn-signal" onclick="rejectDeposit('${t.id}')">❌ უარყოფა</button>
+          </div>
+        </div>
+      `).join('') : '<div class="empty" style="padding:20px;text-align:center;color:var(--muted)">⏳ pending შეტანები არ არის</div>';
+    }
+
+    // Withdrawals
+    const wdEl = document.getElementById('withdrawals-list');
+    if (wdEl) {
+      wdEl.innerHTML = withdrawals.length ? withdrawals.map(t => `
+        <div class="row" style="border-left:3px solid #ef4444">
+          <div class="row-main">
+            <div class="row-title">@${esc(t.username)} <span class="tag tag-crit">WITHDRAW</span></div>
+            <div class="row-meta">
+              <span><b>თანხა</b> <span style="color:#f87171;font-weight:700">₾${Math.abs(Number(t.amount_gel)).toFixed(2)}</span></span>
+              <span><b>IBAN</b> <span style="font-family:monospace">${esc((t.description||'').match(/IBAN: ([^\s·]+)/)?.[1] || '—')}</span></span>
+              <span><b>Email</b> ${esc(t.email)}</span>
+              <span><b>თარიღი</b> ${fmtDate(t.created_at)}</span>
+            </div>
+            <div class="row-meta" style="margin-top:3px">
+              <span style="color:var(--muted);font-size:10px">${esc(t.description || '')}</span>
+            </div>
+          </div>
+          <div class="row-actions">
+            <button class="btn btn-ok" onclick="confirmWithdrawal('${t.id}','${esc(t.username)}',${Math.abs(Number(t.amount_gel))})">✅ გადარიცხე</button>
+            <button class="btn btn-signal" onclick="rejectWithdrawal('${t.id}')">↩️ დაბრუნება</button>
+          </div>
+        </div>
+      `).join('') : '<div class="empty" style="padding:20px;text-align:center;color:var(--muted)">📭 pending გამოტანები არ არის</div>';
+    }
+  } catch(e) {
+    console.error('wallet requests:', e);
+  }
+}
+
+async function confirmDeposit(id, username, amount) {
+  if (!confirm(`დაადასტ. @${username}-ის ₾${amount} შეტანა?`)) return;
+  try {
+    await api(`/api/admin/deposits/${id}/confirm`, { method: 'POST' });
+    showToast(`✅ ₾${amount} — @${username}-ის ბალანსზე ჩაირიცხა`, 'ok');
+    loadWalletRequests();
+    loadOverview();
+  } catch(e) { showToast('შეცდომა: ' + (e.message||''), 'err'); }
+}
+
+async function rejectDeposit(id) {
+  const reason = prompt('უარყოფის მიზეზი (სურვ.):') || '';
+  try {
+    await api(`/api/admin/deposits/${id}/reject`, { method: 'POST', body: JSON.stringify({ reason }) });
+    showToast('❌ შეტანა უარყოფილია', 'ok');
+    loadWalletRequests();
+  } catch(e) { showToast('შეცდომა', 'err'); }
+}
+
+async function confirmWithdrawal(id, username, amount) {
+  if (!confirm(`დაადასტ. @${username}-ის ₾${amount} გამოტანა?\n\nდარწმუნდი რომ BOG-ით გადარიცხვა უკვე გააკეთე!`)) return;
+  try {
+    await api(`/api/admin/withdrawals/${id}/confirm`, { method: 'POST' });
+    showToast(`✅ @${username} — გამოტანა დადასტ.`, 'ok');
+    loadWalletRequests();
+  } catch(e) { showToast('შეცდომა: ' + (e.message||''), 'err'); }
+}
+
+async function rejectWithdrawal(id) {
+  if (!confirm('უარვყოთ გამოტანა? თანხა მომხმარებელს დაუბრუნდება.')) return;
+  try {
+    await api(`/api/admin/withdrawals/${id}/reject`, { method: 'POST' });
+    showToast('↩️ გამოტანა უარყოფილია — თანხა დაბრ.', 'ok');
+    loadWalletRequests();
+  } catch(e) { showToast('შეცდომა', 'err'); }
 }
 
 async function approveListing(listingId) {

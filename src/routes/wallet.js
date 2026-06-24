@@ -4,6 +4,9 @@
 const express = require('express');
 const db      = require('../db');
 const { requireAuth } = require('../middleware/auth');
+const mailer  = require('../utils/mailer');
+
+const ADMIN_EMAIL = process.env.SMTP_USER || 'shavosmail25@gmail.com';
 const router  = express.Router();
 
 // ══════════════════════════════════════════════════════════════
@@ -65,27 +68,41 @@ router.get('/transactions', requireAuth, async (req, res) => {
 });
 
 // ══════════════════════════════════════════════════════════════
-// POST /api/wallet/deposit  — შეტანის მოთხოვნა
+// ══════════════════════════════════════════════════════════════
+// POST /api/wallet/deposit  — შეტანის მოთხოვნა (Manual BOG)
 // ══════════════════════════════════════════════════════════════
 router.post('/deposit', requireAuth, async (req, res) => {
   try {
-    const { amount, method = 'BOG' } = req.body;
+    const { amount } = req.body;
     if (!amount || Number(amount) < 1)
       return res.status(400).json({ error: 'min_1_gel' });
-    if (Number(amount) > 5000)
-      return res.status(400).json({ error: 'max_5000_gel' });
+    if (Number(amount) > 10000)
+      return res.status(400).json({ error: 'max_10000_gel' });
 
-    const ref = `DEP-${Date.now()}-${req.user.id.slice(0,8)}`;
+    const ref = `GB-${Date.now().toString(36).toUpperCase()}-${req.user.id.slice(0,6).toUpperCase()}`;
+
     await db.query(
-      "INSERT INTO transactions(user_id,type,amount_gel,status,payment_method,external_ref,description) VALUES($1,'deposit',$2,'pending',$3,$4,'ბალანსის შეტანა')",
-      [req.user.id, Number(amount), method, ref]
+      `INSERT INTO transactions(user_id,type,amount_gel,status,payment_method,external_ref,description)
+       VALUES($1,'deposit',$2,'pending','BOG',$3,'ბალანსის შეტანა — BOG გადარიცხვა')`,
+      [req.user.id, Number(amount), ref]
     );
 
-    const payUrl = process.env.NODE_ENV === 'production'
-      ? `https://checkout.bog.ge/pay?ref=${ref}&amount=${amount}`
-      : `http://localhost:${process.env.PORT}/api/wallet/deposit/simulate?ref=${ref}&amount=${amount}`;
+    res.json({
+      ref,
+      amount: Number(amount),
+      iban:        'GE62BG0000000562150681',
+      recipient:   'Jumber Shavadze',
+      bank:        'Bank of Georgia',
+      description: ref,
+      eta_hours:   24,
+    });
 
-    res.json({ ref, pay_url: payUrl, amount, method });
+    // ადმინს email — async
+    (async () => {
+      try {
+        await mailer.sendDepositRequestEmail(ADMIN_EMAIL, req.user, amount, ref);
+      } catch(e) { console.error('deposit email:', e.message); }
+    })();
   } catch (err) {
     res.status(500).json({ error: 'server_error' });
   }
@@ -162,6 +179,13 @@ router.post('/withdraw', requireAuth, async (req, res) => {
     });
 
     res.json({ ok: true, amount, commission, total, eta: '1-2 სამ. დღე' });
+
+    // ადმინს email — async
+    (async () => {
+      try {
+        await mailer.sendWithdrawRequestEmail(ADMIN_EMAIL, req.user, amount, iban);
+      } catch(e) { console.error('withdraw email:', e.message); }
+    })();
   } catch (err) {
     res.status(500).json({ error: 'server_error' });
   }

@@ -19,7 +19,7 @@ router.get('/overview', async (req, res) => {
   try {
     const [users, listings, orders, disputes, volume] = await Promise.all([
       db.query("SELECT COUNT(*) AS n, COUNT(*) FILTER (WHERE role='banned') AS banned FROM users"),
-      db.query("SELECT COUNT(*) AS n, COUNT(*) FILTER (WHERE status='active') AS active, COUNT(*) FILTER (WHERE status='pending') AS pending FROM listings"),
+      db.query("SELECT COUNT(*) AS n, COUNT(*) FILTER (WHERE status='active') AS active FROM listings"),
       db.query("SELECT COUNT(*) AS n, COUNT(*) FILTER (WHERE status='active') AS active, COUNT(*) FILTER (WHERE status='completed') AS completed FROM orders"),
       db.query("SELECT COUNT(*) AS n, COUNT(*) FILTER (WHERE status='open') AS open FROM disputes"),
       db.query("SELECT COALESCE(SUM(amount_gel),0) AS total FROM orders WHERE status='completed'"),
@@ -27,7 +27,7 @@ router.get('/overview', async (req, res) => {
 
     res.json({
       users: { total: Number(users.rows[0].n), banned: Number(users.rows[0].banned) },
-      listings: { total: Number(listings.rows[0].n), active: Number(listings.rows[0].active), pending: Number(listings.rows[0].pending) },
+      listings: { total: Number(listings.rows[0].n), active: Number(listings.rows[0].active) },
       orders: {
         total: Number(orders.rows[0].n),
         active: Number(orders.rows[0].active),
@@ -325,6 +325,174 @@ router.delete('/listings/:id', async (req, res) => {
       [req.params.id]
     );
     if (!rows.length) return res.status(404).json({ error: 'not_found' });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// GET /api/admin/deposits  — pending deposit მოთხოვნები
+// ══════════════════════════════════════════════════════════════
+router.get('/deposits', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { rows } = await db.query(`
+      SELECT t.*, u.username, u.email, u.display_name
+      FROM transactions t
+      JOIN users u ON u.id = t.user_id
+      WHERE t.type = 'deposit' AND t.status = 'pending'
+      ORDER BY t.created_at ASC
+    `);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// POST /api/admin/deposits/:id/confirm  — deposit დადასტ.
+router.post('/deposits/:id/confirm', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { rows: tx } = await db.query(
+      "SELECT * FROM transactions WHERE id=$1 AND type='deposit' AND status='pending'",
+      [req.params.id]
+    );
+    if (!tx.length) return res.status(404).json({ error: 'not_found' });
+
+    await db.transaction(async (client) => {
+      await client.query(
+        "UPDATE transactions SET status='completed' WHERE id=$1", [req.params.id]
+      );
+      await client.query(
+        'UPDATE users SET balance_gel=balance_gel+$1 WHERE id=$2',
+        [tx[0].amount_gel, tx[0].user_id]
+      );
+    });
+
+    // push notification მომხმარებელს
+    const push = require('../utils/push');
+    await push.sendToUser(tx[0].user_id, {
+      title: '✅ ბალანსი შეივსო',
+      body: `₾${Number(tx[0].amount_gel).toFixed(2)} დაემატა შენს ბალანსზე`,
+      url: '/?page=wallet',
+      tag: `deposit-${req.params.id}`,
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// POST /api/admin/deposits/:id/reject  — deposit უარყოფა
+router.post('/deposits/:id/reject', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { reason = '' } = req.body;
+    const { rows: tx } = await db.query(
+      "SELECT * FROM transactions WHERE id=$1 AND type='deposit' AND status='pending'",
+      [req.params.id]
+    );
+    if (!tx.length) return res.status(404).json({ error: 'not_found' });
+
+    await db.query(
+      "UPDATE transactions SET status='failed', description=description||$1 WHERE id=$2",
+      [reason ? ` — უარყოფა: ${reason}` : ' — უარყოფილია', req.params.id]
+    );
+
+    const push = require('../utils/push');
+    await push.sendToUser(tx[0].user_id, {
+      title: '❌ შეტანა უარყოფილია',
+      body: reason || 'გადარიცხვა ვერ დადასტ. — დაგვიკავშირდი',
+      url: '/?page=wallet',
+      tag: `deposit-reject-${req.params.id}`,
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// GET /api/admin/withdrawals  — pending გამოტანები
+// ══════════════════════════════════════════════════════════════
+router.get('/withdrawals', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { rows } = await db.query(`
+      SELECT t.*, u.username, u.email, u.display_name
+      FROM transactions t
+      JOIN users u ON u.id = t.user_id
+      WHERE t.type = 'withdrawal' AND t.status = 'pending'
+      ORDER BY t.created_at ASC
+    `);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// POST /api/admin/withdrawals/:id/confirm  — გამოტანა დადასტ.
+router.post('/withdrawals/:id/confirm', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { rows: tx } = await db.query(
+      "SELECT * FROM transactions WHERE id=$1 AND type='withdrawal' AND status='pending'",
+      [req.params.id]
+    );
+    if (!tx.length) return res.status(404).json({ error: 'not_found' });
+
+    await db.query(
+      "UPDATE transactions SET status='completed' WHERE id=$1", [req.params.id]
+    );
+
+    const push = require('../utils/push');
+    await push.sendToUser(tx[0].user_id, {
+      title: '✅ გამოტანა დადასტ.',
+      body: `₾${Math.abs(Number(tx[0].amount_gel)).toFixed(2)} გაიგზავნა შენს ანგარიშზე`,
+      url: '/?page=wallet',
+      tag: `withdrawal-${req.params.id}`,
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// POST /api/admin/withdrawals/:id/reject  — გამოტანა უარყოფა + თანხა დაბრ.
+router.post('/withdrawals/:id/reject', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { reason = '' } = req.body;
+    const { rows: tx } = await db.query(
+      "SELECT * FROM transactions WHERE id=$1 AND type='withdrawal' AND status='pending'",
+      [req.params.id]
+    );
+    if (!tx.length) return res.status(404).json({ error: 'not_found' });
+
+    const refundAmount = Math.abs(Number(tx[0].amount_gel));
+
+    await db.transaction(async (client) => {
+      await client.query(
+        "UPDATE transactions SET status='failed' WHERE id=$1", [req.params.id]
+      );
+      // თანხა დაბრუნება
+      await client.query(
+        'UPDATE users SET balance_gel=balance_gel+$1 WHERE id=$2',
+        [refundAmount, tx[0].user_id]
+      );
+      await client.query(
+        `INSERT INTO transactions(user_id,type,amount_gel,status,description)
+         VALUES($1,'refund',$2,'completed','გამოტანის უარყოფა — თანხა დაბრ.')`,
+        [tx[0].user_id, refundAmount]
+      );
+    });
+
+    const push = require('../utils/push');
+    await push.sendToUser(tx[0].user_id, {
+      title: '↩️ გამოტანა უარყოფილია',
+      body: `₾${refundAmount.toFixed(2)} დაბრუნდა ბალანსზე. ${reason || ''}`,
+      url: '/?page=wallet',
+      tag: `withdrawal-reject-${req.params.id}`,
+    });
+
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: 'server_error' });
