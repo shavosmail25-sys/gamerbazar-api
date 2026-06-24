@@ -17,7 +17,7 @@ router.use(requireAuth, requireAdmin);
 // ══════════════════════════════════════════════════════════════
 router.get('/overview', async (req, res) => {
   try {
-    const [users, listings, orders, disputes, volume] = await Promise.all([\
+    const [users, listings, orders, disputes, volume] = await Promise.all([
       db.query("SELECT COUNT(*) AS n, COUNT(*) FILTER (WHERE role='banned') AS banned FROM users"),
       db.query("SELECT COUNT(*) AS n, COUNT(*) FILTER (WHERE status='active') AS active, COUNT(*) FILTER (WHERE status='pending') AS pending FROM listings"),
       db.query("SELECT COUNT(*) AS n, COUNT(*) FILTER (WHERE status='active') AS active, COUNT(*) FILTER (WHERE status='completed') AS completed FROM orders"),
