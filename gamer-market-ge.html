@@ -1006,7 +1006,7 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
             <div class="opill-dot"></div>
             <span id="chat-pill-text">Escrow · ₾0</span>
             <button class="btn btn-a btn-sm" id="chat-deliver-btn" onclick="markDelivered(currentOrderId)" style="margin-left:4px;display:none">📦 გადავეცი</button>
-            <button class="btn btn-a btn-sm" id="chat-confirm-btn" onclick="confirmOrder(currentOrderId, window._chatOrderAmount)" style="margin-left:4px;display:none">✅ დადასტ.</button>
+            <button class="btn btn-a btn-sm" id="chat-confirm-btn" onclick="confirmCurrentOrder()" style="margin-left:4px;display:none">✅ დადასტ.</button>
             <button class="btn btn-g btn-sm" id="chat-dispute-btn" onclick="disputeCurrentOrder()" style="margin-left:4px;display:none">⚑ დავა</button>
           </div>
         </div>
@@ -1410,19 +1410,13 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
 </div>
 
 <div class="modal-bg" id="confirmModal" onclick="if(event.target===this)closeM('confirmModal')">
-  <div class="modal" style="max-width:360px;text-align:center">
-    <div style="font-size:36px;margin-bottom:8px">✅</div>
-    <div class="modal-title" style="font-size:16px">მიღების დადასტურება</div>
-    <div class="confirm-txt" id="confirm-modal-text">დაადასტ. რომ ნივთი/მონაცემები მიიღე?</div>
-    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;margin:12px 0">
-      <div style="font-size:11px;color:var(--muted);margin-bottom:4px">გამყიდველს ჩაერიცხება</div>
-      <div class="confirm-amt" id="confirm-modal-amt">₾0.00</div>
-    </div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:14px">დადასტ. შემდეგ გაუქმება შეუძლებელია</div>
-    <div class="m-acts">
-      <button class="btn btn-g" onclick="closeM('confirmModal')">გაუქმება</button>
-      <button class="btn btn-a" onclick="executeConfirmOrder()">✅ დიახ, დადასტ.</button>
-    </div>
+  <div class="modal">
+    <div class="confirm-ico">🔐</div>
+    <div class="modal-title" style="text-align:center">ორდ. დადასტ.</div>
+    <div class="confirm-txt">მიიღე CS2 ექაუნთი?</div>
+    <div class="confirm-amt">₾89.00</div>
+    <div class="confirm-txt" style="margin-bottom:16px">დადასტ. შემდეგ გამყ. ჩაერ. · გაუქ. შეუძლ.</div>
+    <div class="m-acts"><button class="btn btn-g" onclick="closeM('confirmModal');openM('disputeModal')">⚑ დავა</button><button class="btn btn-a" onclick="closeM('confirmModal');openM('ratingModal')">✓ დადასტ.</button></div>
   </div>
 </div>
 <div class="modal-bg" id="ratingModal" onclick="if(event.target===this)closeM('ratingModal')">
@@ -1434,6 +1428,34 @@ h1 .hl{color:var(--accent);text-shadow:var(--neon-green)}
     <div class="m-acts"><button class="btn btn-g" onclick="closeM('ratingModal')">გამოტ.</button><button class="btn btn-a" onclick="closeM('ratingModal');showToast('✓ შეფ. გამოქ.!','ok')">გაგზ.</button></div>
   </div>
 </div>
+<!-- ── Edit Listing Modal ─────────────────────────────────────── -->
+<div class="modal-bg" id="editListingModal" onclick="if(event.target===this)closeM('editListingModal')">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-title">✏️ განცხადების რედაქტირება</div>
+    <input type="hidden" id="edit-listing-id">
+    <input type="hidden" id="edit-listing-orig-price">
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px">
+      <div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">სათაური</div>
+        <input class="inp" id="edit-listing-title" placeholder="განცხადების სათაური" style="width:100%;box-sizing:border-box">
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">აღწერა</div>
+        <textarea class="inp" id="edit-listing-desc" rows="3" placeholder="აღწერა" style="width:100%;box-sizing:border-box;resize:vertical"></textarea>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">ფასი (₾)</div>
+        <input class="inp" id="edit-listing-price" type="number" min="1" step="0.01" placeholder="0.00" style="width:100%;box-sizing:border-box" oninput="updatePriceHint()">
+        <div id="edit-listing-price-hint" style="font-size:10px;margin-top:4px"></div>
+      </div>
+    </div>
+    <div class="m-acts" style="margin-top:16px">
+      <button class="btn btn-g" onclick="closeM('editListingModal')">გაუქმება</button>
+      <button class="btn btn-a" onclick="saveListingEdit()">✅ შენახვა</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-bg" id="disputeModal" onclick="if(event.target===this)closeM('disputeModal')">
   <div class="modal">
     <div class="modal-title">⚑ დავის გახსნა</div>
@@ -2121,22 +2143,116 @@ async function loadMyProfile() {
 async function loadMyListings() {
   if (!currentUser) return;
   try {
-    // seller_id პარამეტრი backend-ს გადაეცემა სწორი ID-ით
-    // include_sold=true — საკუთარი გაყიდული განცხ-ებიც ჩანდეს
     const data = await api(
       '/api/listings?seller_id=' + encodeURIComponent(currentUser.id) +
-      '&include_sold=true&limit=20'
+      '&include_sold=true&include_pending=true&include_inactive=true&limit=50'
     );
     const grid = document.getElementById('prof-grid');
     if (!grid) return;
     if (data.listings && data.listings.length) {
-      renderGrid('prof-grid', data.listings.map(mapApiListing), true);
+      grid.innerHTML = data.listings.map(l => {
+        const statusBadge = {
+          active:   '<span style="color:var(--accent);font-size:10px">● აქტიური</span>',
+          pending:  '<span style="color:var(--gold);font-size:10px">⏳ მოდ. მოლოდინში</span>',
+          inactive: '<span style="color:var(--muted);font-size:10px">○ გაყვანილია</span>',
+          sold:     '<span style="color:var(--accent);font-size:10px">✅ გაყიდულია</span>',
+          blocked:  '<span style="color:var(--red);font-size:10px">⛔ დაბლოკილია</span>',
+        }[l.status] || '';
+
+        const discount = l.original_price && Number(l.original_price) > Number(l.price_gel);
+        const priceHtml = discount
+          ? `<span style="text-decoration:line-through;color:var(--muted);font-size:11px">₾${Number(l.original_price).toFixed(2)}</span>
+             <span style="color:#22c55e;font-weight:700;font-family:var(--mono)"> ₾${Number(l.price_gel).toFixed(2)}</span>`
+          : `<span style="color:var(--gold);font-weight:700;font-family:var(--mono)">₾${Number(l.price_gel).toFixed(2)}</span>`;
+
+        const actions = [];
+        if (['active','inactive','pending'].includes(l.status)) {
+          actions.push(`<button class="btn btn-sm" style="font-size:10px;padding:3px 8px;background:var(--bg3);border:1px solid var(--border)" onclick="openEditListingModal('${l.id}')">✏️ რედ.</button>`);
+        }
+        if (l.status === 'active' || l.status === 'pending') {
+          actions.push(`<button class="btn btn-sm" style="font-size:10px;padding:3px 8px;background:var(--bg3);border:1px solid var(--border);color:var(--muted)" onclick="delistListing('${l.id}')">📤 აღება</button>`);
+        }
+        if (l.status === 'inactive') {
+          actions.push(`<button class="btn btn-a btn-sm" style="font-size:10px;padding:3px 8px" onclick="relistListing('${l.id}')">🔄 ხელახლა</button>`);
+        }
+
+        return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+            <div style="font-size:12px;font-weight:600;flex:1;line-height:1.4">${esc(l.title)}</div>
+            ${statusBadge}
+          </div>
+          <div style="font-size:11px;color:var(--muted)">${esc(l.game)} · ${esc(l.listing_type)}</div>
+          <div>${priceHtml}</div>
+          ${actions.length ? `<div style="display:flex;gap:6px;margin-top:4px">${actions.join('')}</div>` : ''}
+        </div>`;
+      }).join('');
     } else {
       grid.innerHTML = '<div class="empty"><div class="empty-ico">📦</div><div class="empty-t">განცხადებები ჯერ არ გაქვს</div></div>';
     }
   } catch (e) {
     console.error('loadMyListings:', e);
   }
+}
+
+async function delistListing(id) {
+  if (!confirm('გამოიყვანო განცხადება საიტიდან?')) return;
+  try {
+    await api('/api/listings/' + id + '/delist', { method: 'POST' });
+    showToast('📤 განცხადება გამოყვანილია', 'ok');
+    loadMyListings();
+  } catch(e) { showToast(e.message || 'შეცდომა', 'err'); }
+}
+
+async function relistListing(id) {
+  try {
+    await api('/api/listings/' + id + '/relist', { method: 'POST' });
+    showToast('⏳ განცხადება მოდერაციაზე გაიგზავნა', 'ok');
+    loadMyListings();
+  } catch(e) { showToast(e.message || 'შეცდომა', 'err'); }
+}
+
+async function openEditListingModal(id) {
+  try {
+    const l = await api('/api/listings/' + id);
+    document.getElementById('edit-listing-id').value        = l.id;
+    document.getElementById('edit-listing-orig-price').value = l.original_price || l.price_gel;
+    document.getElementById('edit-listing-title').value     = l.title || '';
+    document.getElementById('edit-listing-desc').value      = l.description || '';
+    document.getElementById('edit-listing-price').value     = Number(l.price_gel).toFixed(2);
+    updatePriceHint();
+    openM('editListingModal');
+  } catch(e) { showToast('განცხ. ჩვ. ვერ მოხდა', 'err'); }
+}
+
+function updatePriceHint() {
+  const origPrice = Number(document.getElementById('edit-listing-orig-price').value) || 0;
+  const newPrice  = Number(document.getElementById('edit-listing-price').value) || 0;
+  const hint      = document.getElementById('edit-listing-price-hint');
+  if (!hint) return;
+  if (newPrice > 0 && newPrice < origPrice) {
+    hint.innerHTML = `🏷️ <span style="text-decoration:line-through;color:var(--muted)">₾${origPrice.toFixed(2)}</span> → <span style="color:#22c55e;font-weight:700">₾${newPrice.toFixed(2)}</span> ფასდაკლება გამოჩნდება`;
+  } else if (newPrice >= origPrice && origPrice > 0) {
+    hint.innerHTML = `<span style="color:var(--muted)">ფასდაკლება გაუქმდება</span>`;
+  } else {
+    hint.textContent = '';
+  }
+}
+
+async function saveListingEdit() {
+  const id    = document.getElementById('edit-listing-id').value;
+  const title = document.getElementById('edit-listing-title').value.trim();
+  const desc  = document.getElementById('edit-listing-desc').value.trim();
+  const price = document.getElementById('edit-listing-price').value;
+  if (!title) { showToast('სათაური სავალდებულოა', 'err'); return; }
+  try {
+    await api('/api/listings/' + id, {
+      method: 'PUT',
+      body: JSON.stringify({ title, description: desc, price_gel: Number(price) })
+    });
+    closeM('editListingModal');
+    showToast('✅ განცხადება განახლდა!', 'ok');
+    loadMyListings();
+  } catch(e) { showToast(e.message || 'შეცდომა', 'err'); }
 }
 
 async function saveProfile() {
@@ -2976,9 +3092,8 @@ async function openChatRoom(el) {
       const status   = order ? order.status : null;
       const isDisputed = status === 'disputed';
       if (deliverBtn) deliverBtn.style.display = (isSeller && status === 'active' && !isDisputed) ? 'inline-block' : 'none';
-      if (confirmBtn) confirmBtn.style.display = (isBuyer && status === 'delivered' && !isDisputed) ? 'inline-block' : 'none';
-      if (disputeBtn) disputeBtn.style.display = ((isBuyer || isSeller) && status === 'delivered' && !isDisputed) ? 'inline-block' : 'none';
-      if (order) window._chatOrderAmount = order.seller_receives;
+      if (confirmBtn) confirmBtn.style.display = (isBuyer && ['active','delivered'].includes(status) && !isDisputed) ? 'inline-block' : 'none';
+      if (disputeBtn) disputeBtn.style.display = (isBuyer && ['active','delivered'].includes(status) && !isDisputed) ? 'inline-block' : 'none';
     } else {
       if (deliverBtn) deliverBtn.style.display = 'none';
       if (confirmBtn) confirmBtn.style.display = 'none';
@@ -3639,7 +3754,7 @@ async function postListing() {
     document.getElementById('post-desc').value  = '';
 
     closeM('postModal');
-    showToast(isVip ? '⭐ VIP განცხადება გამოქვეყნდა!' : '✅ განცხადება გამოქვეყნდა!', 'ok');
+    showToast(isVip ? '⏳ VIP განცხადება მოდერაციაზე გაიგზავნა!' : '⏳ განცხადება მოდ. მოლოდინშია — დადასტ. შემდეგ გამოჩნდება', 'ok');
     loadListingsFromAPI('home-grid');
     loadListingsFromAPI('l-grid');
     loadHomeStats();
@@ -3688,7 +3803,7 @@ async function loadMyOrders() {
         completed:'var(--accent)', cancelled:'var(--red)', disputed:'var(--red)'
       };
       const isBuyer    = o.buyer_id === currentUser.id;
-      const canConfirm = isBuyer && o.status === 'delivered' && o.escrow_status === 'held';
+      const canConfirm = isBuyer && ['active','delivered'].includes(o.status) && o.escrow_status === 'held';
       const canDeliver = !isBuyer && o.status === 'active' && o.escrow_status === 'held';
       return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;margin-bottom:10px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -3713,27 +3828,14 @@ async function loadMyOrders() {
   }
 }
 
-function confirmOrder(orderId, amount) {
-  window._confirmOrderId  = orderId;
-  window._confirmOrderAmt = amount;
-
-  const amtEl  = document.getElementById('confirm-modal-amt');
-  const txtEl  = document.getElementById('confirm-modal-text');
-  if (amtEl) amtEl.textContent = '₾' + Number(amount).toFixed(2);
-  if (txtEl) txtEl.textContent = 'დაადასტ. რომ ნივთი/მონაცემები მიიღე?';
-  openM('confirmModal');
-}
-
-async function executeConfirmOrder() {
-  const orderId = window._confirmOrderId;
-  const amount  = window._confirmOrderAmt;
-  if (!orderId) return;
-  closeM('confirmModal');
+async function confirmOrder(orderId, amount) {
+  if (!confirm('დაადასტ. რომ მიიღე? ₾' + amount + ' გამყიდველს ჩაერიცხება.')) return;
   try {
     await api('/api/orders/' + orderId + '/confirm', { method: 'POST' });
     showToast('✅ დადასტ.! ₾' + Number(amount).toFixed(2) + ' გამყ. ჩაერიცხა', 'ok');
     refreshOrderViews();
     loadCurrentUser();
+    // rating modal
     setTimeout(() => openM('ratingModal'), 600);
   } catch(e) { showToast(e.message || 'შეცდომა', 'err'); }
 }
@@ -3886,7 +3988,7 @@ function renderOhCard(o) {
   const isBuyer    = o.buyer_id === currentUser.id;
   const role       = isBuyer ? '🛒 მყიდველი' : '💰 გამყიდველი';
   const partner    = isBuyer ? o.seller_username : o.buyer_username;
-  const canConfirm = isBuyer && o.status === 'delivered' && o.escrow_status === 'held' && !o.dispute_id;
+  const canConfirm = isBuyer && ['active','delivered'].includes(o.status) && o.escrow_status === 'held' && !o.dispute_id;
   const canDeliver = !isBuyer && o.status === 'active' && o.escrow_status === 'held' && !o.dispute_id;
   const canReview  = o.status === 'completed' && isBuyer && !o.review_id;
 

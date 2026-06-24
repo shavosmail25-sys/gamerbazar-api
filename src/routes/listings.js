@@ -5,7 +5,7 @@
 
 const express = require('express');
 const db      = require('../db');
-const { requireAuth, optionalAuth } = require('../middleware/auth');
+const { requireAuth, optionalAuth, requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -191,8 +191,8 @@ router.post('/', requireAuth, async (req, res) => {
 
     const { rows } = await db.query(`
       INSERT INTO listings
-        (seller_id, category, game, listing_type, title, description, tags, price_gel)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+        (seller_id, category, game, listing_type, title, description, tags, price_gel, status)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pending')
       RETURNING *
     `, [req.user.id, category, game, normalizedType, title,
         description || '', tags || [], Number(price_gel)]);
@@ -218,6 +218,34 @@ router.put('/:id', requireAuth, async (req, res) => {
     }
 
     const { title, description, tags, price_gel, status } = req.body;
+
+    // status ვალიდაცია — მომხ-ს შეუძლია მხოლოდ inactive (delist)
+    // admin-ს შეუძლია ყველა სტატუსი
+    const allowedUserStatuses = ['inactive'];
+    if (status && req.user.role !== 'admin' && !allowedUserStatuses.includes(status)) {
+      return res.status(403).json({ error: 'cannot_set_this_status' });
+    }
+
+    // ფასდაკლების ლოგიკა — თუ ახალი ფასი < ძველი, original_price ვინახავთ
+    let originalPriceUpdate = '';
+    const params = [title, description, tags, price_gel ? Number(price_gel) : null, status, req.params.id];
+
+    if (price_gel && existing[0].original_price === null) {
+      const oldPrice = Number(existing[0].price_gel);
+      const newPrice = Number(price_gel);
+      if (newPrice < oldPrice) {
+        originalPriceUpdate = ', original_price = $7';
+        params.push(oldPrice);
+      }
+    } else if (price_gel && existing[0].original_price !== null) {
+      const newPrice = Number(price_gel);
+      const origPrice = Number(existing[0].original_price);
+      // ფასი ისევ original-ზე მეტი ან ტოლია — discount გაუქმება
+      if (newPrice >= origPrice) {
+        originalPriceUpdate = ', original_price = NULL';
+      }
+    }
+
     const { rows } = await db.query(`
       UPDATE listings SET
         title       = COALESCE($1, title),
@@ -226,9 +254,10 @@ router.put('/:id', requireAuth, async (req, res) => {
         price_gel   = COALESCE($4, price_gel),
         status      = COALESCE($5, status),
         updated_at  = NOW()
+        ${originalPriceUpdate}
       WHERE id=$6
       RETURNING *
-    `, [title, description, tags, price_gel, status, req.params.id]);
+    `, params);
 
     res.json(rows[0]);
   } catch (err) {
@@ -410,6 +439,87 @@ router.delete('/:id/images', requireAuth, async (req, res) => {
     }
 
     res.json({ ok: true, images: updated });
+  } catch (err) {
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// POST /api/listings/:id/approve  — Admin: pending → active
+// ══════════════════════════════════════════════════════════════
+router.post('/:id/approve', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      "UPDATE listings SET status='active', updated_at=NOW() WHERE id=$1 AND status='pending' RETURNING *",
+      [req.params.id]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'not_found_or_not_pending' });
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// POST /api/listings/:id/reject  — Admin: pending → deleted
+// ══════════════════════════════════════════════════════════════
+router.post('/:id/reject', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { reason = '' } = req.body;
+    const { rows } = await db.query(
+      "UPDATE listings SET status='deleted', updated_at=NOW() WHERE id=$1 RETURNING *",
+      [req.params.id]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'not_found' });
+    res.json({ ok: true, reason });
+  } catch (err) {
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// POST /api/listings/:id/delist  — მომხმარებელი: active → inactive
+// ══════════════════════════════════════════════════════════════
+router.post('/:id/delist', requireAuth, async (req, res) => {
+  try {
+    const { rows: existing } = await db.query(
+      'SELECT * FROM listings WHERE id=$1', [req.params.id]
+    );
+    if (!existing.length) return res.status(404).json({ error: 'not_found' });
+    if (existing[0].seller_id !== req.user.id && req.user.role !== 'admin')
+      return res.status(403).json({ error: 'forbidden' });
+    if (!['active', 'pending'].includes(existing[0].status))
+      return res.status(400).json({ error: 'cannot_delist_this_status' });
+
+    const { rows } = await db.query(
+      "UPDATE listings SET status='inactive', updated_at=NOW() WHERE id=$1 RETURNING *",
+      [req.params.id]
+    );
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// POST /api/listings/:id/relist  — inactive → pending (ისევ მოდერაციაზე)
+// ══════════════════════════════════════════════════════════════
+router.post('/:id/relist', requireAuth, async (req, res) => {
+  try {
+    const { rows: existing } = await db.query(
+      'SELECT * FROM listings WHERE id=$1', [req.params.id]
+    );
+    if (!existing.length) return res.status(404).json({ error: 'not_found' });
+    if (existing[0].seller_id !== req.user.id && req.user.role !== 'admin')
+      return res.status(403).json({ error: 'forbidden' });
+    if (existing[0].status !== 'inactive')
+      return res.status(400).json({ error: 'not_inactive' });
+
+    const { rows } = await db.query(
+      "UPDATE listings SET status='pending', updated_at=NOW() WHERE id=$1 RETURNING *",
+      [req.params.id]
+    );
+    res.json(rows[0]);
   } catch (err) {
     res.status(500).json({ error: 'server_error' });
   }

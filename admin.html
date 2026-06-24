@@ -260,14 +260,6 @@ input,select,textarea{font-family:var(--sans)}
         <span class="sb-item-ico">⚠</span>დავები
         <span class="sb-item-count" id="nav-disputes-count">0</span>
       </div>
-      <div class="sb-item" data-view="deposits" onclick="switchView('deposits')">
-        <span class="sb-item-ico">💰</span>შეტანები
-        <span class="sb-item-count" id="nav-deposits-count">0</span>
-      </div>
-      <div class="sb-item" data-view="withdrawals" onclick="switchView('withdrawals')">
-        <span class="sb-item-ico">📤</span>გატანები
-        <span class="sb-item-count" id="nav-withdrawals-count">0</span>
-      </div>
 
       <div class="sb-section-label">Population</div>
       <div class="sb-item" data-view="users" onclick="switchView('users')">
@@ -331,38 +323,6 @@ input,select,textarea{font-family:var(--sans)}
         <div class="list" id="disputes-list"><div class="loading">სკანირება</div></div>
       </div>
 
-      <!-- ═══════════ DEPOSITS ═══════════ -->
-      <div class="view" id="view-deposits">
-        <div class="view-head">
-          <div><div class="view-title">💰 შეტანების მართვა</div><div class="view-sub">მომხმარებლების გადარიცხვის მოთხოვნები — გადაამოწმე და დაადასტურე</div></div>
-          <button class="btn btn-signal" onclick="loadDeposits()">↻ განახლება</button>
-        </div>
-
-        <!-- ხელით დამატება -->
-        <div class="section-block" style="margin-bottom:20px">
-          <div class="section-block-title">➕ ბალანსის ხელით დამატება</div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
-            <input class="filter-input" id="manual-username" placeholder="username ან email" style="flex:2;min-width:160px">
-            <input class="filter-input" id="manual-amount" type="number" placeholder="თანხა (₾)" style="flex:1;min-width:100px">
-            <input class="filter-input" id="manual-note" placeholder="შენიშვნა (სურ.)" style="flex:2;min-width:160px">
-            <button class="btn btn-signal" onclick="adminAddBalance()">+ დამატება</button>
-          </div>
-        </div>
-
-        <!-- Pending სია -->
-        <div class="section-block-title">⏳ Pending გადარიცხვები</div>
-        <div class="list" id="deposits-list"><div class="loading">სკანირება</div></div>
-      </div>
-
-      <!-- ═══════════ WITHDRAWALS ═══════════ -->
-      <div class="view" id="view-withdrawals">
-        <div class="view-head">
-          <div><div class="view-title">📤 გატანების მართვა</div><div class="view-sub">მომხმარებლების გამოტანის მოთხოვნები — გადაამოწმე IBAN და გადარიცხე</div></div>
-          <button class="btn btn-signal" onclick="loadWithdrawals()">↻ განახლება</button>
-        </div>
-        <div class="list" id="withdrawals-list"><div class="loading">სკანირება</div></div>
-      </div>
-
       <!-- ═══════════ USERS ═══════════ -->
       <div class="view" id="view-users">
         <div class="view-head">
@@ -384,11 +344,13 @@ input,select,textarea{font-family:var(--sans)}
       <!-- ═══════════ LISTINGS ═══════════ -->
       <div class="view" id="view-listings">
         <div class="view-head">
-          <div><div class="view-title">განცხადებების მოდერაცია</div><div class="view-sub">ძებნა სათაურით/თამაშით · სტატუსის ფილტრი · ბლოკვა ან წაშლა</div></div>
+          <div><div class="view-title">განცხადებების მოდერაცია</div><div class="view-sub">pending — საჭიროებს დადასტ. · ბლოკვა ან წაშლა</div></div>
+          <div id="pending-listings-badge" style="display:none;background:#ef4444;color:#fff;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px"></div>
         </div>
         <div class="filter-bar">
           <input class="search-i" id="listings-search" placeholder="🔍 ძებნა სათაურით, თამაშით..." oninput="debounceListingsSearch()">
           <div class="seg" id="listings-filter">
+            <button class="seg-btn" data-status="pending" onclick="setListingsFilter('pending')">⏳ Pending</button>
             <button class="seg-btn on" data-status="all" onclick="setListingsFilter('all')">ყველა</button>
             <button class="seg-btn" data-status="active" onclick="setListingsFilter('active')">აქტიური</button>
             <button class="seg-btn" data-status="blocked" onclick="setListingsFilter('blocked')">დაბლოკილი</button>
@@ -603,8 +565,6 @@ function switchView(view) {
   if (view === 'disputes') loadDisputes();
   if (view === 'users')    loadUsers();
   if (view === 'listings') loadListings();
-  if (view === 'deposits') loadDeposits();
-  if (view === 'withdrawals') loadWithdrawals();
 }
 
 function closeModal(id) {
@@ -629,16 +589,48 @@ async function loadOverview() {
     const bDot = document.getElementById('pulse-dot-banned');
     bDot.className = 'pulse-dot ' + (d.users.banned > 0 ? 'warn' : 'live');
 
+    // pending listings badge — nav-ში
+    const pendingBadge = document.getElementById('pending-listings-badge');
+    if (pendingBadge) {
+      const pendingCount = d.listings.pending || 0;
+      if (pendingCount > 0) {
+        pendingBadge.textContent = `${pendingCount} pending`;
+        pendingBadge.style.display = 'inline-block';
+      } else {
+        pendingBadge.style.display = 'none';
+      }
+    }
+
+    // pulse strip-ში pending indicator
+    let pulseStrip = document.getElementById('pulse-strip');
+    let pendingPulse = document.getElementById('pulse-pending-listings');
+    if (pulseStrip && !pendingPulse) {
+      const cell = document.createElement('div');
+      cell.className = 'pulse-cell';
+      cell.id = 'pulse-pending-cell';
+      cell.innerHTML = `<div class="pulse-dot warn" id="pulse-dot-pending"></div><span class="pulse-label">Pending</span><span class="pulse-val" id="pulse-pending-listings">0</span>`;
+      pulseStrip.appendChild(cell);
+      pendingPulse = document.getElementById('pulse-pending-listings');
+    }
+    if (pendingPulse) {
+      pendingPulse.textContent = d.listings.pending || 0;
+      const dot = document.getElementById('pulse-dot-pending');
+      if (dot) dot.className = 'pulse-dot ' + ((d.listings.pending || 0) > 0 ? 'warn' : 'live');
+    }
+
     grid.innerHTML = `
       <div class="stat-cell">
         <div class="stat-cell-top"><span class="stat-cell-label">Users</span><span class="stat-cell-flag ok"></span></div>
         <div class="stat-cell-val">${d.users.total}</div>
         <div class="stat-cell-sub"><b>${d.users.banned}</b> დაბლოკილი</div>
       </div>
-      <div class="stat-cell">
-        <div class="stat-cell-top"><span class="stat-cell-label">Listings</span><span class="stat-cell-flag ok"></span></div>
+      <div class="stat-cell" style="${(d.listings.pending||0) > 0 ? 'border-color:#f59e0b' : ''}">
+        <div class="stat-cell-top"><span class="stat-cell-label">Listings</span><span class="stat-cell-flag ${(d.listings.pending||0) > 0 ? 'warn' : 'ok'}"></span></div>
         <div class="stat-cell-val">${d.listings.active}</div>
-        <div class="stat-cell-sub">აქტიური · სულ <b>${d.listings.total}</b></div>
+        <div class="stat-cell-sub">
+          აქტიური · სულ <b>${d.listings.total}</b>
+          ${(d.listings.pending||0) > 0 ? `<br><b style="color:#f59e0b">⏳ ${d.listings.pending} pending</b>` : ''}
+        </div>
       </div>
       <div class="stat-cell">
         <div class="stat-cell-top"><span class="stat-cell-label">Orders</span><span class="stat-cell-flag ok"></span></div>
@@ -659,9 +651,12 @@ async function loadOverview() {
 
     const riskBlock = document.getElementById('risk-block');
     const riskSub = document.getElementById('risk-sub');
-    if (d.disputes.open > 0) {
+    const issues = [];
+    if (d.disputes.open > 0) issues.push(`<b style="color:var(--signal)">${d.disputes.open}</b> დავა ელოდება გადაწყვეტას`);
+    if ((d.listings.pending||0) > 0) issues.push(`<b style="color:#f59e0b">${d.listings.pending}</b> განცხ. მოდ. ელოდება`);
+    if (issues.length > 0) {
       riskBlock.style.display = 'block';
-      riskSub.innerHTML = `<b style="color:var(--signal)">${d.disputes.open}</b> დავა ელოდება გადაწყვეტას. რეკომენდირებულია სასწრაფო გადასინჯვა.`;
+      riskSub.innerHTML = issues.join(' · ') + '. რეკომენდირებულია სასწრაფო გადასინჯვა.';
     } else {
       riskBlock.style.display = 'none';
     }
@@ -883,157 +878,6 @@ function debounceListingsSearch() {
   listingsSearchTimer = setTimeout(() => { listingsPage = 1; loadListings(); }, 350);
 }
 
-// ══════════════════════════════════════════════════════════
-// DEPOSITS
-// ══════════════════════════════════════════════════════════
-async function loadDeposits() {
-  const list = document.getElementById('deposits-list');
-  list.innerHTML = '<div class="loading">სკანირება</div>';
-  try {
-    const rows = await api('/api/admin/deposits/pending');
-    const count = document.getElementById('nav-deposits-count');
-    if (count) count.textContent = rows.length;
-
-    if (!rows.length) {
-      list.innerHTML = '<div class="empty-state">✅ Pending შეტანები არ არის</div>';
-      return;
-    }
-
-    list.innerHTML = rows.map(t => `
-      <div class="list-row" style="flex-wrap:wrap;gap:8px">
-        <div style="flex:1;min-width:180px">
-          <div style="font-weight:700">${t.username} <span style="font-size:10px;color:var(--dim)">${t.email}</span></div>
-          <div style="font-size:11px;color:var(--dim);margin-top:2px">${new Date(t.created_at).toLocaleString('ka-GE')}</div>
-          ${t.description ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${t.description}</div>` : ''}
-        </div>
-        <div style="font-size:20px;font-weight:800;color:#4ade80">₾${Number(t.amount_gel).toFixed(2)}</div>
-        <div style="display:flex;gap:6px">
-          <button class="btn btn-signal" onclick="confirmDeposit('${t.id}', '${t.username}', ${t.amount_gel})">✓ დადასტ.</button>
-          <button class="btn btn-ban" onclick="rejectDeposit('${t.id}')">✗ უარი</button>
-        </div>
-      </div>
-    `).join('');
-  } catch(e) {
-    list.innerHTML = `<div class="empty-state">შეცდომა: ${e.message}</div>`;
-  }
-}
-
-async function confirmDeposit(id, username, amount) {
-  if (!confirm(`დაადასტურე ₾${amount} — ${username}?`)) return;
-  try {
-    await api(`/api/admin/deposits/${id}/confirm`, { method: 'POST' });
-    showAdminToast(`✅ ₾${amount} — ${username}-ს ბალანსი განახლდა`);
-    loadDeposits();
-  } catch(e) {
-    showAdminToast('შეცდომა: ' + e.message, true);
-  }
-}
-
-async function rejectDeposit(id) {
-  if (!confirm('უარვყოთ ეს შეტანა?')) return;
-  try {
-    await api(`/api/admin/deposits/${id}/reject`, { method: 'POST' });
-    showAdminToast('შეტანა უარყოფილია');
-    loadDeposits();
-  } catch(e) {
-    showAdminToast('შეცდომა: ' + e.message, true);
-  }
-}
-
-async function adminAddBalance() {
-  const usernameOrEmail = document.getElementById('manual-username')?.value?.trim();
-  const amount = parseFloat(document.getElementById('manual-amount')?.value);
-  const note   = document.getElementById('manual-note')?.value?.trim();
-
-  if (!usernameOrEmail) { showAdminToast('username ან email შეიყვანე', true); return; }
-  if (!amount || amount <= 0) { showAdminToast('თანხა შეიყვანე', true); return; }
-
-  try {
-    // ჯერ user_id ვიპოვოთ
-    const data = await api(`/api/admin/users?search=${encodeURIComponent(usernameOrEmail)}`);
-    if (!data.users?.length) { showAdminToast('მომხმარებელი ვერ მოიძებნა', true); return; }
-    const user = data.users[0];
-
-    if (!confirm(`დაემატოს ₾${amount} — ${user.username}?`)) return;
-
-    await api('/api/admin/balance/add', {
-      method: 'POST',
-      body: JSON.stringify({ user_id: user.id, amount, note: note || `ადმინის მიერ: ${usernameOrEmail}` })
-    });
-    showAdminToast(`✅ ₾${amount} დაემატა ${user.username}-ს`);
-    document.getElementById('manual-username').value = '';
-    document.getElementById('manual-amount').value   = '';
-    document.getElementById('manual-note').value     = '';
-  } catch(e) {
-    showAdminToast('შეცდომა: ' + e.message, true);
-  }
-}
-
-function showAdminToast(msg, isErr = false) {
-  const t = document.createElement('div');
-  t.style.cssText = `position:fixed;bottom:24px;right:24px;z-index:9999;background:${isErr?'#3a1010':'#0d2a1a'};border:1px solid ${isErr?'#ef444440':'#4ade8040'};color:${isErr?'#f87171':'#4ade80'};padding:12px 18px;border-radius:10px;font-size:13px;font-weight:600;max-width:320px`;
-  t.textContent = msg;
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), 4000);
-}
-
-// ══════════════════════════════════════════════════════════
-// WITHDRAWALS
-// ══════════════════════════════════════════════════════════
-async function loadWithdrawals() {
-  const list = document.getElementById('withdrawals-list');
-  list.innerHTML = '<div class="loading">სკანირება</div>';
-  try {
-    const rows = await api('/api/admin/withdrawals/pending');
-    const count = document.getElementById('nav-withdrawals-count');
-    if (count) count.textContent = rows.length;
-
-    if (!rows.length) {
-      list.innerHTML = '<div class="empty-state">✅ Pending გატანები არ არის</div>';
-      return;
-    }
-
-    list.innerHTML = rows.map(t => `
-      <div class="list-row" style="flex-wrap:wrap;gap:8px">
-        <div style="flex:1;min-width:200px">
-          <div style="font-weight:700">${t.username} <span style="font-size:10px;color:var(--dim)">${t.email}</span></div>
-          <div style="font-family:monospace;font-size:12px;color:var(--accent);margin-top:4px">${t.description || '—'}</div>
-          <div style="font-size:11px;color:var(--dim);margin-top:2px">${new Date(t.created_at).toLocaleString('ka-GE')}</div>
-        </div>
-        <div style="font-size:20px;font-weight:800;color:#f87171">₾${Math.abs(Number(t.amount_gel)).toFixed(2)}</div>
-        <div style="display:flex;gap:6px">
-          <button class="btn btn-signal" onclick="confirmWithdrawal('${t.id}', '${t.username}', ${Math.abs(t.amount_gel)})">✓ გადარიცხულია</button>
-          <button class="btn btn-ban" onclick="rejectWithdrawal('${t.id}', ${Math.abs(t.amount_gel)}, '${t.user_id}')">✗ უარი</button>
-        </div>
-      </div>
-    `).join('');
-  } catch(e) {
-    list.innerHTML = `<div class="empty-state">შეცდომა: ${e.message}</div>`;
-  }
-}
-
-async function confirmWithdrawal(id, username, amount) {
-  if (!confirm(`დაადასტურე — ₾${amount} გადარიცხულია ${username}-ზე?`)) return;
-  try {
-    await api(`/api/admin/withdrawals/${id}/confirm`, { method: 'POST' });
-    showAdminToast(`✅ ₾${amount} — ${username} დადასტურდა`);
-    loadWithdrawals();
-  } catch(e) {
-    showAdminToast('შეცდომა: ' + e.message, true);
-  }
-}
-
-async function rejectWithdrawal(id, amount, userId) {
-  if (!confirm(`უარვყოთ და ₾${amount} დავუბრუნოთ მომხმარებელს?`)) return;
-  try {
-    await api(`/api/admin/withdrawals/${id}/reject`, { method: 'POST' });
-    showAdminToast(`✅ გატანა უარყოფილია, ₾${amount} დაბრუნდა`);
-    loadWithdrawals();
-  } catch(e) {
-    showAdminToast('შეცდომა: ' + e.message, true);
-  }
-}
-
 async function loadListings() {
   const list = document.getElementById('listings-list');
   list.innerHTML = '<div class="loading">სკანირება</div>';
@@ -1048,9 +892,9 @@ async function loadListings() {
       document.getElementById('listings-pagination').innerHTML = '';
       return;
     }
-    const statusTag = { active: 'tag-ok', blocked: 'tag-crit', sold: 'tag-blue', deleted: 'tag-neutral', pending: 'tag-warn' };
+    const statusTag = { active: 'tag-ok', blocked: 'tag-crit', sold: 'tag-blue', deleted: 'tag-neutral', pending: 'tag-warn', inactive: 'tag-neutral' };
     list.innerHTML = listingsData.map(l => `
-      <div class="row">
+      <div class="row" style="${l.status === 'pending' ? 'border-left:3px solid #f59e0b' : ''}">
         <div class="row-main">
           <div class="row-title">${esc(l.title)} <span class="tag ${statusTag[l.status] || 'tag-neutral'}">${l.status.toUpperCase()}</span> ${l.is_vip ? '<span class="tag tag-warn">VIP</span>' : ''}</div>
           <div class="row-meta">
@@ -1066,8 +910,13 @@ async function loadListings() {
           </div>
         </div>
         <div class="row-actions">
-          <button class="btn btn-ghost" onclick="openModerateModal('${l.id}')">სტატუსი</button>
-          ${l.status !== 'deleted' ? `<button class="btn btn-signal" onclick="deleteListing('${l.id}')">წაშლა</button>` : ''}
+          ${l.status === 'pending' ? `
+            <button class="btn btn-ok" onclick="approveListing('${l.id}')">✅ დადასტ.</button>
+            <button class="btn btn-signal" onclick="rejectListing('${l.id}')">❌ უარყოფა</button>
+          ` : `
+            <button class="btn btn-ghost" onclick="openModerateModal('${l.id}')">სტატუსი</button>
+            ${l.status !== 'deleted' ? `<button class="btn btn-signal" onclick="deleteListing('${l.id}')">წაშლა</button>` : ''}
+          `}
         </div>
       </div>
     `).join('');
@@ -1103,6 +952,29 @@ async function confirmModerate() {
     showToast('შეცდომა', 'err');
   } finally {
     btn.disabled = false;
+  }
+}
+
+async function approveListing(listingId) {
+  try {
+    await api(`/api/listings/${listingId}/approve`, { method: 'POST' });
+    showToast('✅ განცხადება დადასტ. — საიტზე გამოჩნდა', 'ok');
+    loadListings();
+    loadOverview();
+  } catch (e) {
+    showToast('შეცდომა: ' + (e.message || ''), 'err');
+  }
+}
+
+async function rejectListing(listingId) {
+  if (!confirm('უარვყოთ ეს განცხადება?')) return;
+  try {
+    await api(`/api/listings/${listingId}/reject`, { method: 'POST' });
+    showToast('❌ განცხადება უარყოფილია', 'ok');
+    loadListings();
+    loadOverview();
+  } catch (e) {
+    showToast('შეცდომა', 'err');
   }
 }
 
