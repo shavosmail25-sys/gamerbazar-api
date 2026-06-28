@@ -54,11 +54,11 @@ router.get('/', optionalAuth, async (req, res) => {
       include_sold
     } = req.query;
 
-    // პროფ. გვ-ზე seller_id-ით ვფილტრავთ — status-ს გავაფართოვოთ
+    // მთავარ გვერდზე მხოლოდ active, profile-ზე ყველა სტატუსი
     const statusFilter = seller_id
       ? (include_sold === 'true'
-          ? "l.status IN ('active','sold')"
-          : "l.status IN ('active','sold','pending')")
+          ? "l.status IN ('active','sold','pending','inactive')"
+          : "l.status IN ('active','pending','inactive')")
       : "l.status = 'active'";
 
     const conditions = [statusFilter];
@@ -191,8 +191,8 @@ router.post('/', requireAuth, async (req, res) => {
 
     const { rows } = await db.query(`
       INSERT INTO listings
-        (seller_id, category, game, listing_type, title, description, tags, price_gel)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+        (seller_id, category, game, listing_type, title, description, tags, price_gel, status)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pending')
       RETURNING *
     `, [req.user.id, category, game, normalizedType, title,
         description || '', tags || [], Number(price_gel)]);
