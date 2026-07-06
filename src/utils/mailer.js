@@ -1,46 +1,49 @@
 // src/utils/mailer.js
-// Email შეტყობინებები — nodemailer + Gmail SMTP
+// Email შეტყობინებები — Brevo HTTP API (არა SMTP!)
+//
+// რატომ Brevo API და არა nodemailer/SMTP:
+// Render-ის უფასო გეგმა 2025 წლის სექტემბრიდან ბლოკავს ყველა გამავალ SMTP
+// პორტს (25, 465, 587) — ანუ Gmail SMTP აღარასდროს იმუშავებს უფასო
+// Render სერვისიდან, პაროლის მიუხედავად (Connection timeout). Brevo-ს
+// API HTTPS (443) პორტზე მუშაობს, რომელიც არასდროს იბლოკება.
+//
+// საჭირო ENV ცვლადები:
+//   BREVO_API_KEY — Brevo dashboard → Settings → SMTP & API → API Keys
+//   EMAIL_USER    — შენი გამომგზავნი მისამართი (Brevo-ში Single Sender
+//                   Verification-ით დადასტურებული, მაგ. Gmail მისამართი)
 'use strict';
 
-const nodemailer = require('nodemailer');
+const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
 
-let transporter = null;
-
-function getTransporter() {
-  if (transporter) return transporter;
-
-  // EMAIL_USER/EMAIL_PASS — მოთხოვნილი ცვლადები; SMTP_USER/SMTP_PASS ძვ. თავსებადობისთვის
-  const { EMAIL_USER, EMAIL_PASS, SMTP_USER, SMTP_PASS, SMTP_HOST, SMTP_PORT } = process.env;
-  const user = EMAIL_USER || SMTP_USER;
-  const pass = EMAIL_PASS || SMTP_PASS;
-  if (!user || !pass) return null; // არ არის კონფიგ. — silent skip
-
-  transporter = nodemailer.createTransport({
-    host: SMTP_HOST || 'smtp.gmail.com',
-    port: Number(SMTP_PORT) || 465,
-    secure: true,
-    auth: { user, pass },
-  });
-
-  return transporter;
+function isConfigured() {
+  return !!(process.env.BREVO_API_KEY && process.env.EMAIL_USER);
 }
 
-function getFromAddress() {
-  return process.env.EMAIL_USER || process.env.SMTP_USER;
-}
-
-// ── ბაზის ფუნქცია — html email გაგზავნა ────────────────────────
+// ── ბაზის ფუნქცია — html email გაგზავნა Brevo API-ით ──────────
 async function sendMail({ to, subject, html }) {
-  const t = getTransporter();
-  if (!t || !to) return { sent: false };
+  if (!isConfigured() || !to) return { sent: false };
 
   try {
-    await t.sendMail({
-      from: `"GamerBazar.ge" <${getFromAddress()}>`,
-      to,
-      subject,
-      html,
+    const res = await fetch(BREVO_API_URL, {
+      method: 'POST',
+      headers: {
+        'api-key': process.env.BREVO_API_KEY,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        sender:  { name: 'GamerBazar.ge', email: process.env.EMAIL_USER },
+        to:      [{ email: to }],
+        subject,
+        htmlContent: html,
+      }),
     });
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => res.statusText);
+      console.error('brevo send error:', res.status, errText);
+      return { sent: false, error: errText };
+    }
     return { sent: true };
   } catch (err) {
     console.error('mail send error:', err.message);
