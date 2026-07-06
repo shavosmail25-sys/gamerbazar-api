@@ -9,17 +9,24 @@ let transporter = null;
 function getTransporter() {
   if (transporter) return transporter;
 
-  const { SMTP_USER, SMTP_PASS, SMTP_HOST, SMTP_PORT } = process.env;
-  if (!SMTP_USER || !SMTP_PASS) return null; // არ არის კონფიგ. — silent skip
+  // EMAIL_USER/EMAIL_PASS — მოთხოვნილი ცვლადები; SMTP_USER/SMTP_PASS ძვ. თავსებადობისთვის
+  const { EMAIL_USER, EMAIL_PASS, SMTP_USER, SMTP_PASS, SMTP_HOST, SMTP_PORT } = process.env;
+  const user = EMAIL_USER || SMTP_USER;
+  const pass = EMAIL_PASS || SMTP_PASS;
+  if (!user || !pass) return null; // არ არის კონფიგ. — silent skip
 
   transporter = nodemailer.createTransport({
     host: SMTP_HOST || 'smtp.gmail.com',
     port: Number(SMTP_PORT) || 465,
     secure: true,
-    auth: { user: SMTP_USER, pass: SMTP_PASS },
+    auth: { user, pass },
   });
 
   return transporter;
+}
+
+function getFromAddress() {
+  return process.env.EMAIL_USER || process.env.SMTP_USER;
 }
 
 // ── ბაზის ფუნქცია — html email გაგზავნა ────────────────────────
@@ -29,7 +36,7 @@ async function sendMail({ to, subject, html }) {
 
   try {
     await t.sendMail({
-      from: `"GamerBazar.ge" <${process.env.SMTP_USER}>`,
+      from: `"GamerBazar.ge" <${getFromAddress()}>`,
       to,
       subject,
       html,
@@ -63,6 +70,24 @@ function wrap(title, bodyHtml, ctaText, ctaUrl) {
 }
 
 const FRONTEND = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+// ══════════════════════════════════════════════════════════════
+// OTP EMAIL — Email + OTP შესვლა/რეგისტრაცია
+// ══════════════════════════════════════════════════════════════
+async function sendOtpEmail(email, code, ttlMinutes) {
+  return sendMail({
+    to: email,
+    subject: `🔐 შენი GamerBazar კოდია: ${code}`,
+    html: wrap(
+      'შესვლის კოდი',
+      `შენი ერთჯერადი კოდია:<br><br>
+       <div style="font-size:32px;font-weight:700;letter-spacing:6px;color:#fff;text-align:center;
+                   background:#0d0f17;border-radius:10px;padding:16px 0;margin:10px 0">${code}</div>
+       <br>კოდი მოქმედია <b>${ttlMinutes || 5} წუთი</b>. არავის გაუზიარო ეს კოდი — GamerBazar.ge-ის
+       გუნდი არასდროს მოგთხოვს მას სატელეფონო ან ჩატის საშუალებით.`
+    ),
+  });
+}
 
 // ══════════════════════════════════════════════════════════════
 // ORDER EMAILS
@@ -232,6 +257,7 @@ async function sendWithdrawRequestEmail(adminEmail, user, amount, iban) {
 
 module.exports = {
   sendMail,
+  sendOtpEmail,
   sendOrderCreatedEmail,
   sendOrderConfirmedEmail,
   sendOrderCancelledEmail,
