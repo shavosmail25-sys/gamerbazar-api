@@ -222,15 +222,26 @@ input,select,textarea{font-family:var(--sans)}
     <div class="gate-mark"><div class="dot"></div><div class="label">restricted access</div></div>
     <div class="gate-title">Watch<em>tower</em></div>
     <div class="gate-sub">GamerBazar-ის ოპერატორის პანელი. წვდომა მხოლოდ admin როლის მქონე ანგარიშებისთვის.</div>
-    <div class="gate-field">
-      <label>Email</label>
-      <input type="email" id="gate-email" placeholder="admin@gamerbazar.ge" autocomplete="username">
+
+    <!-- ნაბიჯი 1: Email -->
+    <div id="gate-step-email">
+      <div class="gate-field">
+        <label>Email</label>
+        <input type="email" id="gate-email" placeholder="admin@gamerbazar.ge" autocomplete="username" onkeydown="if(event.key==='Enter')adminRequestOtp()">
+      </div>
+      <button class="gate-btn" id="gate-btn" onclick="adminRequestOtp()">კოდის გაგზავნა →</button>
     </div>
-    <div class="gate-field">
-      <label>Password</label>
-      <input type="password" id="gate-pass" placeholder="••••••••" autocomplete="current-password">
+
+    <!-- ნაბიჯი 2: OTP კოდი -->
+    <div id="gate-step-code" style="display:none">
+      <div class="gate-field">
+        <label>OTP კოდი — გაიგზავნა <span id="gate-target-email"></span>-ზე</label>
+        <input type="text" inputmode="numeric" maxlength="6" id="gate-otp" placeholder="••••••" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')adminVerifyOtp()">
+      </div>
+      <button class="gate-btn" id="gate-verify-btn" onclick="adminVerifyOtp()">წვდომის მოთხოვნა →</button>
+      <div class="gate-sub" style="margin-top:10px;cursor:pointer" onclick="adminBackToEmail()">← სხვა Email</div>
     </div>
-    <button class="gate-btn" id="gate-btn" onclick="adminLogin()">წვდომის მოთხოვნა →</button>
+
     <div class="gate-err" id="gate-err"></div>
     <div class="gate-foot">GAMERBAZAR.GE · OPERATOR CONSOLE</div>
   </div>
@@ -499,17 +510,51 @@ setInterval(updatePulseTime, 1000);
 updatePulseTime();
 
 // ══════════════════════════════════════════════════════════
-// AUTH GATE
+// AUTH GATE — Email + OTP (პაროლების გარეშე)
 // ══════════════════════════════════════════════════════════
-async function adminLogin() {
+async function adminRequestOtp() {
   const email = document.getElementById('gate-email').value.trim();
-  const password = document.getElementById('gate-pass').value;
   const errEl = document.getElementById('gate-err');
   const btn = document.getElementById('gate-btn');
   errEl.style.display = 'none';
 
-  if (!email || !password) {
-    errEl.textContent = 'შეავსე ელ-ფოსტა და პაროლი';
+  if (!email) {
+    errEl.textContent = 'შეავსე ელ-ფოსტა';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true; btn.textContent = 'იგზავნება...';
+
+  try {
+    await api('/api/auth/request-otp', { method: 'POST', body: JSON.stringify({ email }) });
+    document.getElementById('gate-target-email').textContent = email;
+    document.getElementById('gate-step-email').style.display = 'none';
+    document.getElementById('gate-step-code').style.display = 'block';
+    document.getElementById('gate-otp').focus();
+  } catch (e) {
+    errEl.textContent = e.message || 'კოდის გაგზავნა ვერ მოხდა';
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'კოდის გაგზავნა →';
+  }
+}
+
+function adminBackToEmail() {
+  document.getElementById('gate-step-code').style.display = 'none';
+  document.getElementById('gate-step-email').style.display = 'block';
+  document.getElementById('gate-err').style.display = 'none';
+}
+
+async function adminVerifyOtp() {
+  const email = document.getElementById('gate-target-email').textContent.trim();
+  const code  = document.getElementById('gate-otp').value.trim();
+  const errEl = document.getElementById('gate-err');
+  const btn   = document.getElementById('gate-verify-btn');
+  errEl.style.display = 'none';
+
+  if (!code) {
+    errEl.textContent = 'შეიყვანე OTP კოდი';
     errEl.style.display = 'block';
     return;
   }
@@ -517,9 +562,9 @@ async function adminLogin() {
   btn.disabled = true; btn.textContent = 'მოწმდება...';
 
   try {
-    const data = await api('/api/auth/login', {
+    const data = await api('/api/auth/verify-otp', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, code }),
     });
     if (data.user.role !== 'admin') {
       errEl.textContent = 'ეს ანგარიში ადმინისტრატორი არ არის';
@@ -531,7 +576,7 @@ async function adminLogin() {
     currentAdmin = data.user;
     enterApp();
   } catch (e) {
-    errEl.textContent = e.message || 'არასწორი ელ-ფოსტა ან პაროლი';
+    errEl.textContent = e.message || 'არასწორი კოდი';
     errEl.style.display = 'block';
     btn.disabled = false; btn.textContent = 'წვდომის მოთხოვნა →';
   }
@@ -566,7 +611,9 @@ function adminLogout() {
   document.getElementById('app').style.display = 'none';
   document.getElementById('gate').style.display = 'flex';
   document.getElementById('gate-email').value = '';
-  document.getElementById('gate-pass').value = '';
+  document.getElementById('gate-otp').value = '';
+  document.getElementById('gate-step-code').style.display = 'none';
+  document.getElementById('gate-step-email').style.display = 'block';
 }
 
 // ══════════════════════════════════════════════════════════
@@ -683,6 +730,11 @@ async function loadOverview() {
         <div class="stat-cell-top"><span class="stat-cell-label">Volume</span><span class="stat-cell-flag ok"></span></div>
         <div class="stat-cell-val">${fmtMoney(d.volume_gel)}</div>
         <div class="stat-cell-sub">დასრულებული შეკვ.</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-cell-top"><span class="stat-cell-label">Admin Earnings</span><span class="stat-cell-flag ok"></span></div>
+        <div class="stat-cell-val" style="color:var(--accent)">${fmtMoney(d.admin_earnings_gel)}</div>
+        <div class="stat-cell-sub">საიტის 5% საკომისიო — წმინდა მოგება</div>
       </div>
     `;
 
