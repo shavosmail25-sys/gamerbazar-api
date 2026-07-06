@@ -12,6 +12,13 @@ const mailer  = require('../utils/mailer');
 const otp     = require('../utils/otp');
 const router  = express.Router();
 
+// ── სუპერ-ადმინის Email — ავტ. აღიჭურვება 'admin' როლით ────────
+// შეიძლება override .env-ში SUPER_ADMIN_EMAIL ცვლადით, default-ად კი
+// ეს კონკრეტული მისამართია, Watch Tower პანელზე წვდომისთვის.
+const SUPER_ADMIN_EMAIL = (process.env.SUPER_ADMIN_EMAIL || 'shavosmail25@gmail.com')
+  .toLowerCase()
+  .trim();
+
 // ── JWT ტოკენის გენერაცია ─────────────────────────────────────
 function makeToken(userId) {
   return jwt.sign(
@@ -30,6 +37,22 @@ async function uniqueUsername(base) {
     if (!rows.length) return name;
     name = `${slug}${i++}`;
   }
+}
+
+// ── SUPER_ADMIN_EMAIL-ს ყოველთვის 'admin' როლი ჰქონდეს ──────────
+// გამოიძახება login/register-ის დროს (email ან google) — თუ მომხმარებელი
+// ამ მისამართით შემოვიდა და role ჯერ 'admin' არაა, ავტ. აწერს და აბრუნებს
+// განახლებულ user obj-ს, რომ token/response-ში სწორი role ჩანდეს დაუყოვნებლივ.
+async function ensureAdminRole(user) {
+  if (!user || !user.email) return user;
+  if (user.email.toLowerCase().trim() !== SUPER_ADMIN_EMAIL) return user;
+  if (user.role === 'admin') return user;
+
+  const { rows } = await db.query(
+    "UPDATE users SET role='admin' WHERE id=$1 RETURNING *",
+    [user.id]
+  );
+  return rows[0] || user;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -160,6 +183,9 @@ router.post('/verify-otp', async (req, res) => {
       user = created[0];
     }
 
+    // ── Watch Tower წვდომა: SUPER_ADMIN_EMAIL-ს ავტ. ენიჭება 'admin' როლი ──
+    user = await ensureAdminRole(user);
+
     const token = makeToken(user.id);
     res.json({
       token,
@@ -265,6 +291,9 @@ router.get('/google/callback', async (req, res) => {
     if (user.role === 'banned') {
       return res.redirect(`${process.env.FRONTEND_URL}?auth=banned`);
     }
+
+    // ── Watch Tower წვდომა: SUPER_ADMIN_EMAIL-ს ავტ. ენიჭება 'admin' როლი ──
+    user = await ensureAdminRole(user);
 
     const token = makeToken(user.id);
     // Frontend-ზე redirect token-ით
