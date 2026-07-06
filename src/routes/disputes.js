@@ -8,6 +8,8 @@ const { requireAuth, requireAdmin } = require('../middleware/auth');
 const mailer     = require('../utils/mailer');
 const push       = require('../utils/push');
 const cloudinary = require('../utils/cloudinary');
+const ledger     = require('../utils/ledger');
+const chat       = require('./chat');
 const router     = express.Router();
 
 // multer — memoryStorage, Cloudinary-ში ასატვირთად
@@ -97,10 +99,12 @@ router.post('/', requireAuth, upload.array('evidence', 5), async (req, res) => {
         // ჩატში სისტ. შეტყობინება — ტაიმერი გაიყინა
         const { rows: roomRows } = await db.query('SELECT id FROM chat_rooms WHERE order_id=$1', [order_id]);
         if (roomRows.length) {
-          await db.query(`
+          const { rows: msgRows } = await db.query(`
             INSERT INTO messages(room_id, sender_id, content, content_type)
             VALUES($1, $2, '⚠️ დავა გაიხსნა — 48-საათიანი ტაიმერი გაჩერებულია. ადმინისტრაცია განიხილავს საქმეს.', 'system')
+            RETURNING *
           `, [roomRows[0].id, req.user.id]);
+          chat.broadcastMessageToRoom(roomRows[0].id, msgRows[0]);
         }
 
         for (const recipient of recipients) {
@@ -165,16 +169,15 @@ router.put('/:id/resolve', requireAuth, requireAdmin, async (req, res) => {
 
     await db.transaction(async (client) => {
       if (resolution === 'release') {
-        // გამყიდველს + 24სთ hold (ადმინის გადაწყვეტილებაზეც ვრცელდება)
-        await client.query(`
-          UPDATE users SET
-            balance_gel          = balance_gel + $1,
-            balance_available_at = GREATEST(
-              COALESCE(balance_available_at, NOW()),
-              NOW() + INTERVAL '24 hours'
-            )
-          WHERE id=$2
-        `, [order.seller_receives, order.seller_id]);
+        // გამყიდველს + 48სთ hold (იგივე წესი, რაც ჩვეულ confirm-ზე)
+        const fee = Number(order.amount_gel) - Number(order.seller_receives);
+        await ledger.creditSellerWithHold(client, {
+          sellerId:  order.seller_id,
+          orderId:   order.id,
+          amountGel: order.seller_receives,
+          source:    'dispute_release',
+        });
+        await ledger.recordPlatformFee(client, fee);
         await client.query(
           'UPDATE users SET escrow_hold_gel=escrow_hold_gel-$1 WHERE id=$2',
           [order.amount_gel, order.buyer_id]

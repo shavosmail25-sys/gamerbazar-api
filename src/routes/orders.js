@@ -6,7 +6,12 @@ const db      = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const mailer  = require('../utils/mailer');
 const push    = require('../utils/push');
+const ledger  = require('../utils/ledger');
+const chat    = require('./chat');
 const router  = express.Router();
+
+// 48სთ hold-ის scheduler-ი — ერთხელ, მოდულის პირველ ჩატვირთვაზე
+ledger.startHoldsScheduler();
 
 // ══════════════════════════════════════════════════════════════
 // POST /api/orders  — შეკვეთის შექმნა + Escrow Hold
@@ -133,11 +138,13 @@ router.post('/:id/deliver', requireAuth, async (req, res) => {
         // ჩატში სისტემური შეტყობინება
         const { rows: roomRows } = await db.query('SELECT id FROM chat_rooms WHERE order_id=$1', [order.id]);
         if (roomRows.length) {
-          await db.query(`
+          const { rows: msgRows } = await db.query(`
             INSERT INTO messages(room_id, sender_id, content, content_type)
             VALUES($1, $2, $3, 'system')
+            RETURNING *
           `, [roomRows[0].id, order.seller_id,
               `✅ გამყიდველმა ნივთი/მონაცემები გადასცა. თქვენ გაქვთ 48 საათი შეამოწმოთ და დაადასტუროთ (ვადა: ${deadline.toLocaleString('ka-GE')}). თუ პრობლემაა — გახსენით დავა.`]);
+          chat.broadcastMessageToRoom(roomRows[0].id, msgRows[0]);
         }
 
         if (buyerRows.length) {
@@ -284,22 +291,24 @@ router.post('/:id/confirm', requireAuth, async (req, res) => {
     if (!['active', 'delivered'].includes(order.status))
       return res.status(400).json({ error: 'cannot_confirm', current: order.status });
 
+    let holdUntil;
     await db.transaction(async (client) => {
       await client.query(
         'UPDATE users SET escrow_hold_gel=escrow_hold_gel-$1 WHERE id=$2',
         [order.amount_gel, order.buyer_id]
       );
-      // გამყიდველის ბალანსი + 24სთ hold (ანტი-ფროდ cooldown)
-      // balance_available_at = NOW() + 24h → withdraw-ი მანამდე ბლოკირებულია
-      await client.query(`
-        UPDATE users SET
-          balance_gel         = balance_gel + $1,
-          balance_available_at = GREATEST(
-            COALESCE(balance_available_at, NOW()),
-            NOW() + INTERVAL '24 hours'
-          )
-        WHERE id=$2
-      `, [order.seller_receives, order.seller_id]);
+
+      // გამყიდველის შემოსავალი — 48სთ hold-ში (ანტი-ფროდ დაცვა), არა პირდაპირ balance_gel-ზე
+      const fee = Number(order.amount_gel) - Number(order.seller_receives);
+      holdUntil = await ledger.creditSellerWithHold(client, {
+        sellerId:  order.seller_id,
+        orderId:   order.id,
+        amountGel: order.seller_receives,
+        source:    'order_confirm',
+      });
+      // საიტის 5%-იანი საკომისიო → admin_earnings
+      await ledger.recordPlatformFee(client, fee);
+
       await client.query(`
         UPDATE orders SET
           escrow_status='released', status='completed',
@@ -307,17 +316,17 @@ router.post('/:id/confirm', requireAuth, async (req, res) => {
         WHERE id=$1
       `, [order.id]);
       await client.query(
-        "INSERT INTO transactions(user_id,order_id,type,amount_gel,description) VALUES($1,$2,'sale_income',$3,'გაყიდვის შემოსავალი')",
+        "INSERT INTO transactions(user_id,order_id,type,amount_gel,description) VALUES($1,$2,'sale_income',$3,'გაყიდვის შემოსავალი (48სთ hold)')",
         [order.seller_id, order.id, order.seller_receives]
       );
       await client.query(
         "INSERT INTO transactions(user_id,order_id,type,amount_gel,description) VALUES($1,$2,'platform_fee',$3,'პლატფ. კომ.')",
-        [order.seller_id, order.id, -(order.amount_gel - order.seller_receives)]
+        [order.seller_id, order.id, -fee]
       );
       await client.query("UPDATE listings SET status='sold' WHERE id=$1", [order.listing_id]);
     });
 
-    res.json({ ok: true, show_review: true });
+    res.json({ ok: true, show_review: true, hold_until: holdUntil });
 
     (async () => {
       try {
@@ -331,10 +340,27 @@ router.post('/:id/confirm', requireAuth, async (req, res) => {
         }
         await push.sendToUser(order.seller_id, {
           title: '✅ შეკვეთა დადასტ.',
-          body: `${listing.title} — ₾${Number(order.seller_receives).toFixed(2)} ბალანსზე`,
+          body: `${listing.title} — ₾${Number(order.seller_receives).toFixed(2)} 48სთ hold-ში`,
           url: `/?page=wallet`,
           tag: `order-${order.id}-confirmed`,
         });
+
+        // ჩატში ავტ. სისტემური შეტყობინება + რეალურ დროში გავრცელება
+        const { rows: roomRows } = await db.query('SELECT id FROM chat_rooms WHERE order_id=$1', [order.id]);
+        if (roomRows.length) {
+          const roomId = roomRows[0].id;
+          const { rows: msgRows } = await db.query(`
+            INSERT INTO messages(room_id, sender_id, content, content_type)
+            VALUES($1, $2, '✅ ყიდვა დადასტურდა — თანხა გამყიდველს 48-საათიანი hold-ით ჩაერიცხა.', 'system')
+            RETURNING *
+          `, [roomId, req.user.id]);
+          chat.broadcastMessageToRoom(roomId, msgRows[0]);
+          // listing-ი მყისიერად "sold"-ად აღინიშნება ორივე მხარის ღია გვერდებზე
+          chat.broadcastEventToRoom(roomId, {
+            event: 'confirmed', status: 'sold',
+            order_id: order.id, listing_id: order.listing_id,
+          });
+        }
       } catch (e) { console.error('confirm notify error:', e.message); }
     })();
   } catch (err) {

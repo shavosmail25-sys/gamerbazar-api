@@ -1,22 +1,16 @@
 // src/routes/auth.js
-// რეგისტრაცია, შესვლა, Google OAuth
+// შესვლა/რეგისტრაცია — Email + OTP (პაროლების გარეშე), + Google OAuth
 
 'use strict';
 
 const express = require('express');
-const bcrypt  = require('bcryptjs');
 const jwt     = require('jsonwebtoken');
 const db      = require('../db');
 const { requireAuth } = require('../middleware/auth');
 
-const crypto  = require('crypto');
 const mailer  = require('../utils/mailer');
+const otp     = require('../utils/otp');
 const router  = express.Router();
-
-// ── Verification token გენ. ───────────────────────────────────
-function makeVerifyToken() {
-  return crypto.randomBytes(32).toString('hex');
-}
 
 // ── JWT ტოკენის გენერაცია ─────────────────────────────────────
 function makeToken(userId) {
@@ -39,244 +33,145 @@ async function uniqueUsername(base) {
 }
 
 // ══════════════════════════════════════════════════════════════
-// POST /api/auth/register  — ელ-ფოსტით რეგისტრაცია
+// POST /api/auth/request-otp  — OTP კოდის გაგზავნა Email-ზე
+// მუშაობს როგორც ახალი, ისე არსებული მომხმარებლისთვის (login == register)
 // ══════════════════════════════════════════════════════════════
-router.post('/register', async (req, res) => {
-  try {
-    const { email, password, username, display_name } = req.body;
-
-    // ვალიდაცია
-    if (!email || !password || !username) {
-      return res.status(400).json({ error: 'required_fields', message: 'email, password, username სავალდებულოა' });
-    }
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'password_too_short', message: 'პაროლი მინ. 6 სიმბ.' });
-    }
-    if (!/^[a-z0-9_]{3,30}$/i.test(username)) {
-      return res.status(400).json({ error: 'invalid_username', message: 'username: 3-30 ლათ. სიმბ.' });
-    }
-
-    const emailClean    = email.toLowerCase().trim();
-    const usernameClean = username.toLowerCase().trim();
-
-    // email ცალკე შემოწმება
-    const { rows: byEmail } = await db.query(
-      'SELECT id FROM users WHERE email=$1', [emailClean]
-    );
-    if (byEmail.length) {
-      return res.status(409).json({ error: 'email_exists', message: 'ეს email უკვე რეგისტრირებულია' });
-    }
-
-    // username ცალკე შემოწმება
-    const { rows: byUser } = await db.query(
-      'SELECT id FROM users WHERE username=$1', [usernameClean]
-    );
-    if (byUser.length) {
-      return res.status(409).json({ error: 'username_exists', message: 'ეს username უკვე გამოყენებულია, სცადე სხვა' });
-    }
-
-    // პაროლის ჰეში
-    const hash = await bcrypt.hash(password, 12);
-
-    // შექმნა
-    const { rows } = await db.query(
-      `INSERT INTO users (email, username, display_name, password_hash, auth_provider, email_verified)
-       VALUES ($1, $2, $3, $4, 'email', FALSE)
-       RETURNING id, email, username, display_name, role, created_at`,
-      [emailClean, usernameClean, display_name || username, hash]
-    );
-
-    const user  = rows[0];
-    const token = makeToken(user.id);
-
-    res.status(201).json({
-      token, user,
-      email_verification_sent: true,
-      message: 'რეგისტრაცია წარმატებულია! შეამოწმე ემაილი დასადასტურებლად.'
-    });
-
-    // ვერიფიკაციის ემაილი — async
-    (async () => {
-      try {
-        const verifyToken = makeVerifyToken();
-        const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24სთ
-        await db.query(
-          'INSERT INTO email_verifications(user_id, token, expires_at) VALUES($1,$2,$3)',
-          [user.id, verifyToken, expires]
-        );
-        await mailer.sendVerificationEmail(user, verifyToken);
-      } catch(e) { console.error('verify email send error:', e.message); }
-    })();
-  } catch (err) {
-    console.error('register error:', err.message);
-    // PostgreSQL unique violation
-    if (err.code === '23505') {
-      const col = (err.constraint || '');
-      if (col.includes('email'))    return res.status(409).json({ error: 'email_exists',    message: 'ეს email უკვე რეგისტრირებულია' });
-      if (col.includes('username')) return res.status(409).json({ error: 'username_exists', message: 'ეს username უკვე გამოყენებულია' });
-      return res.status(409).json({ error: 'already_exists', message: 'ეს email ან username უკვე გამოყენებულია' });
-    }
-    res.status(500).json({ error: 'server_error', message: err.message });
-  }
-});
-
-// ══════════════════════════════════════════════════════════════
-// GET /api/auth/verify-email?token=xxx
-// ══════════════════════════════════════════════════════════════
-router.get('/verify-email', async (req, res) => {
-  const FRONTEND = process.env.FRONTEND_URL || 'http://localhost:3000';
-  try {
-    const { token } = req.query;
-    if (!token) return res.redirect(`${FRONTEND}/?verify=invalid`);
-
-    const { rows } = await db.query(
-      'SELECT * FROM email_verifications WHERE token=$1 AND expires_at > NOW() AND used=FALSE',
-      [token]
-    );
-    if (!rows.length) return res.redirect(`${FRONTEND}/?verify=expired`);
-
-    const v = rows[0];
-    await db.query('UPDATE users SET email_verified=TRUE WHERE id=$1', [v.user_id]);
-    await db.query('UPDATE email_verifications SET used=TRUE WHERE id=$1', [v.id]);
-
-    res.redirect(`${FRONTEND}/?verify=success`);
-  } catch(err) {
-    console.error('verify email error:', err.message);
-    res.redirect(`${process.env.FRONTEND_URL || ''}/?verify=error`);
-  }
-});
-
-// ══════════════════════════════════════════════════════════════
-// POST /api/auth/resend-verification  — ხელახლა გაგზავნა
-// ══════════════════════════════════════════════════════════════
-router.post('/resend-verification', requireAuth, async (req, res) => {
-  try {
-    const { rows } = await db.query('SELECT * FROM users WHERE id=$1', [req.user.id]);
-    const user = rows[0];
-    if (user.email_verified) return res.status(400).json({ error: 'already_verified' });
-
-    // წინა token-ები გავაუქმოთ
-    await db.query('UPDATE email_verifications SET used=TRUE WHERE user_id=$1', [user.id]);
-
-    const verifyToken = makeVerifyToken();
-    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    await db.query(
-      'INSERT INTO email_verifications(user_id, token, expires_at) VALUES($1,$2,$3)',
-      [user.id, verifyToken, expires]
-    );
-    await mailer.sendVerificationEmail(user, verifyToken);
-
-    res.json({ ok: true, message: 'ვერიფიკაციის ემაილი გაიგზავნა' });
-  } catch(err) {
-    res.status(500).json({ error: 'server_error' });
-  }
-});
-
-// ══════════════════════════════════════════════════════════════
-// POST /api/auth/forgot-password  — პაროლის გადაყენება
-// ══════════════════════════════════════════════════════════════
-router.post('/forgot-password', async (req, res) => {
+router.post('/request-otp', async (req, res) => {
   try {
     const { email } = req.body;
-    if (!email) return res.status(400).json({ error: 'email_required' });
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: 'invalid_email', message: 'მიუთითე სწორი ელ-ფოსტა' });
+    }
+    const emailClean = email.toLowerCase().trim();
 
-    const { rows } = await db.query(
-      "SELECT * FROM users WHERE email=$1 AND auth_provider='email'",
-      [email.toLowerCase()]
+    // დაბ. ანგარიშს OTP აღარ ეგზავნება
+    const { rows: banned } = await db.query(
+      "SELECT id FROM users WHERE email=$1 AND role='banned'", [emailClean]
+    );
+    if (banned.length) {
+      return res.status(403).json({ error: 'banned', message: 'ეს ანგარიში დაბლოკილია' });
+    }
+
+    // Resend cooldown — ბოლო კოდი ბოლო 60 წმ-ში თუ გაგზავნილა, ახალს არ ვგზავნით
+    const { rows: recent } = await db.query(
+      `SELECT created_at FROM otp_codes WHERE email=$1 AND used=FALSE
+       ORDER BY created_at DESC LIMIT 1`,
+      [emailClean]
+    );
+    if (recent.length) {
+      const secsSince = (Date.now() - new Date(recent[0].created_at).getTime()) / 1000;
+      if (secsSince < otp.OTP_RESEND_COOLDOWN_SECONDS) {
+        return res.status(429).json({
+          error: 'too_soon',
+          message: `გთხოვ დაელოდე ${Math.ceil(otp.OTP_RESEND_COOLDOWN_SECONDS - secsSince)} წამს`,
+          retry_after_seconds: Math.ceil(otp.OTP_RESEND_COOLDOWN_SECONDS - secsSince),
+        });
+      }
+    }
+
+    const code       = otp.generateCode();
+    const codeHash   = otp.hashCode(code);
+    const expiresAt  = new Date(Date.now() + otp.OTP_TTL_MINUTES * 60 * 1000);
+
+    // წინა გამოუყენ. კოდები ამ ემაილზე — გავაუქმოთ
+    await db.query("UPDATE otp_codes SET used=TRUE WHERE email=$1 AND used=FALSE", [emailClean]);
+    await db.query(
+      `INSERT INTO otp_codes(email, code_hash, purpose, expires_at) VALUES ($1,$2,'login',$3)`,
+      [emailClean, codeHash, expiresAt]
     );
 
-    // security: ყოველთვის ok ვუბრუნებთ (email enumeration-ის თავიდან ასაცილებლად)
-    res.json({ ok: true, message: 'თუ ეს ემაილი რეგისტრირებულია, მიიღებ ლინკს' });
+    res.json({
+      ok: true,
+      message: 'OTP კოდი გაიგზავნა ელ-ფოსტაზე',
+      expires_in_seconds: otp.OTP_TTL_MINUTES * 60,
+    });
 
-    if (!rows.length) return;
-    const user = rows[0];
-
+    // ემაილის გაგზავნა — async
     (async () => {
       try {
-        const resetToken = makeVerifyToken();
-        const expires = new Date(Date.now() + 60 * 60 * 1000); // 1სთ
-        await db.query(
-          'INSERT INTO password_resets(user_id, token, expires_at) VALUES($1,$2,$3)',
-          [user.id, resetToken, expires]
-        );
-        await mailer.sendPasswordResetEmail(user, resetToken);
-      } catch(e) { console.error('forgot password error:', e.message); }
+        await mailer.sendOtpEmail(emailClean, code, otp.OTP_TTL_MINUTES);
+      } catch (e) { console.error('otp email send error:', e.message); }
     })();
-  } catch(err) {
+  } catch (err) {
+    console.error('request-otp error:', err.message);
     res.status(500).json({ error: 'server_error' });
   }
 });
 
 // ══════════════════════════════════════════════════════════════
-// POST /api/auth/reset-password  — ახალი პაროლის დაყენება
+// POST /api/auth/verify-otp  — კოდის დადასტურება → login ან auto-register
 // ══════════════════════════════════════════════════════════════
-router.post('/reset-password', async (req, res) => {
+router.post('/verify-otp', async (req, res) => {
   try {
-    const { token, password } = req.body;
-    if (!token || !password) return res.status(400).json({ error: 'required_fields' });
-    if (password.length < 6) return res.status(400).json({ error: 'password_too_short' });
+    const { email, code } = req.body;
+    if (!email || !code) {
+      return res.status(400).json({ error: 'required_fields', message: 'email და code სავალდებულოა' });
+    }
+    const emailClean = email.toLowerCase().trim();
+    const codeClean   = String(code).trim();
 
-    const { rows } = await db.query(
-      'SELECT * FROM password_resets WHERE token=$1 AND expires_at > NOW() AND used=FALSE',
-      [token]
+    const { rows: otpRows } = await db.query(
+      `SELECT * FROM otp_codes WHERE email=$1 AND used=FALSE
+       ORDER BY created_at DESC LIMIT 1`,
+      [emailClean]
     );
-    if (!rows.length) return res.status(400).json({ error: 'invalid_or_expired_token' });
+    if (!otpRows.length) {
+      return res.status(400).json({ error: 'no_active_code', message: 'ჯერ გამოითხოვე OTP კოდი' });
+    }
+    const rec = otpRows[0];
 
-    const hash = await bcrypt.hash(password, 12);
-    await db.query('UPDATE users SET password_hash=$1 WHERE id=$2', [hash, rows[0].user_id]);
-    await db.query('UPDATE password_resets SET used=TRUE WHERE id=$1', [rows[0].id]);
-
-    res.json({ ok: true, message: 'პაროლი წარმატებით შეიცვალა' });
-  } catch(err) {
-    res.status(500).json({ error: 'server_error' });
-  }
-});
-
-// ══════════════════════════════════════════════════════════════
-// POST /api/auth/login  — ელ-ფოსტა + პაროლი
-// ══════════════════════════════════════════════════════════════
-router.post('/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ error: 'required_fields' });
+    if (new Date(rec.expires_at) < new Date()) {
+      return res.status(400).json({ error: 'code_expired', message: 'კოდს ვადა გაუვიდა — მოითხოვე ახალი' });
+    }
+    if (rec.attempts >= otp.OTP_MAX_ATTEMPTS) {
+      return res.status(429).json({ error: 'too_many_attempts', message: 'მცდელობების ლიმიტი ამოწურულია — მოითხოვე ახალი კოდი' });
     }
 
-    const { rows } = await db.query(
-      'SELECT * FROM users WHERE email=$1',
-      [email.toLowerCase()]
-    );
-    if (!rows.length) {
-      return res.status(401).json({ error: 'invalid_credentials', message: 'არასწორი email ან პაროლი' });
+    if (otp.hashCode(codeClean) !== rec.code_hash) {
+      await db.query('UPDATE otp_codes SET attempts=attempts+1 WHERE id=$1', [rec.id]);
+      return res.status(401).json({ error: 'invalid_code', message: 'არასწორი კოდი' });
     }
 
-    const user = rows[0];
-    if (user.role === 'banned') {
-      return res.status(403).json({ error: 'banned', message: 'ეს ექ. დაბლოკილია' });
-    }
-    if (!user.password_hash) {
-      return res.status(401).json({ error: 'use_google', message: 'Google-ით შედი' });
-    }
+    // კოდი გამოყენებულია
+    await db.query('UPDATE otp_codes SET used=TRUE WHERE id=$1', [rec.id]);
 
-    const ok = await bcrypt.compare(password, user.password_hash);
-    if (!ok) {
-      return res.status(401).json({ error: 'invalid_credentials', message: 'არასწორი email ან პაროლი' });
-    }
+    // მომხმარებელი — მოძებნა ან ავტ. შექმნა
+    let { rows: users } = await db.query('SELECT * FROM users WHERE email=$1', [emailClean]);
+    let user;
+    let isNewUser = false;
 
-    // last_seen განახლება
-    await db.query('UPDATE users SET last_seen_at=NOW() WHERE id=$1', [user.id]);
+    if (users.length) {
+      user = users[0];
+      if (user.role === 'banned') {
+        return res.status(403).json({ error: 'banned', message: 'ეს ანგარიში დაბლოკილია' });
+      }
+      await db.query(
+        'UPDATE users SET email_verified=TRUE, last_seen_at=NOW() WHERE id=$1',
+        [user.id]
+      );
+    } else {
+      isNewUser = true;
+      const uname = await uniqueUsername(emailClean.split('@')[0]);
+      const { rows: created } = await db.query(`
+        INSERT INTO users (email, username, display_name, auth_provider, email_verified)
+        VALUES ($1,$2,$3,'email',TRUE)
+        RETURNING *
+      `, [emailClean, uname, uname]);
+      user = created[0];
+    }
 
     const token = makeToken(user.id);
     res.json({
       token,
+      is_new_user: isNewUser,
       user: {
         id: user.id, email: user.email, username: user.username,
         display_name: user.display_name, role: user.role,
         avatar_url: user.avatar_url, balance_gel: user.balance_gel,
-      }
+      },
     });
   } catch (err) {
-    console.error('login error:', err.message);
+    console.error('verify-otp error:', err.message);
     res.status(500).json({ error: 'server_error' });
   }
 });

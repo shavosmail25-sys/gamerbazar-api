@@ -7,6 +7,8 @@ const db      = require('../db');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const mailer  = require('../utils/mailer');
 const push    = require('../utils/push');
+const ledger  = require('../utils/ledger');
+const chat    = require('./chat');
 const router  = express.Router();
 
 // ყველა route მოითხოვს admin როლს
@@ -17,12 +19,13 @@ router.use(requireAuth, requireAdmin);
 // ══════════════════════════════════════════════════════════════
 router.get('/overview', async (req, res) => {
   try {
-    const [users, listings, orders, disputes, volume] = await Promise.all([
+    const [users, listings, orders, disputes, volume, platform] = await Promise.all([
       db.query("SELECT COUNT(*) AS n, COUNT(*) FILTER (WHERE role='banned') AS banned FROM users"),
       db.query("SELECT COUNT(*) AS n, COUNT(*) FILTER (WHERE status='active') AS active FROM listings"),
       db.query("SELECT COUNT(*) AS n, COUNT(*) FILTER (WHERE status='active') AS active, COUNT(*) FILTER (WHERE status='completed') AS completed FROM orders"),
       db.query("SELECT COUNT(*) AS n, COUNT(*) FILTER (WHERE status='open') AS open FROM disputes"),
       db.query("SELECT COALESCE(SUM(amount_gel),0) AS total FROM orders WHERE status='completed'"),
+      db.query("SELECT admin_earnings_gel FROM platform_stats WHERE id=1"),
     ]);
 
     res.json({
@@ -35,6 +38,7 @@ router.get('/overview', async (req, res) => {
       },
       disputes: { total: Number(disputes.rows[0].n), open: Number(disputes.rows[0].open) },
       volume_gel: Number(volume.rows[0].total),
+      admin_earnings_gel: Number(platform.rows[0]?.admin_earnings_gel || 0),
     });
   } catch (err) {
     console.error('admin overview error:', err.message);
@@ -104,10 +108,14 @@ router.put('/disputes/:id/resolve', async (req, res) => {
 
     await db.transaction(async (client) => {
       if (resolution === 'release') {
-        await client.query(
-          'UPDATE users SET balance_gel=balance_gel+$1 WHERE id=$2',
-          [order.seller_receives, order.seller_id]
-        );
+        const fee = Number(order.amount_gel) - Number(order.seller_receives);
+        await ledger.creditSellerWithHold(client, {
+          sellerId:  order.seller_id,
+          orderId:   order.id,
+          amountGel: order.seller_receives,
+          source:    'dispute_release',
+        });
+        await ledger.recordPlatformFee(client, fee);
         await client.query(
           'UPDATE users SET escrow_hold_gel=escrow_hold_gel-$1 WHERE id=$2',
           [order.amount_gel, order.buyer_id]
@@ -117,7 +125,7 @@ router.put('/disputes/:id/resolve', async (req, res) => {
           [order.id]
         );
         await client.query(
-          "INSERT INTO transactions(user_id,order_id,type,amount_gel,description) VALUES($1,$2,'sale_income',$3,'დავის გადაწყვ. — გამყ-ზე გადახდა')",
+          "INSERT INTO transactions(user_id,order_id,type,amount_gel,description) VALUES($1,$2,'sale_income',$3,'დავის გადაწყვ. — გამყ-ზე გადახდა (48სთ hold)')",
           [order.seller_id, order.id, order.seller_receives]
         );
       } else {

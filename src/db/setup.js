@@ -21,12 +21,13 @@ CREATE TABLE IF NOT EXISTS users (
   avatar_url        VARCHAR(500),
   gmail_id          VARCHAR(255) UNIQUE,
   auth_provider     VARCHAR(20)  NOT NULL DEFAULT 'email',
-  password_hash     VARCHAR(255),
+  password_hash     VARCHAR(255),  -- აღარ გამოიყენება (OTP-ზე გადავედით) — სვეტი დარჩა ძვ. მონაცემებისთვის
   email_verified    BOOLEAN      NOT NULL DEFAULT FALSE,
-  balance_gel           NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+  balance_gel           NUMERIC(12,2) NOT NULL DEFAULT 0.00,   -- ხელმისაწვდომი ბალანსი (თავისუფლად გასატანი)
   balance_usd           NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+  hold_balance_gel      NUMERIC(12,2) NOT NULL DEFAULT 0.00,   -- 48სთ hold-ში მყოფი თანხა (იხ. balance_holds)
   escrow_hold_gel       NUMERIC(12,2) NOT NULL DEFAULT 0.00,
-  balance_available_at  TIMESTAMPTZ,   -- გამყიდველის hold: confirm + 24სთ შემდეგ გამოტანა შეიძლება
+  balance_available_at  TIMESTAMPTZ,   -- legacy — აღარ გამოიყენება ახალ hold სისტემაში
   role              VARCHAR(20)  NOT NULL DEFAULT 'user',
   is_verified_seller BOOLEAN    NOT NULL DEFAULT FALSE,
   discord_handle    VARCHAR(100),
@@ -181,6 +182,39 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
   created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
+-- ── OTP CODES (პაროლის გარეშე შესვლა) ──────────────────────────
+CREATE TABLE IF NOT EXISTS otp_codes (
+  id          UUID         PRIMARY KEY DEFAULT uuid_generate_v4(),
+  email       VARCHAR(255) NOT NULL,
+  code_hash   VARCHAR(64)  NOT NULL,
+  purpose     VARCHAR(20)  NOT NULL DEFAULT 'login',
+  attempts    SMALLINT     NOT NULL DEFAULT 0,
+  used        BOOLEAN      NOT NULL DEFAULT FALSE,
+  expires_at  TIMESTAMPTZ  NOT NULL,
+  created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+-- ── BALANCE HOLDS (48-საათიანი ჰოლდი გაყიდვის შემდეგ) ──────────
+CREATE TABLE IF NOT EXISTS balance_holds (
+  id           UUID         PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id      UUID         NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  order_id     UUID         REFERENCES orders(id),
+  amount_gel   NUMERIC(12,2) NOT NULL,
+  source       VARCHAR(30)  NOT NULL DEFAULT 'order_confirm',
+  hold_until   TIMESTAMPTZ  NOT NULL,
+  released     BOOLEAN      NOT NULL DEFAULT FALSE,
+  released_at  TIMESTAMPTZ,
+  created_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+-- ── PLATFORM STATS (საიტის წმინდა მოგება — admin_earnings) ─────
+CREATE TABLE IF NOT EXISTS platform_stats (
+  id                 SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+  admin_earnings_gel NUMERIC(14,2) NOT NULL DEFAULT 0.00,
+  updated_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+INSERT INTO platform_stats (id, admin_earnings_gel) VALUES (1, 0) ON CONFLICT (id) DO NOTHING;
+
 -- ── INDEXES ──────────────────────────────────────────────────
 CREATE INDEX IF NOT EXISTS idx_listings_seller   ON listings(seller_id);
 CREATE INDEX IF NOT EXISTS idx_listings_category ON listings(category);
@@ -196,6 +230,9 @@ CREATE INDEX IF NOT EXISTS idx_tx_user           ON transactions(user_id, create
 CREATE INDEX IF NOT EXISTS idx_reviews_seller    ON reviews(seller_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_token    ON sessions(refresh_token);
 CREATE INDEX IF NOT EXISTS idx_push_subs_user    ON push_subscriptions(user_id);
+CREATE INDEX IF NOT EXISTS idx_otp_email         ON otp_codes(email, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_holds_pending     ON balance_holds(released, hold_until);
+CREATE INDEX IF NOT EXISTS idx_holds_user        ON balance_holds(user_id);
 
 -- ── SELLER STATS VIEW ─────────────────────────────────────────
 CREATE OR REPLACE VIEW seller_stats AS
@@ -249,36 +286,30 @@ async function setupDatabase() {
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS reminder_24h_sent BOOLEAN NOT NULL DEFAULT FALSE`,
       `ALTER TABLE disputes ADD COLUMN IF NOT EXISTS evidence_urls   TEXT[] DEFAULT '{}'`,
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS balance_available_at TIMESTAMPTZ`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS hold_balance_gel NUMERIC(12,2) NOT NULL DEFAULT 0.00`,
     ];
     for (const sql of migrations) {
-      try {
-        await client.query(sql);
-        const col = sql.match(/ADD COLUMN IF NOT EXISTS (\S+)/)?.[1] || '?';
-        console.log(`  ✅ migration: ${col}`);
-      } catch (e) {
-        console.error(`  ⚠️ migration skip (${e.message.split('\n')[0]})`);
-      }
+      try { await client.query(sql); } catch (e) { /* უკვე არსებობს */ }
     }
-    console.log('✅ Migrations დასრულდა');
+    console.log('✅ Migrations გამოყენებულია');
 
-    // Admin user (პირველი გაშვებისას)
+    // Admin user (პირველი გაშვებისას) — OTP სისტემაზე გადასვლის შემდეგ
+    // პაროლი აღარ სჭირდება, admin@gamerbazar.ge-ზე შესვლა ხდება Email+OTP-ით
     const existing = await client.query(
       "SELECT id FROM users WHERE email = 'admin@gamerbazar.ge'"
     );
     if (existing.rowCount === 0) {
-      const bcrypt = require('bcryptjs');
-      const hash = await bcrypt.hash('Admin123!', 12);
       await client.query(`
         INSERT INTO users
           (email, username, display_name, bio, auth_provider,
-           role, is_verified_seller, email_verified, password_hash)
+           role, is_verified_seller, email_verified)
         VALUES
           ('admin@gamerbazar.ge','admin','GamerBazar Admin',
-           'პლატფორმის ადმინი','email','admin',TRUE,TRUE,$1)
-      `, [hash]);
+           'პლატფორმის ადმინი','email','admin',TRUE,TRUE)
+      `);
       console.log('✅ Admin user შეიქმნა');
-      console.log('   Email:    admin@gamerbazar.ge');
-      console.log('   Password: Admin123!  (შეცვალე!)');
+      console.log('   Email: admin@gamerbazar.ge');
+      console.log('   შესვლა: Email + OTP კოდით (გაიგზავნება მითითებულ SMTP/EMAIL_USER საფოსტო ყუთზე)');
     } else {
       console.log('ℹ️  Admin user უკვე არსებობს');
     }

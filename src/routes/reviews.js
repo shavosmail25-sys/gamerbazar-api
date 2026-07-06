@@ -4,7 +4,14 @@
 const express = require('express');
 const db      = require('../db');
 const { requireAuth } = require('../middleware/auth');
+const push    = require('../utils/push');
+const chat    = require('./chat');
 const router  = express.Router();
+
+// ★ სავარსკვლავო შეფასების ტექსტური რენდერი (system შეტყობინებისთვის)
+function starsText(rating) {
+  return '⭐'.repeat(rating) + '☆'.repeat(5 - rating);
+}
 
 // POST /api/reviews
 router.post('/', requireAuth, async (req, res) => {
@@ -33,9 +40,38 @@ router.post('/', requireAuth, async (req, res) => {
       INSERT INTO reviews(order_id,reviewer_id,seller_id,rating,comment)
       VALUES($1,$2,$3,$4,$5) RETURNING *
     `, [order_id, req.user.id, order.seller_id, rating, comment || null]);
+    const review = rows[0];
 
-    res.status(201).json(rows[0]);
+    res.status(201).json(review);
+
+    // ── შეფასება ავტ. ჩნდება გამყიდველის ჩატის ფანჯარაში + push ──
+    (async () => {
+      try {
+        const { rows: listingRows } = await db.query('SELECT title FROM listings WHERE id=$1', [order.listing_id]);
+        const listing = listingRows[0] || { title: 'განცხადება' };
+
+        const { rows: roomRows } = await db.query('SELECT id FROM chat_rooms WHERE order_id=$1', [order_id]);
+        if (roomRows.length) {
+          const roomId = roomRows[0].id;
+          const content = `${starsText(rating)}${comment ? `\n„${comment}“` : ''}`;
+          const { rows: msgRows } = await db.query(`
+            INSERT INTO messages(room_id, sender_id, content, content_type)
+            VALUES($1, $2, $3, 'review')
+            RETURNING *
+          `, [roomId, req.user.id, content]);
+          chat.broadcastMessageToRoom(roomId, msgRows[0]);
+        }
+
+        await push.sendToUser(order.seller_id, {
+          title: `${starsText(rating)} ახალი შეფასება`,
+          body: `${listing.title}${comment ? ` — „${comment}“` : ''}`,
+          url: `/?page=profile`,
+          tag: `review-${review.id}`,
+        });
+      } catch (e) { console.error('review notify error:', e.message); }
+    })();
   } catch (err) {
+    console.error('review create:', err.message);
     res.status(500).json({ error: 'server_error' });
   }
 });

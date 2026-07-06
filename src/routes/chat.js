@@ -104,6 +104,9 @@ router.post('/rooms/:id/messages', requireAuth, async (req, res) => {
       RETURNING *
     `, [req.params.id, req.user.id, content.trim()]);
 
+    // WS-ით დაკავშირებულ მხარეებს რეალურ დროში გაგზავნა (თუ ვინმე online-ია)
+    broadcastMessageToRoom(req.params.id, rows[0]);
+
     // push შეტყობ. — მეორე მონაწილეს, თუ ოთახში online არაა
     const recipientId = r.participant_a === req.user.id ? r.participant_b : r.participant_a;
     notifyChatMessage(req.params.id, recipientId, req.user, content.trim()).catch(() => {});
@@ -199,15 +202,7 @@ function setupWebSocket(server) {
         const msg = rows[0];
 
         // ყველა ოთახის წევრს გაგ.
-        const payload = JSON.stringify({
-          id:         msg.id,
-          sender_id:  userId,
-          content:    msg.content,
-          created_at: msg.created_at,
-        });
-        rooms.get(roomId)?.forEach(c => {
-          if (c.ws.readyState === 1) c.ws.send(payload);
-        });
+        broadcastMessageToRoom(roomId, msg);
 
         // push შეტყობ. — მეორე მონაწ-ს, თუ ის ოთახში online არაა
         try {
@@ -240,4 +235,30 @@ function setupWebSocket(server) {
   return wss;
 }
 
-module.exports.setupWebSocket = setupWebSocket;
+// ── სხვა route-ებიდან (orders.js, reviews.js, disputes.js) გამოსაძახებელი დამხმარეები ──
+// ჩატის ოთახში ავტ. სისტემური შეტყობინების (ან review-ის) რეალურ დროში გაგზავნა
+function broadcastMessageToRoom(roomId, messageRow) {
+  const conns = rooms.get(roomId);
+  if (!conns || !conns.size) return;
+  const payload = JSON.stringify({
+    id:           messageRow.id,
+    sender_id:    messageRow.sender_id,
+    content:      messageRow.content,
+    content_type: messageRow.content_type || 'text',
+    created_at:   messageRow.created_at,
+  });
+  conns.forEach(c => { if (c.ws.readyState === 1) c.ws.send(payload); });
+}
+
+// listing/order სტატუსის ცვლილების რეალურ დროში გავრცელება (მაგ. 'sold' გაყიდვისას) —
+// frontend-ი ამის მიხედვით მყისიერად შლის/ანახლებს განცხადებას გვ. გადატვირთვის გარეშე
+function broadcastEventToRoom(roomId, event) {
+  const conns = rooms.get(roomId);
+  if (!conns || !conns.size) return;
+  const payload = JSON.stringify({ type: 'order_status', ...event });
+  conns.forEach(c => { if (c.ws.readyState === 1) c.ws.send(payload); });
+}
+
+module.exports.setupWebSocket         = setupWebSocket;
+module.exports.broadcastMessageToRoom = broadcastMessageToRoom;
+module.exports.broadcastEventToRoom   = broadcastEventToRoom;

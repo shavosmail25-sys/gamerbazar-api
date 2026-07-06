@@ -6,7 +6,7 @@ const db      = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const mailer  = require('../utils/mailer');
 
-const ADMIN_EMAIL = process.env.SMTP_USER || 'shavosmail25@gmail.com';
+const ADMIN_EMAIL = process.env.EMAIL_USER || process.env.SMTP_USER || 'shavosmail25@gmail.com';
 const router  = express.Router();
 
 // ══════════════════════════════════════════════════════════════
@@ -15,29 +15,37 @@ const router  = express.Router();
 router.get('/balance', requireAuth, async (req, res) => {
   try {
     const { rows } = await db.query(
-      'SELECT balance_gel, balance_usd, escrow_hold_gel, balance_available_at FROM users WHERE id=$1',
+      'SELECT balance_gel, balance_usd, escrow_hold_gel, hold_balance_gel FROM users WHERE id=$1',
       [req.user.id]
     );
     const b    = rows[0];
     const rate = 2.74;
-    const now  = new Date();
 
-    // hold პერიოდი: balance_available_at > NOW() → ბალანსი გაყინული
-    const holdUntil     = b.balance_available_at ? new Date(b.balance_available_at) : null;
-    const isOnHold      = holdUntil && holdUntil > now;
-    const holdSecondsLeft = isOnHold ? Math.ceil((holdUntil - now) / 1000) : 0;
+    // უახლოესი hold-ის ვადა — countdown-ისთვის (48სთ ტაიმერი)
+    const { rows: nextHoldRows } = await db.query(
+      `SELECT hold_until, amount_gel FROM balance_holds
+       WHERE user_id=$1 AND released=FALSE
+       ORDER BY hold_until ASC LIMIT 1`,
+      [req.user.id]
+    );
+    const nextHold = nextHoldRows[0] || null;
+    const now = new Date();
+    const holdSecondsLeft = nextHold
+      ? Math.max(0, Math.ceil((new Date(nextHold.hold_until) - now) / 1000))
+      : 0;
 
     res.json({
       balance_gel:        Number(b.balance_gel),
       balance_usd:        Number(b.balance_usd),
       escrow_hold_gel:    Number(b.escrow_hold_gel),
+      hold_balance_gel:   Number(b.hold_balance_gel),
       available_gel:      Number(b.balance_gel),
       exchange_rate:      rate,
       available_usd:      +(Number(b.balance_gel) / rate).toFixed(2),
-      // Hold info — frontend-ი ამ ველებს იყენებს countdown-ისთვის
-      balance_available_at: b.balance_available_at || null,
-      withdraw_on_hold:     isOnHold,
-      withdraw_hold_seconds_left: holdSecondsLeft,
+      // 48-საათიანი hold — უახლოესი გათავისუფლების დრო, frontend countdown-ისთვის
+      next_hold_release_at:      nextHold ? nextHold.hold_until : null,
+      next_hold_amount_gel:      nextHold ? Number(nextHold.amount_gel) : 0,
+      hold_seconds_left:         holdSecondsLeft,
     });
   } catch (err) {
     res.status(500).json({ error: 'server_error' });
@@ -144,23 +152,13 @@ router.post('/withdraw', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'min_5_gel' });
 
     const { rows } = await db.query(
-      'SELECT balance_gel, balance_available_at FROM users WHERE id=$1', [req.user.id]
+      'SELECT balance_gel, hold_balance_gel FROM users WHERE id=$1', [req.user.id]
     );
     const b = rows[0];
 
-    // ── 24სთ Hold შემოწმება ──────────────────────────────────
-    const now       = new Date();
-    const holdUntil = b.balance_available_at ? new Date(b.balance_available_at) : null;
-    if (holdUntil && holdUntil > now) {
-      const secsLeft = Math.ceil((holdUntil - now) / 1000);
-      const hoursLeft = (secsLeft / 3600).toFixed(1);
-      return res.status(403).json({
-        error: 'balance_on_hold',
-        message: `ბალანსი ${hoursLeft} საათით დაბლოკილია (ანტი-ფროდ დაცვა)`,
-        available_at: holdUntil.toISOString(),
-        seconds_left: secsLeft,
-      });
-    }
+    // შენიშვნა: 48სთ hold-ის თანხა hold_balance_gel-შია, არა balance_gel-ში —
+    // ანუ balance_gel უკვე მხოლოდ თავისუფლად გასატან თანხას ასახავს, დამატებითი
+    // ბლოკირება საჭირო აღარაა (იხ. src/utils/ledger.js).
 
     const commission = +(Number(amount) * 0.02).toFixed(2);
     const total      = Number(amount) + commission;
