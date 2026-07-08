@@ -742,6 +742,33 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 </head>
 <body>
 
+<style>
+#auth-boot-screen{
+  position:fixed;inset:0;z-index:99999;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  background:var(--bg);
+  transition:opacity .25s ease;
+}
+#auth-boot-screen .ab-logo{
+  font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:-.4px;
+  color:var(--text);
+  animation:ab-pulse 1.6s ease-in-out infinite;
+}
+#auth-boot-screen .ab-logo em{color:var(--accent);font-style:normal}
+#auth-boot-screen .ab-spinner{
+  width:28px;height:28px;border-radius:50%;
+  border:2px solid var(--border3);border-top-color:var(--accent);
+  animation:ab-spin .8s linear infinite;
+}
+@keyframes ab-pulse{0%,100%{opacity:1}50%{opacity:.45}}
+@keyframes ab-spin{to{transform:rotate(360deg)}}
+#auth-boot-screen.ab-hide{opacity:0;pointer-events:none}
+</style>
+<div id="auth-boot-screen">
+  <div class="ab-logo">Gamer<em>Bazar</em>.ge</div>
+  <div class="ab-spinner"></div>
+</div>
+
 <nav>
   <div class="nav-logo" onclick="pg('home')">Gamer<em>Bazar</em>.ge</div>
   <div class="nav-links">
@@ -1825,7 +1852,13 @@ async function api(path, opts = {}) {
   if (token) headers['Authorization'] = 'Bearer ' + token;
   const res  = await fetch(API_URL + path, { ...opts, headers: { ...headers, ...(opts.headers || {}) } });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw data;
+  if (!res.ok) {
+    // status ვურთავთ error ობიექტს — მნიშვნელოვანია განვასხვავოთ
+    // "ტოკენი ნამდვილად არასწორია" (401/403) და "სერვერი დროებით ვერ პასუხობს"
+    // (network/5xx/cold-start), რომ ამ უკანასკნელზე იუზერი არ გავაგდოთ სისტემიდან.
+    if (data && typeof data === 'object') data.status = res.status;
+    throw data;
+  }
   return data;
 }
 
@@ -1834,7 +1867,12 @@ async function api(path, opts = {}) {
 // ══════════════════════════════════════════════════════════
 function showPageGuarded(id) {
   const guarded = ['profile', 'edit', 'wallet', 'chat', 'order-history'];
-  if (guarded.includes(id) && !currentUser) {
+  if (!guarded.includes(id)) return true;
+  // სანამ საწყისი auth-შემოწმება არ დასრულებულა, არ ვიცით ნამდვილად
+  // სტუმარია თუ არა — ამ დროს login-მოდალს არ ვხსნით (Flash ეფექტის თავიდან აცილება).
+  // ეკრანზე ამ დროს auth-boot ეკრანია გადაფარებული, ასე რომ ნავიგაცია უსაფრთხოა.
+  if (authLoading) return true;
+  if (!currentUser) {
     openM('loginModal');
     showToast('პირველ შედი სისტემაში', 'err');
     return false;
@@ -2097,6 +2135,11 @@ async function verifyLoginOtp() {
   if (btn) { btn.textContent = '⏳ მოწმდება...'; btn.disabled = true; }
   try {
     const data = await api('/api/auth/verify-otp', { method: 'POST', body: JSON.stringify({ email, code }) });
+    // Hard reset — ნებისმიერი წინა (ან სხვა) იუზერის ვიზუალური კვალი (ფოტო/ბალანსი)
+    // მომენტალურად ვშლით, სანამ ახალი მონაცემები ჩაიწერება. ესეც აჩერებს ძველ
+    // localStorage ტოკენს/currentUser-ს, სანამ ახალი არ დამტკიცდება.
+    clearToken();
+    currentUser = null;
     setToken(data.token);
     currentUser = data.user;
     closeM('loginModal');
@@ -2129,6 +2172,14 @@ function checkAuthCallback() {
   }
 }
 
+// ── auth-boot overlay — auth check დასრულებისას იშლება ──────────
+function hideAuthBootScreen() {
+  const el = document.getElementById('auth-boot-screen');
+  if (!el) return;
+  el.classList.add('ab-hide');
+  setTimeout(() => el.remove(), 300);
+}
+
 // Logout
 function doLogout() {
   clearToken();
@@ -2142,15 +2193,39 @@ function doLogout() {
 // ══════════════════════════════════════════════════════════
 // LOAD CURRENT USER
 // ══════════════════════════════════════════════════════════
+// true სანამ საწყისი auth-შემოწმება (/api/auth/me) დასრულდება —
+// გვერდის დამცავებმა (showPageGuarded) და routing-მა ეს უნდა დაელოდონ,
+// რომ არ გაიელვოს login-მოდალმა refresh-ზე ჯერ კიდევ ვალიდური სესიისთვის.
+let authLoading = true;
+
 async function loadCurrentUser() {
-  if (!getToken()) { updateNavUser(); return; }
-  try {
-    currentUser = await api('/api/auth/me');
-    updateNavUser();
-  } catch (e) {
-    clearToken();
+  // ვინახავთ, რომელი ტოკენით დავიწყეთ ეს მოთხოვნა — თუ ამ დროის განმავლობაში
+  // მომხმარებელმა უკვე გამოვიდა/შევიდა სხვა ექაუნთით (ტოკენი შეიცვალა),
+  // ეს ძველი, "დაგვიანებული" პასუხი აღარ უნდა გადააწეროს ახალ currentUser-ს.
+  const tokenAtStart = getToken();
+  if (!tokenAtStart) {
+    authLoading = false;
     currentUser = null;
     updateNavUser();
+    return;
+  }
+  try {
+    const user = await api('/api/auth/me');
+    if (getToken() !== tokenAtStart) return; // მოძველებული პასუხი — იგნორი
+    currentUser = user;
+  } catch (e) {
+    if (getToken() !== tokenAtStart) return; // მოძველებული შეცდომაც — იგნორი
+    // ტოკენს მხოლოდ მაშინ ვშლით, თუ სერვერმა დარწმუნებით თქვა რომ არავალიდურია
+    // (401/403). ქსელის შეცდომაზე, timeout-ზე ან სერვერის "გაღვიძებაზე" (Render
+    // cold-start) მომხმარებელს არ ვაგდებთ სისტემიდან — ტოკენი უცვლელი რჩება.
+    if (e && (e.status === 401 || e.status === 403)) {
+      clearToken();
+      currentUser = null;
+    }
+  } finally {
+    authLoading = false;
+    updateNavUser();
+    hideAuthBootScreen();
   }
 }
 
@@ -2290,10 +2365,15 @@ async function loadMyProfile() {
     const style   = 'width:100%;height:100%;object-fit:cover;border-radius:inherit';
     if (profAva) profAva.innerHTML = `<img src="${src}" style="${style}">`;
     if (avaPrev) avaPrev.innerHTML = `<img src="${src}" style="${style}">`;
-    if (navAva && !navAva.querySelector('img')) navAva.innerHTML = `<img src="${src}" style="${style}">`;
+    // ყოველთვის გადავაწერთ, არა მხოლოდ მაშინ თუ ჯერ სურათი არაა — წინააღმდეგ
+    // შემთხვევაში ძველი (სხვა) იუზერის ფოტო გაჩერდებოდა nav-ში ახალ ექაუნთზეც.
+    if (navAva) navAva.innerHTML = `<img src="${src}" style="${style}">`;
   } else {
     const profAva = document.getElementById('prof-ava-display');
-    if (profAva) profAva.textContent = (currentUser.display_name || currentUser.username || '?').slice(0,2).toUpperCase();
+    const navAva2 = document.getElementById('nav-ava');
+    const initials = (currentUser.display_name || currentUser.username || '?').slice(0,2).toUpperCase();
+    if (profAva) profAva.textContent = initials;
+    if (navAva2) navAva2.textContent = initials;
   }
 
   // badges
@@ -4775,24 +4855,22 @@ document.addEventListener('DOMContentLoaded', () => {
 // სერვერის გაღვიძება (Render free tier)
 try { fetch(API_URL + '/health').catch(() => {}); } catch(e) {}
 
-// Auth
-try { checkAuthCallback(); } catch(e) { console.error('auth callback:', e); }
-try { loadCurrentUser(); } catch(e) { console.error('load user:', e); }
+// Auth — hash-routing-ს ველოდებით სანამ loadCurrentUser არ დასრულდება,
+// რომ guarded გვერდებზე refresh-ისას login-მოდალი არ გაიელვოს ვალიდური სესიისთვის.
+(async function initAuthAndRouting() {
+  try { checkAuthCallback(); } catch(e) { console.error('auth callback:', e); }
+  try { await loadCurrentUser(); } catch(e) { console.error('load user:', e); authLoading = false; hideAuthBootScreen(); }
 
-// Hash routing — refresh-ზე გვერდი შეინარჩუნდეს
-(function() {
   const hash = window.location.hash.replace('#', '');
   const valid = ['home','listings','wallet','profile','chat','order-history','edit'];
   if (hash && valid.includes(hash)) {
-    setTimeout(() => {
-      pg(hash);
-      const navMap = { chat: 2, wallet: 3, profile: 4 };
-      const idx = navMap[hash];
-      if (idx !== undefined) {
-        const els = document.querySelectorAll('.nl');
-        if (els[idx]) act(els[idx]);
-      }
-    }, 150);
+    pg(hash);
+    const navMap = { chat: 2, wallet: 3, profile: 4 };
+    const idx = navMap[hash];
+    if (idx !== undefined) {
+      const els = document.querySelectorAll('.nl');
+      if (els[idx]) act(els[idx]);
+    }
   }
 })();
 

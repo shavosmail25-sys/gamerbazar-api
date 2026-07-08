@@ -24,7 +24,9 @@ function makeToken(userId) {
   return jwt.sign(
     { sub: userId, iat: Math.floor(Date.now() / 1000) },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    // 30 დღიანი სესია — მომხმარებელი აღარ უნდა ვარდებოდეს სისტემიდან
+    // ტაბის დახურვაზე ან ხანმოკლე უმოქმედობაზე. Override: JWT_EXPIRES_IN env-ით.
+    { expiresIn: process.env.JWT_EXPIRES_IN || '30d' }
   );
 }
 
