@@ -226,6 +226,44 @@ router.get('/users', async (req, res) => {
 });
 
 // ══════════════════════════════════════════════════════════════
+// PUT /api/admin/users/:id/set-role  — მოდერატორის სტატუსის მინიჭება/ჩამორთმევა
+// ⚠️ მხოლოდ სუპერ-ადმინს (shavosmail25@gmail.com) შეუძლია ამის გაკეთება —
+// ჩვეულებრივ admin-ებსაც კი არა, სპეციალურად ამ მოთხოვნის მიხედვით.
+// ══════════════════════════════════════════════════════════════
+const SUPER_ADMIN_EMAIL = (process.env.SUPER_ADMIN_EMAIL || 'shavosmail25@gmail.com').toLowerCase().trim();
+
+router.put('/users/:id/set-role', async (req, res) => {
+  try {
+    // req.user.email-ის არსებობაზე არ ვიმედოვნებთ (middleware/auth.js ფაილი
+    // ხელმისაწვდომი არ იყო ამ ცვლილების დაწერისას) — მოქმედი ადმინის
+    // ემაილს პირდაპირ ბაზიდან ვამოწმებთ req.user.id-ით, რაც ყველა
+    // route-ში საიმედოდ არის ხელმისაწვდომი.
+    const { rows: me } = await db.query('SELECT email FROM users WHERE id=$1', [req.user.id]);
+    if (!me.length || (me[0].email || '').toLowerCase().trim() !== SUPER_ADMIN_EMAIL) {
+      return res.status(403).json({ error: 'super_admin_only', message: 'მხოლოდ სუპერ-ადმინს შეუძლია როლის მინიჭება' });
+    }
+    const { role } = req.body;
+    if (!['user', 'moderator', 'admin'].includes(role)) {
+      return res.status(400).json({ error: 'invalid_role' });
+    }
+    const { rows: target } = await db.query('SELECT id, email, role FROM users WHERE id=$1', [req.params.id]);
+    if (!target.length) return res.status(404).json({ error: 'not_found' });
+    if (target[0].role === 'banned') {
+      return res.status(400).json({ error: 'cannot_change_banned_user_role' });
+    }
+
+    const { rows } = await db.query(
+      'UPDATE users SET role=$1, updated_at=NOW() WHERE id=$2 RETURNING id, email, username, role',
+      [role, req.params.id]
+    );
+    res.json({ ok: true, user: rows[0] });
+  } catch (err) {
+    console.error('set-role error:', err.message);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
 // PUT /api/admin/users/:id/ban
 // ══════════════════════════════════════════════════════════════
 router.put('/users/:id/ban', async (req, res) => {

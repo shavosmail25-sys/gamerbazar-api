@@ -6,8 +6,31 @@
 const express = require('express');
 const db      = require('../db');
 const { requireAuth, optionalAuth, requireAdmin } = require('../middleware/auth');
+const { requireModerator } = require('../middleware/requireModerator');
+const ledger  = require('../utils/ledger');
 
 const router = express.Router();
+
+// ══════════════════════════════════════════════════════════════
+// GET /api/listings/moderation/pending  — მოდერაციის რიგი
+// (მოდერატორი + admin) — ყველა pending განცხადება, გამყ. ინფოთი
+// ══════════════════════════════════════════════════════════════
+router.get('/moderation/pending', requireAuth, requireModerator, async (req, res) => {
+  try {
+    const { rows } = await db.query(`
+      SELECT l.*, u.username AS seller_username, u.email AS seller_email,
+             u.display_name AS seller_display_name, u.created_at AS seller_joined_at
+      FROM listings l
+      JOIN users u ON u.id = l.seller_id
+      WHERE l.status = 'pending'
+      ORDER BY l.created_at ASC
+    `);
+    res.json(rows);
+  } catch (err) {
+    console.error('moderation pending list error:', err.message);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
 
 // ══════════════════════════════════════════════════════════════
 // GET /api/listings/suggest  — search autocomplete (game/title)
@@ -57,8 +80,8 @@ router.get('/', optionalAuth, async (req, res) => {
     // მთავარ გვერდზე მხოლოდ active, profile-ზე ყველა სტატუსი
     const statusFilter = seller_id
       ? (include_sold === 'true'
-          ? "l.status IN ('active','sold','pending','inactive')"
-          : "l.status IN ('active','pending','inactive')")
+          ? "l.status IN ('active','sold','pending','inactive','rejected')"
+          : "l.status IN ('active','pending','inactive','rejected')")
       : "l.status = 'active'";
 
     const conditions = [statusFilter];
@@ -213,11 +236,26 @@ router.put('/:id', requireAuth, async (req, res) => {
       'SELECT * FROM listings WHERE id=$1', [req.params.id]
     );
     if (!existing.length) return res.status(404).json({ error: 'not_found' });
-    if (existing[0].seller_id !== req.user.id && req.user.role !== 'admin') {
+    const isPrivileged = ['admin', 'moderator'].includes(req.user.role);
+    if (existing[0].seller_id !== req.user.id && !isPrivileged) {
       return res.status(403).json({ error: 'forbidden' });
     }
 
-    const { title, description, tags, price_gel, status } = req.body;
+    const { title, description, tags, price_gel } = req.body;
+    let { status } = req.body;
+
+    // ⚠️ უსაფრთხოების გასწორება: ჩვეულებრივ გამყიდველს (არა admin/moderator)
+    // აქამდე შეეძლო ამ endpoint-ით ნებისმიერი status გაეგზავნა — მათ შორის
+    // პირდაპირ 'active', რაც მთლიანად აუქმებდა მოდერაციის რიგს. ახლა
+    // non-privileged იუზერს status-ის შეცვლა შეუძლია მხოლოდ ერთ
+    // კონკრეტულ, უსაფრთხო შემთხვევაში — საკუთარი უარყოფილი (rejected)
+    // განცხადების ხელახლა მოდერაციაზე გაგზავნისას (rejected → pending).
+    if (status !== undefined && !isPrivileged) {
+      const allowedResubmit = status === 'pending' && existing[0].status === 'rejected';
+      if (!allowedResubmit) status = undefined;
+    }
+
+    const params = [title, description, tags, price_gel, status, req.params.id];
     const { rows } = await db.query(`
       UPDATE listings SET
         title       = COALESCE($1, title),
@@ -225,10 +263,11 @@ router.put('/:id', requireAuth, async (req, res) => {
         tags        = COALESCE($3, tags),
         price_gel   = COALESCE($4, price_gel),
         status      = COALESCE($5, status),
+        rejection_reason = CASE WHEN $5 = 'pending' THEN NULL ELSE rejection_reason END,
         updated_at  = NOW()
       WHERE id=$6
       RETURNING *
-    `, [title, description, tags, price_gel, status, req.params.id]);
+    `, params);
 
     res.json(rows[0]);
   } catch (err) {
@@ -310,6 +349,13 @@ router.post('/:id/vip', requireAuth, async (req, res) => {
         'INSERT INTO vip_purchases(listing_id,user_id,duration_days,price_gel,expires_at) VALUES($1,$2,$3,$4,$5)',
         [req.params.id, req.user.id, duration_days, price, exp]
       );
+      // VIP საკომისიო — ეს არის პლატფორმის შემოსავალი (არა escrow-ის
+      // ნაწილი), ამიტომ პირდაპირ platform_stats.admin_earnings_gel-ს
+      // ემატება — იგივე ადგილი, საიდანაც Watch Tower-ში ადმინი (ერთადერთი
+      // admin ანგარიში — shavosmail25@gmail.com) ხედავს პლატფორმის
+      // მთლიან შემოსავალს. აქამდე ეს თანხა უბრალოდ ქრებოდა (debit-ი
+      // ხდებოდა გამყიდველზე, მაგრამ არსად არ ირიცხებოდა შემდეგ).
+      await ledger.recordPlatformFee(client, price);
     });
 
     res.json({ ok: true, vip_until: new Date(Date.now() + duration_days * 86400000), price_paid: price });
@@ -416,13 +462,14 @@ router.delete('/:id/images', requireAuth, async (req, res) => {
 });
 
 // ══════════════════════════════════════════════════════════════
-// POST /api/listings/:id/approve  — Admin: pending → active + push
+// POST /api/listings/:id/approve  — Moderator/Admin: pending → active + push
 // ══════════════════════════════════════════════════════════════
-router.post('/:id/approve', requireAuth, requireAdmin, async (req, res) => {
+router.post('/:id/approve', requireAuth, requireModerator, async (req, res) => {
   try {
     const { rows } = await db.query(
-      "UPDATE listings SET status='active', updated_at=NOW() WHERE id=$1 AND status='pending' RETURNING *",
-      [req.params.id]
+      `UPDATE listings SET status='active', moderated_by=$2, moderated_at=NOW(), updated_at=NOW()
+       WHERE id=$1 AND status='pending' RETURNING *`,
+      [req.params.id, req.user.id]
     );
     if (!rows.length) return res.status(404).json({ error: 'not_found_or_not_pending' });
     res.json(rows[0]);
@@ -444,23 +491,27 @@ router.post('/:id/approve', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
-// POST /api/listings/:id/reject  — Admin: pending → deleted + push
-router.post('/:id/reject', requireAuth, requireAdmin, async (req, res) => {
+// POST /api/listings/:id/reject  — Moderator/Admin: pending → rejected (+ მიზეზი) + push
+router.post('/:id/reject', requireAuth, requireModerator, async (req, res) => {
   try {
     const { reason = '' } = req.body;
+    if (!reason.trim()) {
+      return res.status(400).json({ error: 'reason_required', message: 'უარყოფის მიზეზი სავალდებულოა' });
+    }
     const { rows } = await db.query(
-      "UPDATE listings SET status='deleted', updated_at=NOW() WHERE id=$1 RETURNING *",
-      [req.params.id]
+      `UPDATE listings SET status='rejected', rejection_reason=$2, moderated_by=$3, moderated_at=NOW(), updated_at=NOW()
+       WHERE id=$1 AND status='pending' RETURNING *`,
+      [req.params.id, reason.trim(), req.user.id]
     );
-    if (!rows.length) return res.status(404).json({ error: 'not_found' });
-    res.json({ ok: true });
+    if (!rows.length) return res.status(404).json({ error: 'not_found_or_not_pending' });
+    res.json({ ok: true, listing: rows[0] });
 
     (async () => {
       try {
         const push = require('../utils/push');
         await push.sendToUser(rows[0].seller_id, {
           title: '❌ განცხადება უარყოფილია',
-          body: reason || `"${rows[0].title}" — წესების დარღვევა`,
+          body: reason.trim(),
           url: '/?page=profile',
           tag: `listing-rejected-${rows[0].id}`,
         });

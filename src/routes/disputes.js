@@ -5,6 +5,7 @@ const express    = require('express');
 const multer     = require('multer');
 const db         = require('../db');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
+const { requireModerator } = require('../middleware/requireModerator');
 const mailer     = require('../utils/mailer');
 const push       = require('../utils/push');
 const cloudinary = require('../utils/cloudinary');
@@ -127,25 +128,92 @@ router.post('/', requireAuth, upload.array('evidence', 5), async (req, res) => {
 });
 
 // ══════════════════════════════════════════════════════════════
+// GET /api/disputes  — დავების სია (მოდერატორი/admin) — ფილტრი სტატუსზე
+// ══════════════════════════════════════════════════════════════
+router.get('/', requireAuth, requireModerator, async (req, res) => {
+  try {
+    const { status = 'open', page = 1, limit = 30 } = req.query;
+    const offset = (Number(page) - 1) * Number(limit);
+
+    const conditions = [];
+    const params = [];
+    let p = 1;
+    if (status && status !== 'all') {
+      conditions.push(`d.status = $${p++}`);
+      params.push(status);
+    }
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    params.push(Number(limit), offset);
+
+    const { rows } = await db.query(`
+      SELECT d.*,
+        o.amount_gel, o.status AS order_status, o.escrow_status, o.listing_id,
+        l.title AS listing_title, l.game,
+        ob.username AS buyer_username, ob.id AS buyer_id,
+        os.username AS seller_username, os.id AS seller_id,
+        oc.username AS opened_by_username
+      FROM disputes d
+      JOIN orders o   ON o.id = d.order_id
+      JOIN listings l ON l.id = o.listing_id
+      JOIN users ob   ON ob.id = o.buyer_id
+      JOIN users os   ON os.id = o.seller_id
+      JOIN users oc   ON oc.id = d.opened_by
+      ${where}
+      ORDER BY d.created_at DESC
+      LIMIT $${p++} OFFSET $${p++}
+    `, params);
+
+    res.json(rows);
+  } catch (err) {
+    console.error('disputes list error:', err.message);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
 // GET /api/disputes/:id
 // ══════════════════════════════════════════════════════════════
 router.get('/:id', requireAuth, async (req, res) => {
   try {
     const { rows } = await db.query(`
       SELECT d.*,
-        o.buyer_id, o.seller_id, o.amount_gel,
+        o.buyer_id, o.seller_id, o.amount_gel, o.listing_id,
         ob.username AS buyer_username,
-        os.username AS seller_username
+        os.username AS seller_username,
+        l.title AS listing_title, l.game
       FROM disputes d
       JOIN orders o ON o.id=d.order_id
       JOIN users ob ON ob.id=o.buyer_id
       JOIN users os ON os.id=o.seller_id
+      JOIN listings l ON l.id=o.listing_id
       WHERE d.id=$1
     `, [req.params.id]);
     if (!rows.length) return res.status(404).json({ error: 'not_found' });
     const d = rows[0];
-    if (d.buyer_id !== req.user.id && d.seller_id !== req.user.id && req.user.role !== 'admin')
+    const isModerator = ['admin', 'moderator'].includes(req.user.role);
+    if (d.buyer_id !== req.user.id && d.seller_id !== req.user.id && !isModerator)
       return res.status(403).json({ error: 'forbidden' });
+
+    // მოდერატორისთვის/ადმინისთვის — მყიდველი-გამყიდველის სრული ჩატის
+    // ისტორია, დავის განხილვისთვის საჭირო კონტექსტი
+    if (isModerator) {
+      const { rows: roomRows } = await db.query(
+        'SELECT id FROM chat_rooms WHERE order_id=$1', [d.order_id]
+      );
+      if (roomRows.length) {
+        const { rows: messages } = await db.query(`
+          SELECT m.*, u.username AS sender_username
+          FROM messages m
+          JOIN users u ON u.id = m.sender_id
+          WHERE m.room_id = $1
+          ORDER BY m.created_at ASC
+        `, [roomRows[0].id]);
+        d.chat_messages = messages;
+      } else {
+        d.chat_messages = [];
+      }
+    }
+
     res.json(d);
   } catch (err) {
     res.status(500).json({ error: 'server_error' });
@@ -155,7 +223,7 @@ router.get('/:id', requireAuth, async (req, res) => {
 // ══════════════════════════════════════════════════════════════
 // PUT /api/disputes/:id/resolve  — Admin-ის გადაწყვეტილება
 // ══════════════════════════════════════════════════════════════
-router.put('/:id/resolve', requireAuth, requireAdmin, async (req, res) => {
+router.put('/:id/resolve', requireAuth, requireModerator, async (req, res) => {
   try {
     const { resolution, admin_note } = req.body;
     if (!['release','refund'].includes(resolution))
