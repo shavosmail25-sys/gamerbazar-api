@@ -2199,30 +2199,27 @@ function doLogout() {
 let authLoading = true;
 
 async function loadCurrentUser() {
-  // ვინახავთ, რომელი ტოკენით დავიწყეთ ეს მოთხოვნა — თუ ამ დროის განმავლობაში
-  // მომხმარებელმა უკვე გამოვიდა/შევიდა სხვა ექაუნთით (ტოკენი შეიცვალა),
-  // ეს ძველი, "დაგვიანებული" პასუხი აღარ უნდა გადააწეროს ახალ currentUser-ს.
   const tokenAtStart = getToken();
   if (!tokenAtStart) {
     authLoading = false;
     currentUser = null;
     updateNavUser();
+    hideAuthBootScreen();
     return;
   }
+  // 5 წამის timeout — loading screen ყოველთვის გაქრეს
+  const toId = setTimeout(() => {
+    if (authLoading) { authLoading = false; updateNavUser(); hideAuthBootScreen(); }
+  }, 5000);
   try {
-    const user = await api('/api/auth/me');
-    if (getToken() !== tokenAtStart) return; // მოძველებული პასუხი — იგნორი
+    const user = await api("/api/auth/me");
+    if (getToken() !== tokenAtStart) return;
     currentUser = user;
   } catch (e) {
-    if (getToken() !== tokenAtStart) return; // მოძველებული შეცდომაც — იგნორი
-    // ტოკენს მხოლოდ მაშინ ვშლით, თუ სერვერმა დარწმუნებით თქვა რომ არავალიდურია
-    // (401/403). ქსელის შეცდომაზე, timeout-ზე ან სერვერის "გაღვიძებაზე" (Render
-    // cold-start) მომხმარებელს არ ვაგდებთ სისტემიდან — ტოკენი უცვლელი რჩება.
-    if (e && (e.status === 401 || e.status === 403)) {
-      clearToken();
-      currentUser = null;
-    }
+    if (getToken() !== tokenAtStart) return;
+    if (e && (e.status === 401 || e.status === 403)) { clearToken(); currentUser = null; }
   } finally {
+    clearTimeout(toId);
     authLoading = false;
     updateNavUser();
     hideAuthBootScreen();
