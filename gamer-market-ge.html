@@ -18,6 +18,7 @@
   --purple:#b57bee;--pd:#b57bee10;
   --grad-accent:linear-gradient(90deg,#34d399,#22d3ee);
   --glass-bg:rgba(255,255,255,.04);--glass-border:#ffffff14;
+  --card-solid:#151b2ee6;
   --font:'Lexend',sans-serif;--display:'Space Grotesk',sans-serif;--mono:'JetBrains Mono',monospace;
   --r:8px;--r2:14px;
 }
@@ -169,14 +170,21 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 .gtab.on{background:var(--bg4);color:var(--text)}
 
 /* LISTING CARD */
-.lcard{background:var(--glass-bg);backdrop-filter:blur(10px);border:1px solid var(--glass-border);border-radius:var(--r2);overflow:hidden;cursor:pointer;transition:all .2s;position:relative}
+.lcard{background:var(--card-solid, #14161ce6);border:1px solid var(--glass-border);border-radius:var(--r2);overflow:hidden;cursor:pointer;transition:transform .18s,box-shadow .18s,border-color .18s;position:relative;
+  /* სქროლის lag-ის რეალური მიზეზი: backdrop-filter:blur() თითოეულ ბარათზე (20+ ერთდროულად გვერდზე)
+     აიძულებდა ბრაუზერს ყოველ scroll-კადრზე ხელახლა გამოეთვალა real-time ბლური ყველასთვის.
+     ვცვლით მყარი (მაგრამ ისევ გამჭვირვალე/მინისებრი) ფონით — ვიზუალურად თითქმის იდენტურია,
+     მაგრამ GPU-ს აღარაფერს ახარჯინებს scroll-ის დროს.
+     content-visibility — ეკრანს გარეთა ბარათებს საერთოდ არ ვამუშავებთ/ვხატავთ, სანამ არ გამოჩნდება. */
+  content-visibility:auto;contain-intrinsic-size:auto 268px;contain:layout style paint;
+}
 .lcard:hover{border-color:var(--accent)40;transform:translateY(-3px);box-shadow:0 10px 28px #00000050}
 .lcard.vip{border-color:#f0b42930}
 .lcard.vip::after{content:'VIP';position:absolute;top:9px;right:9px;background:linear-gradient(135deg,#f0b429,#e07d29);color:#08090d;font-size:8px;font-weight:800;padding:2px 6px;border-radius:3px;letter-spacing:.04em}
 .lcard-img{height:100px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:38px;position:relative;overflow:hidden}
 .lcard-img img{width:100%;height:100%;object-fit:cover;display:block}
 .lcard-img-empty{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:30px;opacity:.35}
-.lcard-img-bg{position:absolute;inset:0;font-size:90px;display:flex;align-items:center;justify-content:center;opacity:.1;filter:blur(3px)}
+.lcard-img-bg{position:absolute;inset:0;font-size:90px;display:flex;align-items:center;justify-content:center;opacity:.08}
 .lcard-body{padding:13px}
 .lcard-game{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
 .lcard-title{font-size:13px;font-weight:600;line-height:1.3;margin-bottom:7px}
@@ -486,6 +494,63 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 .form-i{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:8px 12px;color:var(--text);font-size:12px;outline:none;transition:border-color .15s}
 .form-i:focus{border-color:var(--ad2)}.form-i::placeholder{color:var(--muted)}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* ══════════ Create Listing — full page, multi-step (მოდალის მაგივრად) ══════════ */
+.cl-wrap{max-width:720px;margin:0 auto;padding:20px 16px 100px}
+.cl-head{margin-bottom:20px}
+.cl-title{font-size:18px;font-weight:800;letter-spacing:-.4px;margin-bottom:14px}
+.cl-stepper{display:flex;align-items:center;gap:0}
+.cl-dot{width:26px;height:26px;border-radius:50%;background:var(--bg3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--muted);flex-shrink:0;transition:all .2s}
+.cl-dot.on{background:var(--ad);border-color:var(--accent);color:var(--accent)}
+.cl-dot.done{background:var(--accent);border-color:var(--accent);color:#08090d}
+.cl-line{flex:1;height:2px;background:var(--border2);margin:0 6px;transition:background .2s}
+.cl-line.done{background:var(--accent)}
+.cl-step{animation:pageFadeIn .25s ease}
+.cl-sec-title{font-size:12px;font-weight:700;color:var(--muted2);margin:18px 0 10px;text-transform:uppercase;letter-spacing:.04em}
+.cl-sec-title:first-child{margin-top:0}
+.cl-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+@media(min-width:640px){.cl-grid{grid-template-columns:repeat(4,1fr)}}
+.cl-cat-card{background:var(--card-solid);border:1.5px solid var(--glass-border);border-radius:var(--r2);padding:16px 10px;text-align:center;cursor:pointer;transition:transform .15s,border-color .15s;font-size:26px;
+  display:flex;flex-direction:column;align-items:center;gap:6px;min-height:78px;justify-content:center;
+  -webkit-tap-highlight-color:transparent}
+.cl-cat-card:active{transform:scale(.96)}
+.cl-cat-card:hover,.cl-cat-card.on{border-color:var(--accent)}
+.cl-cat-card.on{background:var(--ad);box-shadow:0 0 0 1px var(--accent) inset}
+.cl-cat-card span{font-size:11.5px;font-weight:600;color:var(--text);line-height:1.25}
+.cl-selected-cat{background:var(--ad);border:1px solid var(--ad2);border-radius:9px;padding:9px 12px;font-size:12.5px;font-weight:600;color:var(--accent);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.cl-type-toggle{display:grid;grid-template-columns:1fr;gap:8px}
+@media(min-width:520px){.cl-type-toggle{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}}
+.cl-type-btn{width:100%;background:var(--bg3);border:1.5px solid var(--border2);border-radius:9px;padding:11px;text-align:center;font-size:12.5px;font-weight:600;color:var(--muted2);cursor:pointer;transition:all .15s}
+.cl-type-btn.on{background:var(--ad);border-color:var(--accent);color:var(--accent)}
+.cl-price-row{display:flex;align-items:center;gap:10px}
+.cl-price-input{flex:1;display:flex;align-items:center;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:0 12px}
+.cl-price-input span{color:var(--muted);font-size:13px;margin-right:4px}
+.cl-price-input .form-i{background:none;border:none;padding:11px 0}
+.cl-price-usd{font-size:11.5px;color:var(--muted);white-space:nowrap;font-family:var(--mono)}
+.cl-dropzone{border:2px dashed var(--border2);border-radius:12px;padding:18px;cursor:pointer;transition:border-color .15s,background .15s;position:relative}
+.cl-dropzone.drag{border-color:var(--accent);background:var(--ad)}
+#post-img-strip{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.cl-package-grid{display:grid;grid-template-columns:1fr;gap:10px}
+@media(min-width:520px){.cl-package-grid{grid-template-columns:1fr 1fr}}
+.cl-package{cursor:pointer;display:block}
+.cl-package input{position:absolute;opacity:0;width:0;height:0}
+.cl-package-box{border:2px solid var(--border2);border-radius:12px;padding:20px 14px;text-align:center;transition:all .18s;background:var(--card-solid)}
+.cl-package input:checked + .cl-package-box{border-color:var(--accent);background:var(--ad)}
+.cl-package-vip{position:relative}
+.cl-package input:checked + .cl-package-vip{border-color:var(--gold);background:var(--gd)}
+.cl-bottom-nav{display:none}
+@media(max-width:900px){
+  .cl-bottom-nav{
+    position:fixed;left:0;right:0;bottom:0;z-index:120;
+    display:flex;gap:10px;padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+    background:var(--bg2);border-top:1px solid var(--border2);
+    box-shadow:0 -8px 24px #00000040;
+  }
+  .cl-bottom-nav .btn{flex:1;padding:13px;font-size:13.5px;justify-content:center}
+  #cl-back-btn{flex:0 0 auto;padding:13px 18px}
+}
+.cl-desktop-nav{display:flex;gap:10px;margin-top:22px;justify-content:flex-end}
+@media(max-width:900px){.cl-desktop-nav{display:none}}
 .ava-upload-area{border:2px dashed var(--border2);border-radius:var(--r2);padding:20px;text-align:center;cursor:pointer;transition:all .18s;position:relative}
 .ava-upload-area:hover{border-color:var(--ad2);background:var(--ad)}
 .ava-preview{width:70px;height:70px;border-radius:14px;margin:0 auto 10px;background:var(--bg4);border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:28px;overflow:hidden}
@@ -701,12 +766,10 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
   .btn-google{width:100%;padding:11px;font-size:13px;justify-content:center}
   .form-i{font-size:15px !important} /* iOS zoom prevention (16px+ disables) */
 
-  /* postModal — full bottom sheet */
-  #postModal .modal{max-height:90vh}
-  #postModal .form-g{margin-bottom:9px}
-  #postModal .form-i{font-size:15px}
-  #post-img-area{padding:10px}
-  #post-img-strip{gap:5px}
+  /* create-listing page — mobile */
+  .cl-wrap{padding:16px 14px 96px}
+  #post-img-area{padding:12px}
+  #post-img-strip{gap:6px}
 
   /* deposit/withdraw modals */
   #dep-show-amount{font-size:24px}
@@ -827,7 +890,7 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M7 9h10M7 13h10M7 17h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
     <span>კატალოგი</span>
   </div>
-  <div class="bnav-add" onclick="openM('postModal')" aria-label="დამატება">
+  <div class="bnav-add" onclick="if(currentUser){pg('create-listing')}else{openM('loginModal')}" aria-label="დამატება">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#06120d" stroke-width="2.2" stroke-linecap="round"/></svg>
   </div>
   <div class="bnav-item" data-idx="2" onclick="pg('chat');act(document.querySelectorAll('.nl')[2])">
@@ -851,7 +914,7 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
         <div class="hero-cta">
           <button class="btn btn-a" style="padding:9px 20px;font-size:13px" onclick="pg('listings');act(document.querySelectorAll('.nl')[1])">განცხადებები →</button>
           <button class="btn btn-g" id="hero-cta-guest" style="padding:9px 16px;font-size:13px" onclick="openM('loginModal')">უფასო რეგისტრაცია</button>
-          <button class="btn btn-g" id="hero-cta-user" style="padding:9px 16px;font-size:13px;display:none" onclick="openM('postModal')">➕ განცხადების დამატება</button>
+          <button class="btn btn-g" id="hero-cta-user" style="padding:9px 16px;font-size:13px;display:none" onclick="if(currentUser){pg('create-listing')}else{openM('loginModal')}">➕ განცხადების დამატება</button>
         </div>
         <div class="hero-stats">
           <div><div class="hs-n" id="stat-listings">─</div><div class="hs-l">განცხადება</div></div>
@@ -874,7 +937,7 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
       <div class="cat-card" onclick="goCategory('social')">📲<div>სოციალური</div><div style="font-size:10px;color:var(--muted)" id="cnt-social">─</div></div>
       <div class="cat-card" onclick="goCategory('boosting')">⚡<div>ბუსტინგი</div><div style="font-size:10px;color:var(--muted)" id="cnt-boosting">─</div></div>
       <div class="cat-card" onclick="goCategory('currency')">💎<div>ვალუტა</div><div style="font-size:10px;color:var(--muted)" id="cnt-currency">─</div></div>
-      <div class="cat-card" onclick="if(currentUser){openM('postModal')}else{openM('loginModal')}" style="border-color:var(--ad2);background:var(--ad)" id="cat-card-post">➕<div style="color:var(--accent)" id="cat-card-post-label">განცხ. დამატება</div><div style="font-size:10px;color:var(--muted)" id="cat-card-post-sub">გამოქვეყნება</div></div>
+      <div class="cat-card" onclick="if(currentUser){pg('create-listing')}else{openM('loginModal')}" style="border-color:var(--ad2);background:var(--ad)" id="cat-card-post">➕<div style="color:var(--accent)" id="cat-card-post-label">განცხ. დამატება</div><div style="font-size:10px;color:var(--muted)" id="cat-card-post-sub">გამოქვეყნება</div></div>
     </div>
 
     <div class="vip-banner">
@@ -945,7 +1008,7 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
     <div class="showcase-cta">
       <div class="showcase-cta-title" id="bottom-cta-title">გაყიდე შენი ექაუნთი დღესვე</div>
       <div class="showcase-cta-sub" id="bottom-cta-sub">დარეგისტრირდი წუთებში და განათავსე განცხადება — დაცული Escrow სისტემით, სამართლიანი 5%-იანი საკომისიოთი.</div>
-      <button class="btn btn-a" style="padding:10px 22px;font-size:13px" onclick="if(currentUser){openM('postModal')}else{openM('loginModal')}" id="bottom-cta-btn">➕ განცხადების დამატება</button>
+      <button class="btn btn-a" style="padding:10px 22px;font-size:13px" onclick="if(currentUser){pg('create-listing')}else{openM('loginModal')}" id="bottom-cta-btn">➕ განცხადების დამატება</button>
     </div>
   </div>
 </div>
@@ -1463,7 +1526,7 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 
       <div class="m-acts">
         <button class="btn btn-g" onclick="depBack()">← უკან</button>
-        <button class="btn btn-a" onclick="closeM('depositModal');showToast('✅ გადარიცხვის შემდეგ 1-24სთ-ში ბალანსი განახლდება!','ok')">გავიგე ✓</button>
+        <button class="btn btn-a" onclick="closeM('depositModal');showToast('✅ გადარიცხვის შემდეგ 1-24სთ-ში ბალანსი განახლდება!','ok');loadWallet();">გავიგე ✓</button>
       </div>
     </div>
   </div>
@@ -1624,120 +1687,142 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
     <div class="m-acts"><button class="btn btn-g" onclick="closeM('disputeModal')">გაუქ.</button><button class="btn btn-a" style="background:var(--red)" onclick="submitDispute()">გახ.</button></div>
   </div>
 </div>
-<div class="modal-bg" id="postModal" onclick="if(event.target===this)closeM('postModal')">
-  <div class="modal" style="max-width:460px">
-    <div class="modal-title">➕ განცხადების დამატება</div>
-
-    <div class="form-g"><label class="form-l">კატეგორია / თამაში</label>
-      <select class="form-i" id="post-category" onchange="updatePostForm()">
-        <optgroup label="📱 მობილური თამაშები">
-          <option value="mobile|PUBG Mobile">📱 PUBG Mobile</option>
-          <option value="mobile|Arena Breakout">📱 Arena Breakout</option>
-          <option value="mobile|CoD Mobile">📱 CoD Mobile</option>
-          <option value="mobile|Mobile Legends">📱 Mobile Legends</option>
-          <option value="mobile|Brawl Stars">📱 Brawl Stars</option>
-          <option value="mobile|Clash of Clans">📱 Clash of Clans</option>
-          <option value="mobile|Genshin Impact">📱 Genshin Impact</option>
-          <option value="mobile|Roblox">📱 Roblox</option>
-        </optgroup>
-        <optgroup label="🖥️ PC / Console">
-          <option value="pc|CS2">🖥️ CS2</option>
-          <option value="pc|Valorant">🖥️ Valorant</option>
-          <option value="pc|Dota 2">🖥️ Dota 2</option>
-          <option value="pc|League of Legends">🖥️ League of Legends</option>
-        </optgroup>
-        <optgroup label="📲 სოციალური ქსელები">
-          <option value="social|Instagram">📲 Instagram</option>
-          <option value="social|TikTok">📲 TikTok</option>
-          <option value="social|YouTube">📲 YouTube</option>
-          <option value="social|Facebook">📲 Facebook</option>
-        </optgroup>
-        <optgroup label="⚡ ბუსტინგი / სერვისი">
-          <option value="boosting|PUBG Mobile">⚡ PUBG Mobile Boost</option>
-          <option value="boosting|CS2">⚡ CS2 Boost</option>
-          <option value="boosting|Valorant">⚡ Valorant Boost</option>
-          <option value="boosting|სხვა">⚡ სხვა თამაში</option>
-        </optgroup>
-        <optgroup label="💎 ვალუტა / ნივთები">
-          <option value="currency|PUBG Mobile">💎 PUBG UC</option>
-          <option value="currency|Mobile Legends">💎 ML Diamonds</option>
-          <option value="currency|Brawl Stars">💎 Brawl Stars Gems</option>
-          <option value="currency|CS2">💎 CS2 Credits/Skins</option>
-          <option value="currency|სხვა">💎 სხვა ვალუტა</option>
-        </optgroup>
-      </select>
-    </div>
-
-    <div class="form-g"><label class="form-l">ტიპი</label>
-      <select class="form-i" id="post-type">
-        <option value="account">🎮 ექაუნთი</option>
-        <option value="boosting">⚡ ბუსტინგი / სერვისი</option>
-        <option value="currency">💎 ვალუტა / ნივთი</option>
-      </select>
-    </div>
-
-    <div class="form-g"><label class="form-l">სათაური</label>
-      <input class="form-i" id="post-title" placeholder="მაგ.: Global Elite · 2500+ საათი">
-    </div>
-    <div class="form-g"><label class="form-l">აღწერა</label>
-      <textarea class="form-i" id="post-desc" rows="2" placeholder="დეტალური ინფო..."></textarea>
-    </div>
-
-    <div class="form-g"><label class="form-l">ფასი (₾)</label>
-      <input class="form-i" id="post-price" type="number" placeholder="50" min="1" oninput="updateVipPrice()">
-    </div>
-
-    <!-- VIP სისტემა -->
-    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:14px;margin-bottom:12px">
-      <div style="font-size:12px;font-weight:700;margin-bottom:10px">📢 განთავსების ტიპი</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <label id="post-free-label" style="cursor:pointer">
-          <input type="radio" name="post-vip-radio" value="no" checked onchange="updateVipPrice()" style="display:none">
-          <div id="post-free-box" style="border:2px solid var(--accent);border-radius:8px;padding:10px;text-align:center;transition:all .2s">
-            <div style="font-size:18px">📋</div>
-            <div style="font-size:12px;font-weight:600;margin-top:4px">უფასო</div>
-            <div style="font-size:10px;color:var(--muted);margin-top:2px">სტანდარტული</div>
-          </div>
-        </label>
-        <label id="post-vip-label" style="cursor:pointer">
-          <input type="radio" name="post-vip-radio" value="yes" onchange="updateVipPrice()" style="display:none">
-          <div id="post-vip-box" style="border:2px solid var(--border2);border-radius:8px;padding:10px;text-align:center;transition:all .2s">
-            <div style="font-size:18px">⭐</div>
-            <div style="font-size:12px;font-weight:600;margin-top:4px">VIP</div>
-            <div style="font-size:10px;color:var(--gold);margin-top:2px" id="vip-price-label">ფასის 10%</div>
-          </div>
-        </label>
-      </div>
-      <div id="vip-info" style="display:none;margin-top:8px;font-size:11px;color:var(--gold);background:var(--gd);border-radius:6px;padding:8px;text-align:center">
-        ⭐ VIP — გამოჩნდება კატეგორიის სათავეში · ₾<span id="vip-cost">0</span> ჩამოიჭრება ბალანსიდან
+<!-- CREATE LISTING — Full-page, Multi-step (ძველი modal-ის ნაცვლად) -->
+<div id="page-create-listing" class="page main">
+  <div class="cl-wrap">
+    <div class="cl-head">
+      <div class="cl-title">➕ განცხადების დამატება</div>
+      <div class="cl-stepper">
+        <div class="cl-dot on" id="cl-dot-1">1</div><div class="cl-line" id="cl-line-1"></div>
+        <div class="cl-dot" id="cl-dot-2">2</div><div class="cl-line" id="cl-line-2"></div>
+        <div class="cl-dot" id="cl-dot-3">3</div>
       </div>
     </div>
 
-    <div class="form-g">
-      <label class="form-l">📸 ფოტო (სურვ. · JPG/PNG · მაქ. 2MB)</label>
-      <div id="post-img-area" style="border:2px dashed var(--border2);border-radius:10px;padding:14px;cursor:pointer;transition:all .2s;position:relative"
-           onclick="document.getElementById('post-img-input').click()"
-           ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
-           ondragleave="this.style.borderColor='var(--border2)'"
-           ondrop="handleImgDrop(event)">
-        <input type="file" id="post-img-input" accept="image/jpeg,image/png,image/webp"
-               multiple style="display:none" onchange="previewPostImgs(this)">
+    <!-- STEP 1 — კატეგორიის არჩევა -->
+    <div class="cl-step" id="cl-step-1">
+      <div class="cl-sec-title">🎮 სათამაშო ექაუნთები</div>
+      <div class="cl-grid">
+        <div class="cl-cat-card" data-cv="mobile|PUBG Mobile" onclick="clSelectCat('mobile','PUBG Mobile',this)">📱<span>PUBG Mobile</span></div>
+        <div class="cl-cat-card" data-cv="mobile|Arena Breakout" onclick="clSelectCat('mobile','Arena Breakout',this)">📱<span>Arena Breakout</span></div>
+        <div class="cl-cat-card" data-cv="pc|CS2" onclick="clSelectCat('pc','CS2',this)">🖥️<span>CS2</span></div>
+        <div class="cl-cat-card" data-cv="pc|Valorant" onclick="clSelectCat('pc','Valorant',this)">🖥️<span>Valorant</span></div>
+        <div class="cl-cat-card" data-cv="pc|Dota 2" onclick="clSelectCat('pc','Dota 2',this)">🖥️<span>Dota 2</span></div>
+        <div class="cl-cat-card" data-cv="pc|League of Legends" onclick="clSelectCat('pc','League of Legends',this)">🖥️<span>League of Legends</span></div>
+        <div class="cl-cat-card" data-cv="mobile|CoD Mobile" onclick="clSelectCat('mobile','CoD Mobile',this)">📱<span>CoD Mobile</span></div>
+        <div class="cl-cat-card" data-cv="mobile|Mobile Legends" onclick="clSelectCat('mobile','Mobile Legends',this)">📱<span>Mobile Legends</span></div>
+        <div class="cl-cat-card" data-cv="mobile|Brawl Stars" onclick="clSelectCat('mobile','Brawl Stars',this)">📱<span>Brawl Stars</span></div>
+        <div class="cl-cat-card" data-cv="mobile|Clash of Clans" onclick="clSelectCat('mobile','Clash of Clans',this)">📱<span>Clash of Clans</span></div>
+        <div class="cl-cat-card" data-cv="mobile|Genshin Impact" onclick="clSelectCat('mobile','Genshin Impact',this)">📱<span>Genshin Impact</span></div>
+        <div class="cl-cat-card" data-cv="mobile|Roblox" onclick="clSelectCat('mobile','Roblox',this)">📱<span>Roblox</span></div>
+      </div>
 
-        <!-- thumbnail strip -->
-        <div id="post-img-strip" style="display:none;display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
+      <div class="cl-sec-title">⚡ ბუსტინგი / სერვისი</div>
+      <div class="cl-grid">
+        <div class="cl-cat-card" data-cv="boosting|PUBG Mobile" onclick="clSelectCat('boosting','PUBG Mobile',this)">⚡<span>PUBG Mobile Boost</span></div>
+        <div class="cl-cat-card" data-cv="boosting|CS2" onclick="clSelectCat('boosting','CS2',this)">⚡<span>CS2 Boost</span></div>
+        <div class="cl-cat-card" data-cv="boosting|Valorant" onclick="clSelectCat('boosting','Valorant',this)">⚡<span>Valorant Boost</span></div>
+        <div class="cl-cat-card" data-cv="boosting|სხვა" onclick="clSelectCat('boosting','სხვა',this)">⚡<span>სხვა თამაში</span></div>
+      </div>
 
-        <div id="post-img-placeholder" style="text-align:center">
-          <div style="font-size:20px;margin-bottom:3px">📷</div>
-          <div style="font-size:11px;font-weight:600">ფოტოების ატვირთვა (მაქს. 5)</div>
-          <div style="font-size:10px;color:var(--muted)">jpeg · png · webp · 3MB თითო</div>
+      <div class="cl-sec-title">💎 ვალუტა / ნივთები</div>
+      <div class="cl-grid">
+        <div class="cl-cat-card" data-cv="currency|PUBG Mobile" onclick="clSelectCat('currency','PUBG Mobile',this)">💎<span>PUBG UC</span></div>
+        <div class="cl-cat-card" data-cv="currency|Mobile Legends" onclick="clSelectCat('currency','Mobile Legends',this)">💎<span>ML Diamonds</span></div>
+        <div class="cl-cat-card" data-cv="currency|Brawl Stars" onclick="clSelectCat('currency','Brawl Stars',this)">💎<span>Brawl Stars Gems</span></div>
+        <div class="cl-cat-card" data-cv="currency|CS2" onclick="clSelectCat('currency','CS2',this)">💎<span>CS2 Credits/Skins</span></div>
+        <div class="cl-cat-card" data-cv="currency|სხვა" onclick="clSelectCat('currency','სხვა',this)">💎<span>სხვა ვალუტა</span></div>
+      </div>
+
+      <div class="cl-sec-title">📲 სოციალური ქსელები / პლატფორმები</div>
+      <div class="cl-grid">
+        <div class="cl-cat-card" data-cv="social|Instagram" onclick="clSelectCat('social','Instagram',this)">📸<span>Instagram</span></div>
+        <div class="cl-cat-card" data-cv="social|TikTok" onclick="clSelectCat('social','TikTok',this)">🎵<span>TikTok</span></div>
+        <div class="cl-cat-card" data-cv="social|YouTube" onclick="clSelectCat('social','YouTube',this)">▶️<span>YouTube</span></div>
+        <div class="cl-cat-card" data-cv="social|Facebook" onclick="clSelectCat('social','Facebook',this)">👍<span>Facebook</span></div>
+      </div>
+    </div>
+
+    <!-- STEP 2 — დეტალები -->
+    <div class="cl-step" id="cl-step-2" style="display:none">
+      <div class="cl-selected-cat" id="cl-selected-cat-label"></div>
+
+      <input type="hidden" id="post-category" value="">
+      <input type="hidden" id="post-type" value="">
+
+      <div class="form-g"><label class="form-l">ტიპი</label>
+        <div class="cl-type-toggle" id="cl-type-toggle"></div>
+      </div>
+
+      <div class="form-g"><label class="form-l">სათაური</label>
+        <input class="form-i" id="post-title" placeholder="მაგ.: Global Elite · 2500+ საათი">
+      </div>
+      <div class="form-g"><label class="form-l">აღწერა</label>
+        <textarea class="form-i" id="post-desc" rows="3" placeholder="დეტალური ინფო..."></textarea>
+      </div>
+
+      <div class="form-g"><label class="form-l">ფასი</label>
+        <div class="cl-price-row">
+          <div class="cl-price-input"><span>₾</span><input class="form-i" id="post-price" type="number" placeholder="50" min="1" oninput="updateVipPrice();clUpdatePriceUsd()"></div>
+          <div class="cl-price-usd">≈ $<span id="cl-price-usd">0</span></div>
+        </div>
+      </div>
+
+      <div class="form-g">
+        <label class="form-l">📸 ფოტო (სურვ. · JPG/PNG · მაქ. 3MB · მაქს. 5)</label>
+        <div id="post-img-area" class="cl-dropzone"
+             onclick="document.getElementById('post-img-input').click()"
+             ondragover="event.preventDefault();this.classList.add('drag')"
+             ondragleave="this.classList.remove('drag')"
+             ondrop="event.preventDefault();this.classList.remove('drag');handleImgDrop(event)">
+          <input type="file" id="post-img-input" accept="image/jpeg,image/png,image/webp"
+                 multiple style="display:none" onchange="previewPostImgs(this)">
+          <div id="post-img-strip" style="display:none"></div>
+          <div id="post-img-placeholder" style="text-align:center">
+            <div style="font-size:22px;margin-bottom:4px">📷</div>
+            <div style="font-size:12px;font-weight:600">დააჭირე ან ჩააგდე ფოტო</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px">jpeg · png · webp</div>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="m-acts" style="margin-top:12px">
-      <button class="btn btn-g" onclick="closeM('postModal')">გაუქმება</button>
-      <button class="btn btn-a" id="post-submit-btn" onclick="postListing()">გამოქვეყნება</button>
+    <!-- STEP 3 — განთავსების ტიპი -->
+    <div class="cl-step" id="cl-step-3" style="display:none">
+      <div class="cl-sec-title" style="margin-bottom:12px">📢 განთავსების ტიპი</div>
+      <div class="cl-package-grid">
+        <label id="post-free-label" class="cl-package">
+          <input type="radio" name="post-vip-radio" value="no" checked onchange="updateVipPrice()">
+          <div id="post-free-box" class="cl-package-box">
+            <div style="font-size:22px">📋</div>
+            <div style="font-weight:700;margin-top:6px">უფასო</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">სტანდარტული განთავსება</div>
+          </div>
+        </label>
+        <label id="post-vip-label" class="cl-package">
+          <input type="radio" name="post-vip-radio" value="yes" onchange="updateVipPrice()">
+          <div id="post-vip-box" class="cl-package-box cl-package-vip">
+            <div style="font-size:22px">⭐</div>
+            <div style="font-weight:700;margin-top:6px;color:var(--gold)">VIP განთავსება</div>
+            <div style="font-size:11px;color:var(--gold);margin-top:2px" id="vip-price-label">ფასის 10%</div>
+          </div>
+        </label>
+      </div>
+      <div id="vip-info" style="display:none;margin-top:10px;font-size:12px;color:var(--gold);background:var(--gd);border-radius:8px;padding:10px;text-align:center">
+        ⭐ VIP — გამოჩნდება კატეგორიის სათავეში · ₾<span id="vip-cost">0</span> ჩამოიჭრება ბალანსიდან
+      </div>
+
+      <div class="cl-desktop-nav">
+        <button class="btn btn-g" onclick="clBack()">← უკან</button>
+        <button class="btn btn-a" id="post-submit-btn-desktop" onclick="postListing()">გამოქვეყნება</button>
+      </div>
     </div>
+  </div>
+
+  <!-- Sticky bottom nav — მობილურზე ეკრანის ბოლოში ფიქსირებული, აღარ სჭირდება ჩამოსქროლვა -->
+  <div class="cl-bottom-nav">
+    <button class="btn btn-g" id="cl-back-btn" onclick="clBack()" style="display:none">← უკან</button>
+    <button class="btn btn-a" id="cl-next-btn" onclick="clNext()" disabled>აირჩიე კატეგორია</button>
   </div>
 </div>
 <div class="modal-bg" id="vipModal" onclick="if(event.target===this)closeM('vipModal')">
@@ -1814,7 +1899,7 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 // ══════════════════════════════════════════════════════════
 // CONFIG
 // ══════════════════════════════════════════════════════════
-const API_URL = 'https://gamerbazar-api-production.up.railway.app';
+const API_URL = 'https://gamebazar.up.railway.app';
 
 // ── სურათის URL-ის აწყობა — Cloudinary-ს ურლები უკვე სრულია (https://res.cloudinary.com/...),
 // API_URL-ის დამატება მათ არ სჭირდება (ამის დავიწყება ტეხდა სურათებს — abrunebda error.png/ცარიელი src).
@@ -1866,7 +1951,7 @@ async function api(path, opts = {}) {
 // AUTH GUARD — გვერდების დაცვა
 // ══════════════════════════════════════════════════════════
 function showPageGuarded(id) {
-  const guarded = ['profile', 'edit', 'wallet', 'chat', 'order-history'];
+  const guarded = ['profile', 'edit', 'wallet', 'chat', 'order-history', 'create-listing'];
   if (!guarded.includes(id)) return true;
   // სანამ საწყისი auth-შემოწმება არ დასრულებულა, არ ვიცით ნამდვილად
   // სტუმარია თუ არა — ამ დროს login-მოდალს არ ვხსნით (Flash ეფექტის თავიდან აცილება).
@@ -1998,6 +2083,7 @@ function pg(id) {
     window.history.replaceState({}, '', window.location.pathname + window.location.search);
   }
   if (id === 'wallet')  { updateNavUser(); loadWallet(); }
+  if (id === 'create-listing') { clResetForm(); }
   if (id === 'profile') { updateNavUser(); loadMyProfile(); }
   if (id === 'chat')    { loadChatRooms(); showChatSidebar(); }
   if (id === 'edit')    { loadMyProfile(); }
@@ -2199,6 +2285,9 @@ function doLogout() {
 let authLoading = true;
 
 async function loadCurrentUser() {
+  // ვინახავთ, რომელი ტოკენით დავიწყეთ ეს მოთხოვნა — თუ ამ დროის განმავლობაში
+  // მომხმარებელმა უკვე გამოვიდა/შევიდა სხვა ექაუნთით (ტოკენი შეიცვალა),
+  // ეს ძველი, "დაგვიანებული" პასუხი აღარ უნდა გადააწეროს ახალ currentUser-ს.
   const tokenAtStart = getToken();
   if (!tokenAtStart) {
     authLoading = false;
@@ -2207,19 +2296,20 @@ async function loadCurrentUser() {
     hideAuthBootScreen();
     return;
   }
-  // 5 წამის timeout — loading screen ყოველთვის გაქრეს
-  const toId = setTimeout(() => {
-    if (authLoading) { authLoading = false; updateNavUser(); hideAuthBootScreen(); }
-  }, 5000);
   try {
-    const user = await api("/api/auth/me");
-    if (getToken() !== tokenAtStart) return;
+    const user = await api('/api/auth/me');
+    if (getToken() !== tokenAtStart) return; // მოძველებული პასუხი — იგნორი
     currentUser = user;
   } catch (e) {
-    if (getToken() !== tokenAtStart) return;
-    if (e && (e.status === 401 || e.status === 403)) { clearToken(); currentUser = null; }
+    if (getToken() !== tokenAtStart) return; // მოძველებული შეცდომაც — იგნორი
+    // ტოკენს მხოლოდ მაშინ ვშლით, თუ სერვერმა დარწმუნებით თქვა რომ არავალიდურია
+    // (401/403). ქსელის შეცდომაზე, timeout-ზე ან სერვერის "გაღვიძებაზე" (Render
+    // cold-start) მომხმარებელს არ ვაგდებთ სისტემიდან — ტოკენი უცვლელი რჩება.
+    if (e && (e.status === 401 || e.status === 403)) {
+      clearToken();
+      currentUser = null;
+    }
   } finally {
-    clearTimeout(toId);
     authLoading = false;
     updateNavUser();
     hideAuthBootScreen();
@@ -3915,15 +4005,8 @@ function renderChats() { loadChatRooms(); }
 // sendMsg — იხ. Chat JS ბლოკი
 
 // ══════════════════════════════════════════════════════════
-// POST LISTING
+// POST LISTING — Full-page Multi-step (Create Listing)
 // ══════════════════════════════════════════════════════════
-function handleImgDrop(e) {
-  e.preventDefault();
-  const file = e.dataTransfer.files[0];
-  if (file && file.type.startsWith('image/')) previewPostImg({ files: [file] });
-}
-
-// ── Post Modal — კატეგ. მიხ. ტიპები + სათაური ──────────────────
 const POST_TYPES = {
   mobile: [
     { value:'account',  label:'🎮 ექაუნთი' },
@@ -3980,26 +4063,102 @@ const POST_PLACEHOLDERS = {
   'სხვა ვალუტა':       'მიუთითე ვალუტის სახეობა და რაოდენობა',
 };
 
-function updatePostForm() {
-  const catEl = document.getElementById('post-category');
-  const typeEl = document.getElementById('post-type');
-  const titleEl = document.getElementById('post-title');
-  if (!catEl || !typeEl) return;
+const CAT_LABELS = { mobile:'📱 მობილური', pc:'🖥️ PC/Console', social:'📲 სოციალური', boosting:'⚡ ბუსტინგი', currency:'💎 ვალუტა' };
 
-  const [cat, game] = (catEl.value || '').split('|');
+let clStep = 1;
+
+// STEP 1 → აირჩია კატეგორია/თამაში ბარათზე დაჭერით — ავტ. გადადის STEP 2-ზე
+function clSelectCat(cat, game, el) {
+  document.querySelectorAll('.cl-cat-card').forEach(c => c.classList.remove('on'));
+  if (el) el.classList.add('on');
+
+  document.getElementById('post-category').value = cat + '|' + game;
+
+  const label = document.getElementById('cl-selected-cat-label');
+  if (label) label.innerHTML = `${CAT_LABELS[cat] || cat} · <b>${game}</b> &nbsp;·&nbsp; <span style="cursor:pointer;text-decoration:underline" onclick="clGoToStep(1)">შეცვლა</span>`;
+
+  // ტიპის toggle-ის აწყობა კატეგორიის მიხედვით
   const types = POST_TYPES[cat] || POST_TYPES.mobile;
+  const toggle = document.getElementById('cl-type-toggle');
+  if (toggle) {
+    toggle.innerHTML = types.map((t, i) =>
+      `<button type="button" class="cl-type-btn${i===0?' on':''}" onclick="clSelectType('${t.value}', this)">${t.label}</button>`
+    ).join('');
+  }
+  document.getElementById('post-type').value = types[0].value;
 
-  // ტიპების განახლება
-  typeEl.innerHTML = types.map(t =>
-    `<option value="${t.value}">${t.label}</option>`
-  ).join('');
+  const titleEl = document.getElementById('post-title');
+  if (titleEl && POST_PLACEHOLDERS[game]) titleEl.placeholder = POST_PLACEHOLDERS[game];
 
-  // placeholder-ის განახლება
-  if (titleEl && game && POST_PLACEHOLDERS[game]) {
-    titleEl.placeholder = POST_PLACEHOLDERS[game];
+  clGoToStep(2);
+}
+
+function clSelectType(val, el) {
+  document.getElementById('post-type').value = val;
+  document.querySelectorAll('.cl-type-btn').forEach(b => b.classList.remove('on'));
+  if (el) el.classList.add('on');
+}
+
+function clUpdatePriceUsd() {
+  const price = parseFloat(document.getElementById('post-price')?.value) || 0;
+  const usdEl = document.getElementById('cl-price-usd');
+  if (usdEl) usdEl.textContent = (price / 2.74).toFixed(0);
+}
+
+// სვედჯების/ღილაკების მდგომარეობა თითოეულ ნაბიჯზე
+function clGoToStep(n) {
+  clStep = n;
+  document.querySelectorAll('.cl-step').forEach((s, i) => { s.style.display = (i === n - 1) ? 'block' : 'none'; });
+
+  for (let i = 1; i <= 3; i++) {
+    const dot  = document.getElementById('cl-dot-' + i);
+    const line = document.getElementById('cl-line-' + i);
+    if (dot) dot.classList.toggle('on', i === n);
+    if (dot) dot.classList.toggle('done', i < n);
+    if (line) line.classList.toggle('done', i < n);
   }
 
+  const backBtn = document.getElementById('cl-back-btn');
+  const nextBtn = document.getElementById('cl-next-btn');
+  if (backBtn) backBtn.style.display = n > 1 ? 'inline-flex' : 'none';
+  if (nextBtn) {
+    nextBtn.disabled = (n === 1 && !document.getElementById('post-category').value);
+    if (n === 1) { nextBtn.textContent = 'აირჩიე კატეგორია'; nextBtn.onclick = clNext; }
+    else if (n === 2) { nextBtn.textContent = 'გაგრძელება →'; nextBtn.onclick = clNext; nextBtn.disabled = false; }
+    else { nextBtn.textContent = 'გამოქვეყნება'; nextBtn.onclick = postListing; nextBtn.disabled = false; }
+  }
+  window.scrollTo(0, 0);
+}
+
+function clNext() {
+  if (clStep === 1) return; // STEP 1-დან გადასვლა მხოლოდ ბარათზე დაჭერით ხდება
+  if (clStep === 2) {
+    const title = document.getElementById('post-title')?.value?.trim();
+    const price = parseFloat(document.getElementById('post-price')?.value);
+    if (!title)               { showToast('სათაური სავალდებულოა', 'err'); return; }
+    if (!price || price < 1)  { showToast('ფასი სავალდებულოა', 'err'); return; }
+    clGoToStep(3);
+  }
+}
+function clBack() {
+  if (clStep > 1) clGoToStep(clStep - 1);
+}
+
+// ახალ გვერდზე შესვლისას — ყოველთვის სუფთა, STEP 1-იდან იწყება
+function clResetForm() {
+  clStep = 1;
+  postImgFiles = [];
+  document.querySelectorAll('.cl-cat-card').forEach(c => c.classList.remove('on'));
+  const catInput = document.getElementById('post-category'); if (catInput) catInput.value = '';
+  const typeInput = document.getElementById('post-type'); if (typeInput) typeInput.value = '';
+  const label = document.getElementById('cl-selected-cat-label'); if (label) label.innerHTML = '';
+  const toggle = document.getElementById('cl-type-toggle'); if (toggle) toggle.innerHTML = '';
+  ['post-title','post-desc','post-price'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
+  const freeRadio = document.querySelector('input[name="post-vip-radio"][value="no"]');
+  if (freeRadio) freeRadio.checked = true;
+  renderImgStrip();
   updateVipPrice();
+  clGoToStep(1);
 }
 
 function updateVipPrice() {
@@ -4007,8 +4166,6 @@ function updateVipPrice() {
   const vipInfo   = document.getElementById('vip-info');
   const vipCost   = document.getElementById('vip-cost');
   const vipLabel  = document.getElementById('vip-price-label');
-  const freeBox   = document.getElementById('post-free-box');
-  const vipBox    = document.getElementById('post-vip-box');
   const isVip     = document.querySelector('input[name="post-vip-radio"]:checked')?.value === 'yes';
 
   const price = parseFloat(priceEl?.value) || 0;
@@ -4017,13 +4174,8 @@ function updateVipPrice() {
   if (vipLabel) vipLabel.textContent = price > 0 ? `VIP = ₾${cost}` : 'ფასის 10%';
   if (vipCost)  vipCost.textContent  = cost.toFixed(2);
   if (vipInfo)  vipInfo.style.display = isVip ? 'block' : 'none';
-
-  if (freeBox) freeBox.style.border = !isVip
-    ? '2px solid var(--accent)' : '2px solid var(--border2)';
-  if (vipBox)  vipBox.style.border  = isVip
-    ? '2px solid var(--gold)' : '2px solid var(--border2)';
-  if (vipBox && isVip) vipBox.style.background = 'var(--gd)';
-  else if (vipBox) vipBox.style.background = '';
+  // ბარათების ვიზუალური მდგომარეობა (checked/unchecked) CSS-ით იმართება
+  // (`.cl-package input:checked + .cl-package-box`) — JS-ს აქ აღარაფერი სჭირდება.
 }
 
 
@@ -4091,7 +4243,7 @@ function previewPostImg(input) { previewPostImgs(input); }
 
 async function postListing() {
   if (!currentUser) { showToast('ჯერ შედი სისტემაში', 'err'); openM('loginModal'); return; }
-  const catVal   = (document.getElementById('post-category') || {}).value || 'mobile|სხვა';
+  const catVal   = (document.getElementById('post-category') || {}).value || '';
   const [category, game] = catVal.split('|');
   const listing_type = (document.getElementById('post-type')  || {}).value || 'account';
   const title    = (document.getElementById('post-title') || {}).value?.trim();
@@ -4099,8 +4251,9 @@ async function postListing() {
   const desc     = (document.getElementById('post-desc')  || {}).value?.trim() || '';
   const isVip    = document.querySelector('input[name="post-vip-radio"]:checked')?.value === 'yes';
 
-  if (!title)           { showToast('სათაური სავალდებულოა', 'err'); return; }
-  if (!price_gel || price_gel < 1) { showToast('ფასი სავალდებულოა', 'err'); return; }
+  if (!category)        { showToast('აირჩიე კატეგორია', 'err'); clGoToStep(1); return; }
+  if (!title)           { showToast('სათაური სავალდებულოა', 'err'); clGoToStep(2); return; }
+  if (!price_gel || price_gel < 1) { showToast('ფასი სავალდებულოა', 'err'); clGoToStep(2); return; }
 
   // VIP ფასი = 10%
   const vipCost = Math.max(1, Math.round(price_gel * 0.10 * 100) / 100);
@@ -4113,8 +4266,9 @@ async function postListing() {
     }
   }
 
-  const btn = document.getElementById('post-submit-btn');
-  if (btn) { btn.textContent = '⏳ ქმნება...'; btn.disabled = true; }
+  // ორივე submit ღილაკი (მობილურის sticky bottom-nav + დესკტოპის) ერთდროულად ვმართავთ
+  const btns = [document.getElementById('cl-next-btn'), document.getElementById('post-submit-btn-desktop')].filter(Boolean);
+  btns.forEach(b => { b.dataset.origText = b.textContent; b.textContent = '⏳ ქმნება...'; b.disabled = true; });
 
   try {
     // 1. განცხ. შექმნა
@@ -4126,7 +4280,7 @@ async function postListing() {
     // 2. სურ-ების ატვირთვა (multipart)
     if (postImgFiles.length && newL.id) {
       try {
-        if (btn) btn.textContent = '⏳ სურ. ტვირთება...';
+        btns.forEach(b => b.textContent = '⏳ სურ. ტვირთება...');
         const fd = new FormData();
         postImgFiles.forEach(f => fd.append('images', f));
         await fetch(API_URL + '/api/listings/' + newL.id + '/images', {
@@ -4140,7 +4294,7 @@ async function postListing() {
     // 3. VIP გააქტ.
     if (isVip && newL.id) {
       try {
-        if (btn) btn.textContent = '⏳ VIP...';
+        btns.forEach(b => b.textContent = '⏳ VIP...');
         await api('/api/listings/' + newL.id + '/vip', {
           method: 'POST',
           body: JSON.stringify({ duration_days: 30, price: vipCost })
@@ -4148,26 +4302,18 @@ async function postListing() {
       } catch(e) { console.warn('vip failed:', e.message); }
     }
 
-    // reset form
-    postImgFiles = [];
-    renderImgStrip();
-    const freeRadio = document.querySelector('input[name="post-vip-radio"][value="no"]');
-    if (freeRadio) { freeRadio.checked = true; updateVipPrice(); }
-    document.getElementById('post-title').value = '';
-    document.getElementById('post-price').value = '';
-    document.getElementById('post-desc').value  = '';
-
-    closeM('postModal');
+    clResetForm();
     showToast(isVip ? '⏳ VIP განცხ. მოდ. მოლოდინშია' : '⏳ განცხ. გაიგზავნა მოდ-ზე — დადასტ. შემდეგ გამოჩნდება', 'ok');
     loadListingsFromAPI('home-grid');
     loadListingsFromAPI('l-grid');
     loadHomeStats();
     if (currentUser) loadMyListings('active');
     loadCurrentUser();
+    pg('profile'); act(document.querySelectorAll('.nl')[4]);
   } catch (e) {
     showToast(e.message || 'შეცდომა', 'err');
   } finally {
-    if (btn) { btn.textContent = 'გამოქვეყნება'; btn.disabled = false; }
+    btns.forEach(b => { b.textContent = b.dataset.origText || 'გამოქვეყნება'; b.disabled = false; });
   }
 }
 
@@ -4782,13 +4928,30 @@ renderChats();
 // Auth
 
 // ── Deposit Step Functions ────────────────────────────────────
-function depStep2() {
+async function depStep2() {
   const amount = parseFloat(document.getElementById('dep-amount')?.value);
   if (!amount || amount < 1) { showToast('შეიყვანე თანხა', 'err'); return; }
-  document.getElementById('dep-show-amount').textContent = '₾' + amount.toFixed(2);
-  document.getElementById('dep-username').textContent = currentUser?.username || '—';
-  document.getElementById('dep-step1').style.display = 'none';
-  document.getElementById('dep-step2').style.display = 'block';
+  const btn = document.querySelector('#dep-step1 .btn-a');
+  if (btn) { btn.textContent = '⏳...'; btn.disabled = true; }
+  try {
+    // კრიტიკული: სწორედ ეს მოთხოვნა აკლდა მთლიანად — ბექენდზე ქმნის
+    // 'pending' ტრანზაქციას, საიდანაც ადმინის "შეტანის მოთხოვნები"
+    // სექცია იკითხავს მონაცემებს. მის გარეშე მოთხოვნა ვერასდროს
+    // გამოჩნდებოდა Watch Tower-ში, მიუხედავად იმისა რომ იუზერს
+    // ეჩვენებოდა წარმატების ეკრანი.
+    const data = await api('/api/wallet/deposit', { method: 'POST', body: JSON.stringify({ amount }) });
+    document.getElementById('dep-show-amount').textContent = '₾' + Number(data.amount).toFixed(2);
+    document.getElementById('dep-username').textContent = currentUser?.username || '—';
+    document.getElementById('dep-step1').style.display = 'none';
+    document.getElementById('dep-step2').style.display = 'block';
+  } catch (e) {
+    const msg = e?.error === 'max_10000_gel' ? 'მაქს. ₾10,000'
+              : e?.error === 'min_1_gel'      ? 'მინ. ₾1'
+              : (e?.message || 'შეცდომა — სცადე ხელახლა');
+    showToast(msg, 'err');
+  } finally {
+    if (btn) { btn.textContent = 'შემდეგი →'; btn.disabled = false; }
+  }
 }
 
 function depBack() {
@@ -4816,10 +4979,6 @@ window.openM = function(id) {
   }
   if (_origOpenM) _origOpenM(id);
 };
-
-async function doDeposit() {
-  // legacy — ახლა depStep2 გამოიყენება
-}
 
 async function doWithdraw() {
   const iban   = document.getElementById('wd-iban')?.value?.trim();
@@ -4852,6 +5011,10 @@ document.addEventListener('DOMContentLoaded', () => {
 // სერვერის გაღვიძება (Render free tier)
 try { fetch(API_URL + '/health').catch(() => {}); } catch(e) {}
 
+// Safety-net — რაც არ უნდა მოხდეს (backend ჩამოკიდებული/unreachable/CORS),
+// boot-ეკრანი მაქსიმუმ 8 წამში ყოველთვის უნდა გაქრეს, რომ საიტი სამუდამოდ არ დაიბლოკოს.
+setTimeout(() => { authLoading = false; hideAuthBootScreen(); }, 8000);
+
 // Auth — hash-routing-ს ველოდებით სანამ loadCurrentUser არ დასრულდება,
 // რომ guarded გვერდებზე refresh-ისას login-მოდალი არ გაიელვოს ვალიდური სესიისთვის.
 (async function initAuthAndRouting() {
@@ -4859,7 +5022,7 @@ try { fetch(API_URL + '/health').catch(() => {}); } catch(e) {}
   try { await loadCurrentUser(); } catch(e) { console.error('load user:', e); authLoading = false; hideAuthBootScreen(); }
 
   const hash = window.location.hash.replace('#', '');
-  const valid = ['home','listings','wallet','profile','chat','order-history','edit'];
+  const valid = ['home','listings','wallet','profile','chat','order-history','edit','create-listing'];
   if (hash && valid.includes(hash)) {
     pg(hash);
     const navMap = { chat: 2, wallet: 3, profile: 4 };
@@ -4874,15 +5037,14 @@ try { fetch(API_URL + '/health').catch(() => {}); } catch(e) {}
 // Service Worker (push notifications)
 try { registerServiceWorker(); } catch(e) { console.error('SW register:', e); }
 
-// postModal init
+// create-listing wizard — საწყისი მდგომარეობა
 setTimeout(() => {
   try {
-    updatePostForm();
-    updateVipPrice();
+    clResetForm();
     document.querySelectorAll('input[name="post-vip-radio"]').forEach(r => {
       r.addEventListener('change', updateVipPrice);
     });
-  } catch(e) { console.error('postModal init:', e); }
+  } catch(e) { console.error('create-listing init:', e); }
 }, 200);
 
 // Loader — ყოველ შემთხვევაში მოვხსნათ
