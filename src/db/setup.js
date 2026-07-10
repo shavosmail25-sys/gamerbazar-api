@@ -59,6 +59,9 @@ CREATE TABLE IF NOT EXISTS listings (
   vip_expires_at TIMESTAMPTZ,
   views_count    INT          NOT NULL DEFAULT 0,
   orders_count   INT          NOT NULL DEFAULT 0,
+  moderated_by     UUID         REFERENCES users(id),   -- ვინ დაამტკიცა/უარყო (moderator/admin)
+  moderated_at     TIMESTAMPTZ,                          -- როდის იქნა განხილული
+  rejection_reason TEXT,                                 -- უარყოფის მიზეზი (მოდერატორის პანელი)
   created_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
   updated_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
@@ -287,6 +290,13 @@ async function setupDatabase() {
       `ALTER TABLE disputes ADD COLUMN IF NOT EXISTS evidence_urls   TEXT[] DEFAULT '{}'`,
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS balance_available_at TIMESTAMPTZ`,
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS hold_balance_gel NUMERIC(12,2) NOT NULL DEFAULT 0.00`,
+      // ── მოდერაციის სვეტები listings-ზე — approve/reject 500-ს იძლეოდა
+      // ამათ გარეშე, რადგან listings.js ცდილობდა ჩაეწერა სვეტებში
+      // რომლებიც ბაზურ CREATE TABLE-ში აღარ იყო ჩართული ((IF NOT EXISTS
+      // — უსაფრთხოა უკვე არსებულ ცხრილზეც, არაფერს გადააწერს) ──
+      `ALTER TABLE listings ADD COLUMN IF NOT EXISTS moderated_by     UUID REFERENCES users(id)`,
+      `ALTER TABLE listings ADD COLUMN IF NOT EXISTS moderated_at     TIMESTAMPTZ`,
+      `ALTER TABLE listings ADD COLUMN IF NOT EXISTS rejection_reason TEXT`,
     ];
     for (const sql of migrations) {
       try { await client.query(sql); } catch (e) { /* უკვე არსებობს */ }
