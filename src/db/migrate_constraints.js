@@ -15,13 +15,17 @@ async function migrate() {
     await client.query('BEGIN');
 
     // ── 1. users.role ─────────────────────────────────────────
+    // ⚠️ დამატებულია 'moderator' როლი — მოდერატორის ფუნქციონალი
+    // (განცხადებების მოდერაცია, დავების ნახვა) კოდში უკვე არსებობს,
+    // მაგრამ ეს constraint მას აქამდე არ სცნობდა, რის გამოც
+    // 'moderator' როლის მინიჭება ბაზაზე ერორს დააგდებდა.
     await client.query(`
       ALTER TABLE users
         DROP CONSTRAINT IF EXISTS chk_users_role,
         ADD CONSTRAINT chk_users_role
-          CHECK (role IN ('user', 'admin', 'banned'))
+          CHECK (role IN ('user', 'admin', 'moderator', 'banned'))
     `);
-    console.log('✅ users.role CHECK დამატებულია');
+    console.log('✅ users.role CHECK დამატებულია (მათ შორის moderator)');
 
     // ── 2. listings.status ────────────────────────────────────
     await client.query(`

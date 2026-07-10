@@ -11,6 +11,20 @@ const ledger  = require('../utils/ledger');
 const chat    = require('./chat');
 const router  = express.Router();
 
+// ── სუპერ-ადმინის Email ──────────────────────────────────────────
+// უსაფრთხოების აუდიტის მოთხოვნით ჰარდქოდირებული fallback მისამართი
+// მთლიანად ამოღებულია. SUPER_ADMIN_EMAIL სავალდებულოდ უნდა მოდიოდეს
+// .env-დან — თუ ცვლადი არ არის განსაზღვრული, სერვერი საერთოდ ვერ ჩაეშვება
+// (fail-closed), რომ არასდროს მოხდეს რომელიმე default/hardcoded მისამართზე
+// super-admin წვდომის შემთხვევითი მინიჭება (მაგ. /users/:id/set-role).
+if (!process.env.SUPER_ADMIN_EMAIL) {
+  throw new Error(
+    '[admin.js] SUPER_ADMIN_EMAIL გარემოს ცვლადი არ არის დაყენებული. ' +
+    'დააყენე .env ფაილში სუპერ-ადმინის ემაილი — hardcoded fallback განზრახ ამოღებულია.'
+  );
+}
+const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL.toLowerCase().trim();
+
 // ყველა route მოითხოვს admin როლს
 router.use(requireAuth, requireAdmin);
 
@@ -227,11 +241,9 @@ router.get('/users', async (req, res) => {
 
 // ══════════════════════════════════════════════════════════════
 // PUT /api/admin/users/:id/set-role  — მოდერატორის სტატუსის მინიჭება/ჩამორთმევა
-// ⚠️ მხოლოდ სუპერ-ადმინს (shavosmail25@gmail.com) შეუძლია ამის გაკეთება —
+// ⚠️ მხოლოდ SUPER_ADMIN_EMAIL-ს (იხ. ფაილის თავი) შეუძლია ამის გაკეთება —
 // ჩვეულებრივ admin-ებსაც კი არა, სპეციალურად ამ მოთხოვნის მიხედვით.
 // ══════════════════════════════════════════════════════════════
-const SUPER_ADMIN_EMAIL = (process.env.SUPER_ADMIN_EMAIL || 'shavosmail25@gmail.com').toLowerCase().trim();
-
 router.put('/users/:id/set-role', async (req, res) => {
   try {
     // req.user.email-ის არსებობაზე არ ვიმედოვნებთ (middleware/auth.js ფაილი

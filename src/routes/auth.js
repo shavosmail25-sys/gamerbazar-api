@@ -13,11 +13,55 @@ const otp     = require('../utils/otp');
 const router  = express.Router();
 
 // ── სუპერ-ადმინის Email — ავტ. აღიჭურვება 'admin' როლით ────────
-// შეიძლება override .env-ში SUPER_ADMIN_EMAIL ცვლადით, default-ად კი
-// ეს კონკრეტული მისამართია, Watch Tower პანელზე წვდომისთვის.
-const SUPER_ADMIN_EMAIL = (process.env.SUPER_ADMIN_EMAIL || 'shavosmail25@gmail.com')
-  .toLowerCase()
-  .trim();
+// უსაფრთხოების აუდიტის მოთხოვნით ჰარდქოდირებული fallback მისამართი
+// მთლიანად ამოღებულია. SUPER_ADMIN_EMAIL სავალდებულოდ უნდა მოდიოდეს
+// .env-დან — თუ ცვლადი არ არის განსაზღვრული, სერვერი საერთოდ ვერ ჩაეშვება
+// (fail-closed), რომ არასდროს მოხდეს რომელიმე default/hardcoded მისამართზე
+// admin წვდომის შემთხვევითი მინიჭება.
+if (!process.env.SUPER_ADMIN_EMAIL) {
+  throw new Error(
+    '[auth.js] SUPER_ADMIN_EMAIL გარემოს ცვლადი არ არის დაყენებული. ' +
+    'დააყენე .env ფაილში სუპერ-ადმინის ემაილი — hardcoded fallback განზრახ ამოღებულია.'
+  );
+}
+const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL.toLowerCase().trim();
+
+// ── მარტივი In-memory Rate Limiter (IP-ის მიხედვით) ──────────────
+// per-email 60წმ cooldown და OTP_MAX_ATTEMPTS მხოლოდ ერთი კონკრეტული
+// email-ისგან იცავს. დამატებით, აქ ვზღუდავთ ერთი IP/სკრიპტის მხრიდან
+// ბევრ სხვადასხვა email-ზე ერთდროულ spam/brute-force მცდელობებსაც.
+const _rateLimitBuckets = new Map();
+
+function checkRateLimit(key, maxRequests, windowMs) {
+  const now = Date.now();
+  const bucket = _rateLimitBuckets.get(key);
+  if (!bucket || now - bucket.windowStart > windowMs) {
+    _rateLimitBuckets.set(key, { windowStart: now, count: 1 });
+    return true;
+  }
+  if (bucket.count >= maxRequests) return false;
+  bucket.count += 1;
+  return true;
+}
+
+// მოძველებული ბაკეტების პერიოდული გასუფთავება (მეხსიერების გაჟონვის თავიდან ასაცილებლად)
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, bucket] of _rateLimitBuckets.entries()) {
+    if (now - bucket.windowStart > 15 * 60 * 1000) _rateLimitBuckets.delete(key);
+  }
+}, 5 * 60 * 1000).unref();
+
+function getClientIp(req) {
+  const fwd = req.headers['x-forwarded-for'];
+  if (fwd) return fwd.split(',')[0].trim();
+  return req.socket?.remoteAddress || 'unknown';
+}
+
+const OTP_REQUEST_MAX_PER_WINDOW = 10;             // მაქს. 10 OTP მოთხოვნა
+const OTP_REQUEST_WINDOW_MS      = 15 * 60 * 1000; // 15 წუთის ფანჯარაში, ერთი IP-დან
+const OTP_VERIFY_MAX_PER_WINDOW  = 20;             // მაქს. 20 verify მცდელობა
+const OTP_VERIFY_WINDOW_MS       = 15 * 60 * 1000; // 15 წუთის ფანჯარაში, ერთი IP-დან
 
 // ── JWT ტოკენის გენერაცია ─────────────────────────────────────
 function makeToken(userId) {
@@ -68,6 +112,15 @@ router.post('/request-otp', async (req, res) => {
       return res.status(400).json({ error: 'invalid_email', message: 'მიუთითე სწორი ელ-ფოსტა' });
     }
     const emailClean = email.toLowerCase().trim();
+
+    // IP-დონის რეით-ლიმიტი — სკრიპტით სხვადასხვა email-ზე მასობრივ spam-ს ვბლოკავთ
+    const ip = getClientIp(req);
+    if (!checkRateLimit(`otp-request:${ip}`, OTP_REQUEST_MAX_PER_WINDOW, OTP_REQUEST_WINDOW_MS)) {
+      return res.status(429).json({
+        error: 'too_many_requests',
+        message: 'ძალიან ბევრი მოთხოვნა ამ მისამართიდან — სცადე მოგვიანებით',
+      });
+    }
 
     // დაბ. ანგარიშს OTP აღარ ეგზავნება
     const { rows: banned } = await db.query(
@@ -135,30 +188,57 @@ router.post('/verify-otp', async (req, res) => {
     const emailClean = email.toLowerCase().trim();
     const codeClean   = String(code).trim();
 
-    const { rows: otpRows } = await db.query(
-      `SELECT * FROM otp_codes WHERE email=$1 AND used=FALSE
-       ORDER BY created_at DESC LIMIT 1`,
-      [emailClean]
-    );
-    if (!otpRows.length) {
-      return res.status(400).json({ error: 'no_active_code', message: 'ჯერ გამოითხოვე OTP კოდი' });
-    }
-    const rec = otpRows[0];
-
-    if (new Date(rec.expires_at) < new Date()) {
-      return res.status(400).json({ error: 'code_expired', message: 'კოდს ვადა გაუვიდა — მოითხოვე ახალი' });
-    }
-    if (rec.attempts >= otp.OTP_MAX_ATTEMPTS) {
-      return res.status(429).json({ error: 'too_many_attempts', message: 'მცდელობების ლიმიტი ამოწურულია — მოითხოვე ახალი კოდი' });
+    // IP-დონის რეით-ლიმიტი — brute-force სკრიპტის დაცვა
+    const ip = getClientIp(req);
+    if (!checkRateLimit(`otp-verify:${ip}`, OTP_VERIFY_MAX_PER_WINDOW, OTP_VERIFY_WINDOW_MS)) {
+      return res.status(429).json({
+        error: 'too_many_requests',
+        message: 'ძალიან ბევრი მცდელობა ამ მისამართიდან — სცადე მოგვიანებით',
+      });
     }
 
-    if (otp.hashCode(codeClean) !== rec.code_hash) {
-      await db.query('UPDATE otp_codes SET attempts=attempts+1 WHERE id=$1', [rec.id]);
-      return res.status(401).json({ error: 'invalid_code', message: 'არასწორი კოდი' });
-    }
+    // ტრანზაქცია + row-level lock (FOR UPDATE) — პარალელურმა/ავტომატურმა
+    // მოთხოვნებმა ვერ უნდა აუარონ გვერდი attempts-ლიმიტს race condition-ის
+    // გამო (SELECT-ისა და attempts-ის UPDATE-ის ატომური თანმიმდევრობა).
+    const verifyResult = await db.transaction(async (client) => {
+      const { rows: otpRows } = await client.query(
+        `SELECT * FROM otp_codes WHERE email=$1 AND used=FALSE
+         ORDER BY created_at DESC LIMIT 1 FOR UPDATE`,
+        [emailClean]
+      );
+      if (!otpRows.length) return { error: 'no_active_code' };
+      const rec = otpRows[0];
 
-    // კოდი გამოყენებულია
-    await db.query('UPDATE otp_codes SET used=TRUE WHERE id=$1', [rec.id]);
+      if (new Date(rec.expires_at) < new Date()) return { error: 'code_expired' };
+      if (rec.attempts >= otp.OTP_MAX_ATTEMPTS) return { error: 'too_many_attempts' };
+
+      if (otp.hashCode(codeClean) !== rec.code_hash) {
+        await client.query('UPDATE otp_codes SET attempts=attempts+1 WHERE id=$1', [rec.id]);
+        return { error: 'invalid_code' };
+      }
+
+      await client.query('UPDATE otp_codes SET used=TRUE WHERE id=$1', [rec.id]);
+      return { ok: true };
+    });
+
+    if (verifyResult.error) {
+      const statusByError = {
+        no_active_code:    400,
+        code_expired:      400,
+        too_many_attempts: 429,
+        invalid_code:      401,
+      };
+      const messageByError = {
+        no_active_code:    'ჯერ გამოითხოვე OTP კოდი',
+        code_expired:      'კოდს ვადა გაუვიდა — მოითხოვე ახალი',
+        too_many_attempts: 'მცდელობების ლიმიტი ამოწურულია — მოითხოვე ახალი კოდი',
+        invalid_code:      'არასწორი კოდი',
+      };
+      return res.status(statusByError[verifyResult.error]).json({
+        error: verifyResult.error,
+        message: messageByError[verifyResult.error],
+      });
+    }
 
     // მომხმარებელი — მოძებნა ან ავტ. შექმნა
     let { rows: users } = await db.query('SELECT * FROM users WHERE email=$1', [emailClean]);

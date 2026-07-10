@@ -302,9 +302,37 @@ router.delete('/:id', requireAuth, async (req, res) => {
 // ══════════════════════════════════════════════════════════════
 // POST /api/listings/:id/vip  — VIP-ის გააქტ.
 // ══════════════════════════════════════════════════════════════
+
+// ⚠️ უსაფრთხოების გასწორება: VIP პაკეტების მკაცრი Whitelist.
+// ადრე duration_days და price ორივე ფაქტობრივად frontend-იდან
+// გამოგზავნილ მონაცემებზე იყო დამოკიდებული — clientPrice პირდაპირ
+// გამოიყენებოდა, თუ ის "დაახლოებით" ემთხვეოდა გამოთვლილს, ხოლო
+// duration_days საერთოდ არ მოწმდებოდა. თავდამსხმელს შეეძლო API-ზე
+// პირდაპირი მოთხოვნით ნებისმიერი duration_days და price გაეგზავნა.
+// ახლა ნებადართულია მხოლოდ ქვემოთ ჩამოთვლილი კონკრეტული პაკეტები
+// (7 / 30 / 90 დღე), თითოეულის ფასი კი მკაცრად, უცვლელად გაწერილია
+// ბექენდზე (Hardcode) — client-ის მიერ გამოგზავნილი price საერთოდ
+// აღარ გამოიყენება.
+// ⚠️ ქვემოთ მითითებული ₾ ღირებულებები მაგალითია — production-ში
+// გაშვებამდე შეცვალეთ თქვენი რეალური ბიზნეს ფასებით.
+const VIP_PACKAGES = {
+  7:  5,
+  30: 15,
+  90: 35,
+};
+
 router.post('/:id/vip', requireAuth, async (req, res) => {
   try {
-    const { duration_days = 30, price: clientPrice } = req.body;
+    const duration_days = Number(req.body.duration_days);
+
+    // მკაცრი whitelist შემოწმება — მხოლოდ ზემოთ განსაზღვრული პაკეტები
+    if (!Object.prototype.hasOwnProperty.call(VIP_PACKAGES, duration_days)) {
+      return res.status(400).json({
+        error: 'invalid_vip_package',
+        allowed_days: Object.keys(VIP_PACKAGES).map(Number),
+      });
+    }
+    const price = VIP_PACKAGES[duration_days];
 
     const { rows: listing } = await db.query(
       'SELECT * FROM listings WHERE id=$1', [req.params.id]
@@ -312,16 +340,6 @@ router.post('/:id/vip', requireAuth, async (req, res) => {
     if (!listing.length || listing[0].seller_id !== req.user.id) {
       return res.status(403).json({ error: 'forbidden' });
     }
-
-    // ფასის გამოთვლა: 5% განცხ. ფასიდან (გლობალური, ერთიანი საკომისიო — ledger.js), მინ. ₾1
-    // Frontend-იდან მოდის clientPrice (pre-calculated), backend ამოწმებს
-    const { fee: computedFee } = ledger.splitCommission(listing[0].price_gel);
-    const computed = Math.max(1, computedFee);
-    // clientPrice-ს ვიყენებთ თუ გამოგზავნა, მაგ. frontend-ის მიერ დათვლილი
-    // გადამოწმება: უნდა ემთხვეოდეს computed-ს ±₾0.05 (rounding margin)
-    const price = clientPrice && Math.abs(Number(clientPrice) - computed) < 0.06
-      ? Number(clientPrice)
-      : computed;
 
     // ბალანსის შემოწ.
     const { rows: u } = await db.query(
@@ -345,7 +363,7 @@ router.post('/:id/vip', requireAuth, async (req, res) => {
       await client.query(
         `INSERT INTO transactions(user_id,type,amount_gel,gross_amount_gel,net_amount_gel,commission_fee_gel,description)
          VALUES($1,'vip_purchase',$2,$3,0,$3,$4)`,
-        [req.user.id, -price, price, `VIP ${duration_days} დღე (5%)`]
+        [req.user.id, -price, price, `VIP ${duration_days} დღიანი პაკეტი`]
       );
       await client.query(
         'INSERT INTO vip_purchases(listing_id,user_id,duration_days,price_gel,expires_at) VALUES($1,$2,$3,$4,$5)',

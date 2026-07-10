@@ -222,8 +222,15 @@ router.get('/:id', requireAuth, async (req, res) => {
 
 // ══════════════════════════════════════════════════════════════
 // PUT /api/disputes/:id/resolve  — Admin-ის გადაწყვეტილება
+//
+// ⚠️ უსაფრთხოების გასწორება: ეს როუტი რეალურ ფულად ოპერაციას
+// ასრულებს — escrow-ის გათავისუფლებას ან თანხის დაბრუნებას.
+// ადრე საკმარისი იყო მოდერატორის უფლება (requireModerator), რაც
+// ნიშნავდა, რომ ჩვეულებრივ მოდერატორსაც შეეძლო ფინანსური
+// გადაწყვეტილების მიღება. ახლა აქ მკაცრად მოითხოვება requireAdmin —
+// მხოლოდ admin-ს შეუძლია დავის დახურვა და თანხის მოძრაობა.
 // ══════════════════════════════════════════════════════════════
-router.put('/:id/resolve', requireAuth, requireModerator, async (req, res) => {
+router.put('/:id/resolve', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { resolution, admin_note } = req.body;
     if (!['release','refund'].includes(resolution))
