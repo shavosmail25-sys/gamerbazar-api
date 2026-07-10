@@ -1498,7 +1498,7 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
           <div id="post-vip-box" class="cl-package-box cl-package-vip">
             <div style="font-size:22px">⭐</div>
             <div style="font-weight:700;margin-top:6px;color:var(--gold)">VIP განთავსება</div>
-            <div style="font-size:11px;color:var(--gold);margin-top:2px" id="vip-price-label">ფასის 10%</div>
+            <div style="font-size:11px;color:var(--gold);margin-top:2px" id="vip-price-label">ფასის 5%</div>
           </div>
         </label>
       </div>
@@ -1672,7 +1672,7 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 <div class="modal-bg" id="withdrawModal" onclick="if(event.target===this)closeM('withdrawModal')">
   <div class="modal" style="max-width:420px">
     <div class="modal-title">📤 თანხის გამოტანა</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:14px">თანხა გადაირიცხება შენს საბანკო ანგარიშზე 1-2 სამუშაო დღეში. საკომისიო: 2%</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px">თანხა გადაირიცხება შენს საბანკო ანგარიშზე 1-2 სამუშაო დღეში. საკომისიო: 5% (ჩამოიჭრება მოთხოვნილი თანხიდან)</div>
     <div class="form-g">
       <label class="form-l">შენი IBAN</label>
       <input class="form-i" id="wd-iban" placeholder="GE29TB0000000001234567" style="font-family:monospace;letter-spacing:.5px">
@@ -4169,9 +4169,9 @@ function updateVipPrice() {
   const isVip     = document.querySelector('input[name="post-vip-radio"]:checked')?.value === 'yes';
 
   const price = parseFloat(priceEl?.value) || 0;
-  const cost  = Math.max(1, Math.round(price * 0.10 * 100) / 100);
+  const cost  = Math.max(1, Math.round(price * 0.05 * 100) / 100);
 
-  if (vipLabel) vipLabel.textContent = price > 0 ? `VIP = ₾${cost}` : 'ფასის 10%';
+  if (vipLabel) vipLabel.textContent = price > 0 ? `VIP = ₾${cost}` : 'ფასის 5%';
   if (vipCost)  vipCost.textContent  = cost.toFixed(2);
   if (vipInfo)  vipInfo.style.display = isVip ? 'block' : 'none';
   // ბარათების ვიზუალური მდგომარეობა (checked/unchecked) CSS-ით იმართება
@@ -4255,8 +4255,8 @@ async function postListing() {
   if (!title)           { showToast('სათაური სავალდებულოა', 'err'); clGoToStep(2); return; }
   if (!price_gel || price_gel < 1) { showToast('ფასი სავალდებულოა', 'err'); clGoToStep(2); return; }
 
-  // VIP ფასი = 10%
-  const vipCost = Math.max(1, Math.round(price_gel * 0.10 * 100) / 100);
+  // VIP ფასი = 5% (გლობალური, ერთიანი საკომისიო)
+  const vipCost = Math.max(1, Math.round(price_gel * 0.05 * 100) / 100);
 
   if (isVip) {
     const bal = Number(currentUser.balance_gel) || 0;
@@ -4670,7 +4670,7 @@ const BOT_FAQ = [
   },
   {
     keys: ['vip','ვიპ','vip განცხ','პრემიუმ'],
-    answer: `⭐ <b>VIP განცხადება</b> — ეს სპეციალური განთავსებაა:\n\n• VIP განცხ. <b>კატეგორიის სათავეში</b> ჩანს\n• ფასი = განცხ. ფასის <b>10%</b> (მინ. ₾1)\n• ბალანსიდან ჩამოიჭრება ავტომატურად\n\nმაგ: ₾100 ღირი განცხ-სთვის VIP = ₾10\n\nVIP-ის ასაღებად: <b>➕ განცხ. დამატება → VIP</b> ვარიანტი`
+    answer: `⭐ <b>VIP განცხადება</b> — ეს სპეციალური განთავსებაა:\n\n• VIP განცხ. <b>კატეგორიის სათავეში</b> ჩანს\n• ფასი = განცხ. ფასის <b>5%</b> (მინ. ₾1)\n• ბალანსიდან ჩამოიჭრება ავტომატურად\n\nმაგ: ₾100 ღირი განცხ-სთვის VIP = ₾5\n\nVIP-ის ასაღებად: <b>➕ განცხ. დამატება → VIP</b> ვარიანტი`
   },
   {
     keys: ['ბალანს','შეტანა','deposit','დეპოზიტ','გადახდა','შევტანო'],
@@ -4702,7 +4702,7 @@ const BOT_FAQ = [
   },
   {
     keys: ['კომის','5%','პლატფ. კომ','commission','fee'],
-    answer: `💸 <b>პლატფ. კომისია:</b>\n\nGamerBazar იღებს <b>5%</b> ყოველი გაყიდვიდან.\n\nმაგ: ₾100 გაყიდვაზე:\n• გამყ. მიიღებს: <b>₾95</b>\n• პლატფ. კომ: <b>₾5</b>\n\nVIP ყიდვა ცალკეა — <b>ფასის 10%</b>`
+    answer: `💸 <b>პლატფ. კომისია:</b>\n\nGamerBazar იღებს <b>5%</b> გაყიდვაზე, გამოტანასა და VIP-ზე. <b>დეპოზიტზე (თანხის შეტანაზე) საკომისიო არ არის</b>.\n\nმაგ: ₾100 გაყიდვაზე:\n• გამყ. მიიღებს: <b>₾95</b>\n• პლატფ. კომ: <b>₾5</b>\n\nVIP ყიდვაც იგივე <b>5%-ია</b> (ფასიდან)`
   },
   {
     keys: ['ჩატი','chat','შეტყობ','გამყ. დაკ','დაუკავშირ'],
@@ -4988,9 +4988,9 @@ async function doWithdraw() {
   const btn = document.querySelector('#withdrawModal .btn-a');
   if (btn) { btn.textContent = '⏳...'; btn.disabled = true; }
   try {
-    await api('/api/wallet/withdraw', { method:'POST', body: JSON.stringify({ amount, iban }) });
+    const data = await api('/api/wallet/withdraw', { method:'POST', body: JSON.stringify({ amount, iban }) });
     closeM('withdrawModal');
-    showToast('✅ მოთხოვნა გაიგზავნა! 1-2 სამ. დღეში გადაირიცხება', 'ok');
+    showToast(`✅ მოთხოვნა გაიგზავნა! ხელზე ჩაირიცხება ₾${Number(data.net_payout).toFixed(2)} (საკომ. 5%) — 1-2 სამ. დღეში`, 'ok');
     loadCurrentUser(); loadWallet();
   } catch(e) {
     // ბექენდი აგზავნის { error: 'კოდი' } ფორმატს, არა { message: ... } — ამიტომ

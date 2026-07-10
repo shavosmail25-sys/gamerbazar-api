@@ -96,6 +96,9 @@ CREATE TABLE IF NOT EXISTS transactions (
   order_id       UUID         REFERENCES orders(id),
   type           VARCHAR(30)  NOT NULL,
   amount_gel     NUMERIC(10,2) NOT NULL,
+  gross_amount_gel   NUMERIC(12,2),   -- საკომისიოს დაანგარიშებამდე თანხა
+  net_amount_gel     NUMERIC(12,2),   -- საკომისიოს გამოკლებით/დამატებით სუფთა თანხა
+  commission_fee_gel NUMERIC(12,2),   -- 5%-იანი პლატფორმის საკომისიო (თუ ეხება)
   description    TEXT,
   status         VARCHAR(20)  NOT NULL DEFAULT 'completed',
   payment_method VARCHAR(30),
@@ -297,6 +300,12 @@ async function setupDatabase() {
       `ALTER TABLE listings ADD COLUMN IF NOT EXISTS moderated_by     UUID REFERENCES users(id)`,
       `ALTER TABLE listings ADD COLUMN IF NOT EXISTS moderated_at     TIMESTAMPTZ`,
       `ALTER TABLE listings ADD COLUMN IF NOT EXISTS rejection_reason TEXT`,
+      // ── Commission audit trail — ყოველ საკომისიო-შემცველ ტრანზაქციაზე
+      // ჩანს ზუსტად რა თანხიდან (gross), რამდენი წავიდა საკომისიოში (fee)
+      // და რამდენი დარჩა/გაიცა სუფთა (net) ──
+      `ALTER TABLE transactions ADD COLUMN IF NOT EXISTS gross_amount_gel   NUMERIC(12,2)`,
+      `ALTER TABLE transactions ADD COLUMN IF NOT EXISTS net_amount_gel     NUMERIC(12,2)`,
+      `ALTER TABLE transactions ADD COLUMN IF NOT EXISTS commission_fee_gel NUMERIC(12,2)`,
     ];
     for (const sql of migrations) {
       try { await client.query(sql); } catch (e) { /* უკვე არსებობს */ }

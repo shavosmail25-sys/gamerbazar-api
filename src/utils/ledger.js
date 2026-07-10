@@ -9,6 +9,20 @@ const db = require('../db');
 
 const HOLD_HOURS = 48;
 
+// ── გლობალური 5%-იანი საკომისიო — ერთადერთი წყარო (Single Source of Truth) ──
+// ყველა ფინანსური ნაკადი (deposit, withdraw, VIP, escrow) აქედან კითხულობს
+// განაკვეთს, რომ % არასდროს "დაცილდეს" ერთმანეთს სხვადასხვა route-ში.
+const PLATFORM_FEE_PCT = 0.05;
+
+// gross-იდან (მთლიანი თანხიდან) გამოთვლის { fee, net } — fee ყოველთვის
+// ორ ათწილადამდე მრგვალდება (₾-ის ცენტები), net = gross - fee.
+function splitCommission(grossAmount, pct = PLATFORM_FEE_PCT) {
+  const gross = Number(grossAmount) || 0;
+  const fee   = Math.round(gross * pct * 100) / 100;
+  const net   = Math.round((gross - fee) * 100) / 100;
+  return { gross, fee, net };
+}
+
 // ── გამყიდველს ემატება თანხა hold_balance_gel-ზე + balance_holds ჩანაწერი ──
 // client — db.transaction-ის შიდა client (ატომურობისთვის, იძახება არსებული ტრანზაქციის ფარგლებში)
 async function creditSellerWithHold(client, { sellerId, orderId, amountGel, source }) {
@@ -89,6 +103,8 @@ function startHoldsScheduler() {
 
 module.exports = {
   HOLD_HOURS,
+  PLATFORM_FEE_PCT,
+  splitCommission,
   creditSellerWithHold,
   recordPlatformFee,
   releaseMaturedHolds,

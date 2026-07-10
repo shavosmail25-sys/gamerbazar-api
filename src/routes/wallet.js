@@ -5,6 +5,7 @@ const express = require('express');
 const db      = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const mailer  = require('../utils/mailer');
+const ledger  = require('../utils/ledger');
 
 const ADMIN_EMAIL = process.env.EMAIL_USER || process.env.SMTP_USER || 'shavosmail25@gmail.com';
 const router  = express.Router();
@@ -160,23 +161,29 @@ router.post('/withdraw', requireAuth, async (req, res) => {
     // ანუ balance_gel უკვე მხოლოდ თავისუფლად გასატან თანხას ასახავს, დამატებითი
     // ბლოკირება საჭირო აღარაა (იხ. src/utils/ledger.js).
 
-    const commission = +(Number(amount) * 0.02).toFixed(2);
-    const total      = Number(amount) + commission;
+    // გლობალური 5%-იანი საკომისიო (ledger.js) — ბალანსიდან იკლება ზუსტად
+    // მოთხოვნილი თანხა (gross), ხოლო ადმინმა ხელზე უნდა გასცეს მხოლოდ
+    // net (95%) — fee ჩაითვლება პლატფორმის შემოსავალში მხოლოდ მას შემდეგ,
+    // რაც ადმინი მოთხოვნას რეალურად დაადასტურებს (admin.js /confirm).
+    const { gross, fee, net } = ledger.splitCommission(amount);
 
-    if (Number(b.balance_gel) < total)
+    if (Number(b.balance_gel) < gross)
       return res.status(402).json({ error: 'insufficient_balance', available: b.balance_gel });
 
     await db.transaction(async (client) => {
       await client.query(
-        'UPDATE users SET balance_gel=balance_gel-$1 WHERE id=$2', [total, req.user.id]
+        'UPDATE users SET balance_gel=balance_gel-$1 WHERE id=$2', [gross, req.user.id]
       );
       await client.query(
-        "INSERT INTO transactions(user_id,type,amount_gel,status,payment_method,description) VALUES($1,'withdrawal',$2,'pending','bank',$3)",
-        [req.user.id, -total, `გამოტ. IBAN: ${iban.slice(-4)} · კომ: ₾${commission}`]
+        `INSERT INTO transactions
+           (user_id,type,amount_gel,gross_amount_gel,net_amount_gel,commission_fee_gel,status,payment_method,description)
+         VALUES($1,'withdrawal',$2,$3,$4,$5,'pending','bank',$6)`,
+        [req.user.id, -gross, gross, net, fee,
+         `გამოტ. IBAN: ${iban.slice(-4)} · ხელზე გაცემა: ₾${net} (საკომ. 5% — ₾${fee})`]
       );
     });
 
-    res.json({ ok: true, amount, commission, total, eta: '1-2 სამ. დღე' });
+    res.json({ ok: true, amount: gross, commission: fee, net_payout: net, eta: '1-2 სამ. დღე' });
 
     // ადმინს email — async
     (async () => {

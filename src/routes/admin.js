@@ -404,13 +404,24 @@ router.post('/deposits/:id/confirm', requireAuth, requireAdmin, async (req, res)
     );
     if (!tx.length) return res.status(404).json({ error: 'not_found' });
 
+    // ⚠️ დეპოზიტზე საკომისიო არ არის აღებული (0%) — გადაწყვეტილება:
+    // თანხის შემოტანა თავისთავად ღირებულების შექმნა არაა (ინდუსტრიის
+    // სტანდარტი — Steam Market/G2G/Eldorado არც ერთი არ იღებს deposit fee-ს).
+    // 5%-იანი საკომისია რჩება მხოლოდ იქ, სადაც რეალურად აქტიური ტრანზაქციაა:
+    // გაყიდვა (orders.js), გამოტანა (wallet.js), VIP (listings.js).
+    const gross = Number(tx[0].amount_gel);
+
     await db.transaction(async (client) => {
       await client.query(
-        "UPDATE transactions SET status='completed' WHERE id=$1", [req.params.id]
+        `UPDATE transactions SET
+           status='completed',
+           net_amount_gel=$2, commission_fee_gel=0, gross_amount_gel=$3
+         WHERE id=$1`,
+        [req.params.id, gross, gross]
       );
       await client.query(
         'UPDATE users SET balance_gel=balance_gel+$1 WHERE id=$2',
-        [tx[0].amount_gel, tx[0].user_id]
+        [gross, tx[0].user_id]
       );
     });
 
@@ -418,7 +429,7 @@ router.post('/deposits/:id/confirm', requireAuth, requireAdmin, async (req, res)
     const push = require('../utils/push');
     await push.sendToUser(tx[0].user_id, {
       title: '✅ ბალანსი შეივსო',
-      body: `₾${Number(tx[0].amount_gel).toFixed(2)} დაემატა შენს ბალანსზე`,
+      body: `₾${gross.toFixed(2)} დაემატა შენს ბალანსზე`,
       url: '/?page=wallet',
       tag: `deposit-${req.params.id}`,
     });
@@ -485,14 +496,25 @@ router.post('/withdrawals/:id/confirm', requireAuth, requireAdmin, async (req, r
     );
     if (!tx.length) return res.status(404).json({ error: 'not_found' });
 
-    await db.query(
-      "UPDATE transactions SET status='completed' WHERE id=$1", [req.params.id]
-    );
+    // საკომისიო უკვე გამოთვლილია მოთხოვნის დროს (wallet.js) და შენახულია
+    // commission_fee_gel-ში — აქ მხოლოდ ვაქტ. ვხდით პლატფორმის შემოსავალში,
+    // რომ უარყოფის შემთხვევაში (reject) არასდროს დარჩეს "ბრჭყალებში" საკომისიო.
+    const fee = Number(tx[0].commission_fee_gel) || 0;
+    const net = tx[0].net_amount_gel != null
+      ? Number(tx[0].net_amount_gel)
+      : Math.abs(Number(tx[0].amount_gel));
+
+    await db.transaction(async (client) => {
+      await client.query(
+        "UPDATE transactions SET status='completed' WHERE id=$1", [req.params.id]
+      );
+      if (fee > 0) await ledger.recordPlatformFee(client, fee);
+    });
 
     const push = require('../utils/push');
     await push.sendToUser(tx[0].user_id, {
       title: '✅ გამოტანა დადასტ.',
-      body: `₾${Math.abs(Number(tx[0].amount_gel)).toFixed(2)} გაიგზავნა შენს ანგარიშზე`,
+      body: `₾${net.toFixed(2)} გაიგზავნა შენს ანგარიშზე`,
       url: '/?page=wallet',
       tag: `withdrawal-${req.params.id}`,
     });

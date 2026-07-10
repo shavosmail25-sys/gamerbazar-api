@@ -313,9 +313,10 @@ router.post('/:id/vip', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'forbidden' });
     }
 
-    // ფასის გამოთვლა: 10% განცხ. ფასიდან, მინ. ₾1
+    // ფასის გამოთვლა: 5% განცხ. ფასიდან (გლობალური, ერთიანი საკომისიო — ledger.js), მინ. ₾1
     // Frontend-იდან მოდის clientPrice (pre-calculated), backend ამოწმებს
-    const computed = Math.max(1, Math.round(Number(listing[0].price_gel) * 0.10 * 100) / 100);
+    const { fee: computedFee } = ledger.splitCommission(listing[0].price_gel);
+    const computed = Math.max(1, computedFee);
     // clientPrice-ს ვიყენებთ თუ გამოგზავნა, მაგ. frontend-ის მიერ დათვლილი
     // გადამოწმება: უნდა ემთხვეოდეს computed-ს ±₾0.05 (rounding margin)
     const price = clientPrice && Math.abs(Number(clientPrice) - computed) < 0.06
@@ -342,8 +343,9 @@ router.post('/:id/vip', requireAuth, async (req, res) => {
         [exp, req.params.id]
       );
       await client.query(
-        "INSERT INTO transactions(user_id,type,amount_gel,description) VALUES($1,'vip_purchase',$2,$3)",
-        [req.user.id, -price, `VIP ${duration_days} დღე (10%)`]
+        `INSERT INTO transactions(user_id,type,amount_gel,gross_amount_gel,net_amount_gel,commission_fee_gel,description)
+         VALUES($1,'vip_purchase',$2,$3,0,$3,$4)`,
+        [req.user.id, -price, price, `VIP ${duration_days} დღე (5%)`]
       );
       await client.query(
         'INSERT INTO vip_purchases(listing_id,user_id,duration_days,price_gel,expires_at) VALUES($1,$2,$3,$4,$5)',
