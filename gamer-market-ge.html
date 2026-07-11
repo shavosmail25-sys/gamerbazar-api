@@ -151,6 +151,7 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 .game-mini:hover{border-color:var(--accent)50;transform:translateY(-2px);
   box-shadow:0 0 18px #00ffb312}
 .game-mini .ico{font-size:26px;margin-bottom:5px}
+.game-mini .ico img{width:30px;height:30px;object-fit:contain;border-radius:7px;vertical-align:middle}
 .game-mini .gname{font-size:11px;font-weight:700;line-height:1.3}
 .game-mini .gcnt{font-size:9px;color:var(--muted);margin-top:2px}
 
@@ -158,6 +159,7 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 .game-hero{background:var(--bg2);border-bottom:1px solid var(--border);padding:24px 20px}
 .game-hero-inner{max-width:1120px;margin:0 auto;display:flex;align-items:center;gap:16px}
 .game-icon-big{width:64px;height:64px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:32px;flex-shrink:0;border:1px solid var(--border2)}
+.game-icon-big img{width:68%;height:68%;object-fit:contain;border-radius:9px}
 .game-title{font-size:22px;font-weight:800;letter-spacing:-.4px}
 .game-desc{font-size:12px;color:var(--muted2);margin-top:3px}
 .game-badges{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
@@ -517,6 +519,7 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 .cl-cat-card:hover,.cl-cat-card.on{border-color:var(--accent)}
 .cl-cat-card.on{background:var(--ad);box-shadow:0 0 0 1px var(--accent) inset}
 .cl-cat-card span{font-size:11.5px;font-weight:600;color:var(--text);line-height:1.25}
+.cl-cat-card img{width:28px;height:28px;object-fit:contain;border-radius:6px}
 .cl-selected-cat{background:var(--ad);border:1px solid var(--ad2);border-radius:9px;padding:9px 12px;font-size:12.5px;font-weight:600;color:var(--accent);margin-bottom:16px;display:flex;align-items:center;gap:8px}
 .cl-type-toggle{display:grid;grid-template-columns:1fr;gap:8px}
 @media(min-width:520px){.cl-type-toggle{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}}
@@ -583,6 +586,7 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 .toast{position:fixed;bottom:18px;right:18px;z-index:400;background:var(--bg2);border:1px solid var(--border2);border-radius:9px;padding:9px 14px;font-size:12px;box-shadow:0 8px 24px #00000060;transform:translateY(60px);opacity:0;transition:all .25s;display:flex;align-items:center;gap:8px}
 .toast.show{transform:none;opacity:1}.toast.ok{border-color:#00e5a035}.toast.err{border-color:#e05d5d35}
 .empty{text-align:center;padding:48px 20px}.empty-ico{font-size:40px;opacity:.22;margin-bottom:9px}.empty-t{color:var(--muted);font-size:12px}
+.empty-ico img{width:40px;height:40px;object-fit:contain}
 
 /* ══════════════════════════════════════════════════════
    RESPONSIVE — 800px (tablet)
@@ -1397,18 +1401,18 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
     <div class="cl-step" id="cl-step-1">
       <div class="cl-sec-title">🎮 სათამაშო ექაუნთები</div>
       <div class="cl-grid">
-        <div class="cl-cat-card" data-cv="mobile|PUBG Mobile" onclick="clSelectCat('mobile','PUBG Mobile',this)">📱<span>PUBG Mobile</span></div>
-        <div class="cl-cat-card" data-cv="mobile|Arena Breakout" onclick="clSelectCat('mobile','Arena Breakout',this)">📱<span>Arena Breakout</span></div>
-        <div class="cl-cat-card" data-cv="pc|CS2" onclick="clSelectCat('pc','CS2',this)">🖥️<span>CS2</span></div>
-        <div class="cl-cat-card" data-cv="pc|Valorant" onclick="clSelectCat('pc','Valorant',this)">🖥️<span>Valorant</span></div>
-        <div class="cl-cat-card" data-cv="pc|Dota 2" onclick="clSelectCat('pc','Dota 2',this)">🖥️<span>Dota 2</span></div>
-        <div class="cl-cat-card" data-cv="pc|League of Legends" onclick="clSelectCat('pc','League of Legends',this)">🖥️<span>League of Legends</span></div>
-        <div class="cl-cat-card" data-cv="mobile|CoD Mobile" onclick="clSelectCat('mobile','CoD Mobile',this)">📱<span>CoD Mobile</span></div>
-        <div class="cl-cat-card" data-cv="mobile|Mobile Legends" onclick="clSelectCat('mobile','Mobile Legends',this)">📱<span>Mobile Legends</span></div>
-        <div class="cl-cat-card" data-cv="mobile|Brawl Stars" onclick="clSelectCat('mobile','Brawl Stars',this)">📱<span>Brawl Stars</span></div>
-        <div class="cl-cat-card" data-cv="mobile|Clash of Clans" onclick="clSelectCat('mobile','Clash of Clans',this)">📱<span>Clash of Clans</span></div>
-        <div class="cl-cat-card" data-cv="mobile|Genshin Impact" onclick="clSelectCat('mobile','Genshin Impact',this)">📱<span>Genshin Impact</span></div>
-        <div class="cl-cat-card" data-cv="mobile|Roblox" onclick="clSelectCat('mobile','Roblox',this)">📱<span>Roblox</span></div>
+        <div class="cl-cat-card" data-cv="mobile|PUBG Mobile" onclick="clSelectCat('mobile','PUBG Mobile',this)"><img src="photos/logos/pubg-mobile.png" alt="PUBG Mobile"><span>PUBG Mobile</span></div>
+        <div class="cl-cat-card" data-cv="mobile|Arena Breakout" onclick="clSelectCat('mobile','Arena Breakout',this)"><img src="photos/logos/arena-breakout.jpg" alt="Arena Breakout"><span>Arena Breakout</span></div>
+        <div class="cl-cat-card" data-cv="pc|CS2" onclick="clSelectCat('pc','CS2',this)"><img src="photos/logos/cs2.jpg" alt="CS2"><span>CS2</span></div>
+        <div class="cl-cat-card" data-cv="pc|Valorant" onclick="clSelectCat('pc','Valorant',this)"><img src="photos/logos/valorant.jpg" alt="Valorant"><span>Valorant</span></div>
+        <div class="cl-cat-card" data-cv="pc|Dota 2" onclick="clSelectCat('pc','Dota 2',this)"><img src="photos/logos/dota-2.jpg" alt="Dota 2"><span>Dota 2</span></div>
+        <div class="cl-cat-card" data-cv="pc|League of Legends" onclick="clSelectCat('pc','League of Legends',this)"><img src="photos/logos/league-of-legends.jpg" alt="League of Legends"><span>League of Legends</span></div>
+        <div class="cl-cat-card" data-cv="mobile|CoD Mobile" onclick="clSelectCat('mobile','CoD Mobile',this)"><img src="photos/logos/cod-mobile.jpg" alt="CoD Mobile"><span>CoD Mobile</span></div>
+        <div class="cl-cat-card" data-cv="mobile|Mobile Legends" onclick="clSelectCat('mobile','Mobile Legends',this)"><img src="photos/logos/mobile-legends.jpg" alt="Mobile Legends"><span>Mobile Legends</span></div>
+        <div class="cl-cat-card" data-cv="mobile|Brawl Stars" onclick="clSelectCat('mobile','Brawl Stars',this)"><img src="photos/logos/brawl-stars.jpg" alt="Brawl Stars"><span>Brawl Stars</span></div>
+        <div class="cl-cat-card" data-cv="mobile|Clash of Clans" onclick="clSelectCat('mobile','Clash of Clans',this)"><img src="photos/logos/clash-of-clans.jpg" alt="Clash of Clans"><span>Clash of Clans</span></div>
+        <div class="cl-cat-card" data-cv="mobile|Genshin Impact" onclick="clSelectCat('mobile','Genshin Impact',this)"><img src="photos/logos/genshin-impact.jpg" alt="Genshin Impact"><span>Genshin Impact</span></div>
+        <div class="cl-cat-card" data-cv="mobile|Roblox" onclick="clSelectCat('mobile','Roblox',this)"><img src="photos/logos/roblox.jpg" alt="Roblox"><span>Roblox</span></div>
       </div>
 
       <div class="cl-sec-title">⚡ ბუსტინგი / სერვისი</div>
@@ -1430,10 +1434,10 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 
       <div class="cl-sec-title">📲 სოციალური ქსელები / პლატფორმები</div>
       <div class="cl-grid">
-        <div class="cl-cat-card" data-cv="social|Instagram" onclick="clSelectCat('social','Instagram',this)">📸<span>Instagram</span></div>
-        <div class="cl-cat-card" data-cv="social|TikTok" onclick="clSelectCat('social','TikTok',this)">🎵<span>TikTok</span></div>
-        <div class="cl-cat-card" data-cv="social|YouTube" onclick="clSelectCat('social','YouTube',this)">▶️<span>YouTube</span></div>
-        <div class="cl-cat-card" data-cv="social|Facebook" onclick="clSelectCat('social','Facebook',this)">👍<span>Facebook</span></div>
+        <div class="cl-cat-card" data-cv="social|Instagram" onclick="clSelectCat('social','Instagram',this)"><img src="photos/logos/instagram.jpg" alt="Instagram"><span>Instagram</span></div>
+        <div class="cl-cat-card" data-cv="social|TikTok" onclick="clSelectCat('social','TikTok',this)"><img src="photos/logos/tiktok.jpg" alt="TikTok"><span>TikTok</span></div>
+        <div class="cl-cat-card" data-cv="social|YouTube" onclick="clSelectCat('social','YouTube',this)"><img src="photos/logos/youtube.jpg" alt="YouTube"><span>YouTube</span></div>
+        <div class="cl-cat-card" data-cv="social|Facebook" onclick="clSelectCat('social','Facebook',this)"><img src="photos/logos/facebook.jpg" alt="Facebook"><span>Facebook</span></div>
       </div>
     </div>
 
@@ -3284,21 +3288,21 @@ function goCategory(cat) {
 // GAME HUB
 // ══════════════════════════════════════════════════════════
 const MOBILE_GAMES = [
-  { id:'pubg',    name:'PUBG Mobile',       ico:'🎯', color:'#f0b42918', desc:'Battle Royale · Conqueror' },
-  { id:'arena',   name:'Arena Breakout',    ico:'🔫', color:'#e05d5d18', desc:'Hardcore Extraction Shooter' },
-  { id:'codm',    name:'CoD Mobile',        ico:'💥', color:'#9d7df518', desc:'Warzone Mobile' },
-  { id:'mlbb',    name:'Mobile Legends',    ico:'⚔️', color:'#4d9de018', desc:'MOBA · Bang Bang' },
-  { id:'brawl',   name:'Brawl Stars',       ico:'⭐', color:'#f0b42918', desc:'Supercell · Trophies' },
-  { id:'clash',   name:'Clash of Clans',    ico:'🏰', color:'#00ffb318', desc:'CoC · Clash Royale' },
-  { id:'genshin', name:'Genshin Impact',    ico:'✨', color:'#9d7df518', desc:'miHoYo · Honkai Star Rail' },
-  { id:'roblox',  name:'Roblox',            ico:'🟥', color:'#e05d5d18', desc:'Blox Fruits · Adopt Me' }
+  { id:'pubg',    name:'PUBG Mobile',       logo:'photos/logos/pubg-mobile.png',    color:'#f0b42918', desc:'Battle Royale · Conqueror' },
+  { id:'arena',   name:'Arena Breakout',    logo:'photos/logos/arena-breakout.jpg', color:'#e05d5d18', desc:'Hardcore Extraction Shooter' },
+  { id:'codm',    name:'CoD Mobile',        logo:'photos/logos/cod-mobile.jpg',     color:'#9d7df518', desc:'Warzone Mobile' },
+  { id:'mlbb',    name:'Mobile Legends',    logo:'photos/logos/mobile-legends.jpg', color:'#4d9de018', desc:'MOBA · Bang Bang' },
+  { id:'brawl',   name:'Brawl Stars',       logo:'photos/logos/brawl-stars.jpg',    color:'#f0b42918', desc:'Supercell · Trophies' },
+  { id:'clash',   name:'Clash of Clans',    logo:'photos/logos/clash-of-clans.jpg', color:'#00ffb318', desc:'CoC · Clash Royale' },
+  { id:'genshin', name:'Genshin Impact',    logo:'photos/logos/genshin-impact.jpg', color:'#9d7df518', desc:'miHoYo · Honkai Star Rail' },
+  { id:'roblox',  name:'Roblox',            logo:'photos/logos/roblox.jpg',         color:'#e05d5d18', desc:'Blox Fruits · Adopt Me' }
 ];
 
 function renderMobileGames() {
   const el = document.getElementById('mobile-games-grid'); if (!el) return;
   el.innerHTML = MOBILE_GAMES.map(g =>
     `<div class="game-mini" onclick="openGameHub('${g.id}')">
-      <div class="ico">${g.ico}</div>
+      <div class="ico"><img src="${g.logo}" alt="${g.name}" loading="lazy"></div>
       <div class="gname">${g.name}</div>
       <div class="gcnt">განცხ. ─</div>
     </div>`
@@ -3307,7 +3311,7 @@ function renderMobileGames() {
 
 function openGameHub(id) {
   curGame = MOBILE_GAMES.find(g => g.id === id); if (!curGame) return;
-  document.getElementById('gh-ico').textContent = curGame.ico;
+  document.getElementById('gh-ico').innerHTML = `<img src="${curGame.logo}" alt="${curGame.name}">`;
   document.getElementById('gh-ico').style.background = curGame.color;
   document.getElementById('gh-title').textContent = curGame.name;
   document.getElementById('gh-desc').textContent  = curGame.desc;
@@ -3323,7 +3327,7 @@ async function renderGameTab() {
   const ok = await loadListingsFromAPI('gh-grid', { game: curGame.name, listing_type: typeMap[curGameTab], limit: 20 });
   if (!ok) {
     const el = document.getElementById('gh-grid');
-    if (el) el.innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="empty-ico">${curGame.ico}</div><div class="empty-t">ამ კატეგორიაში განცხადებები ჯერ არ არის</div></div>`;
+    if (el) el.innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="empty-ico"><img src="${curGame.logo}" alt="${curGame.name}"></div><div class="empty-t">ამ კატეგორიაში განცხადებები ჯერ არ არის</div></div>`;
   }
 }
 
