@@ -1466,7 +1466,7 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 
       <div class="form-g"><label class="form-l">ფასი</label>
         <div class="cl-price-row">
-          <div class="cl-price-input"><span>₾</span><input class="form-i" id="post-price" type="number" placeholder="50" min="1" oninput="updateVipPrice();clUpdatePriceUsd()"></div>
+          <div class="cl-price-input"><span>₾</span><input class="form-i" id="post-price" type="number" placeholder="50" min="1" oninput="clUpdatePriceUsd()"></div>
           <div class="cl-price-usd">≈ $<span id="cl-price-usd">0</span></div>
         </div>
       </div>
@@ -1496,29 +1496,13 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
     </div>
 
     <!-- STEP 3 — განთავსების ტიპი -->
+    <!-- VIP ახლა ანგარიშის (account-level) სტატუსია — ცალკე "VIP
+         განთავსების" არჩევანი აღარ არსებობს. თუ ანგარიში VIP-ია,
+         ეს განცხადება ავტ., დამატებითი გადახდის გარეშე VIP-ია
+         (POST /api/listings ბექენდზე ამას ავტ. აკეთებს). -->
     <div class="cl-step" id="cl-step-3" style="display:none">
-      <div class="cl-sec-title" style="margin-bottom:12px">📢 განთავსების ტიპი</div>
-      <div class="cl-package-grid">
-        <label id="post-free-label" class="cl-package">
-          <input type="radio" name="post-vip-radio" value="no" checked onchange="updateVipPrice()">
-          <div id="post-free-box" class="cl-package-box">
-            <div style="font-size:22px">📋</div>
-            <div style="font-weight:700;margin-top:6px">უფასო</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px">სტანდარტული განთავსება</div>
-          </div>
-        </label>
-        <label id="post-vip-label" class="cl-package">
-          <input type="radio" name="post-vip-radio" value="yes" onchange="updateVipPrice()">
-          <div id="post-vip-box" class="cl-package-box cl-package-vip">
-            <div style="font-size:22px">⭐</div>
-            <div style="font-weight:700;margin-top:6px;color:var(--gold)">VIP განთავსება</div>
-            <div style="font-size:11px;color:var(--gold);margin-top:2px" id="vip-price-label">ფასის 5%</div>
-          </div>
-        </label>
-      </div>
-      <div id="vip-info" style="display:none;margin-top:10px;font-size:12px;color:var(--gold);background:var(--gd);border-radius:8px;padding:10px;text-align:center">
-        ⭐ VIP — გამოჩნდება კატეგორიის სათავეში · ₾<span id="vip-cost">0</span> ჩამოიჭრება ბალანსიდან
-      </div>
+      <div class="cl-sec-title" style="margin-bottom:12px">📢 განთავსება</div>
+      <div id="post-vip-status-box" style="border-radius:10px;padding:14px;text-align:center;font-size:13px"></div>
 
       <div class="cl-desktop-nav">
         <button class="btn btn-g" onclick="clBack()">← უკან</button>
@@ -1842,19 +1826,11 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 <div class="modal-bg" id="vipModal" onclick="if(event.target===this)closeM('vipModal')">
   <div class="modal">
     <div class="confirm-ico">⭐</div>
-    <div class="modal-title" style="text-align:center">VIP განცხადება</div>
-    <div id="vip-modal-listing-name" style="text-align:center;font-size:12px;color:var(--muted);margin:-6px 0 12px"></div>
-
-    <!-- ბანერი/პროფილის მენიუდან იხსნება კონკრეტული listing-ის გარეშე —
-         ჯერ თავად უნდა აირჩიოს, რომელ საკუთარ განცხადებას სურს VIP-ის დამატება.
-         "ჩემი განცხადებები"-დან ⭐ ღილაკით გახსნისას (openVipModal) ეს ბლოკი იმალება,
-         რადგან listing უკვე ცნობილია. -->
-    <div id="vip-modal-picker" style="display:none;margin-bottom:12px">
-      <label class="form-l">აირჩიე განცხადება</label>
-      <select class="form-i" id="vip-modal-listing-select" onchange="vipModalListingId=this.value||null">
-        <option value="">— აირჩიე —</option>
-      </select>
-    </div>
+    <div class="modal-title" style="text-align:center">VIP სტატუსი</div>
+    <!-- VIP ანგარიშის (account-level) სტატუსია — listing აღარ ირჩევა.
+         ყიდვისას ვადა ერთბაშად ეხება როგორც ანგარიშს, ისე ყველა
+         აქტიურ/მოლოდინის განცხადებას. -->
+    <div id="vip-modal-status" style="text-align:center;font-size:12px;color:var(--muted);margin:-6px 0 12px"></div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:12px">
       <label class="cl-package">
@@ -1948,10 +1924,11 @@ function imgUrl(u) {
   return /^https?:\/\//i.test(u) ? u : (API_URL + u);
 }
 
-// ⚠️ ეს პაკეტები 1:1 უნდა ემთხვეოდეს ბექენდის listings.js-ში VIP_PACKAGES
-// ობიექტს (duration_days → price_gel). ფასს ბექენდი მკაცრად, hardcode-ით
-// ითვლის და client-ის მიერ გამოგზავნილ price-ს საერთოდ არ იყენებს —
-// ეს კონსტანტა მხოლოდ frontend-ზე სწორი ფასის საჩვენებლადაა.
+// ⚠️ ეს პაკეტები 1:1 უნდა ემთხვეოდეს ბექენდის users.js-ში VIP_PACKAGES
+// ობიექტს (duration_days → price_gel, POST /api/users/me/vip). ფასს
+// ბექენდი მკაცრად, hardcode-ით ითვლის და client-ის მიერ გამოგზავნილ
+// price-ს საერთოდ არ იყენებს — ეს კონსტანტა მხოლოდ frontend-ზე სწორი
+// ფასის საჩვენებლადაა.
 const VIP_PACKAGES = { 7: 5, 30: 15, 90: 35 };
 
 let currentUser  = null;
@@ -2552,8 +2529,12 @@ async function loadMyListings(filter) {
         const btns = [];
         if (!isSold && ['active','inactive','pending'].includes(l.status))
           btns.push(`<button onclick="openEditListingModal('${l.id}')" style="font-size:10px;padding:3px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--fg);cursor:pointer">&#x270F;&#xFE0F; რედ.</button>`);
-        if (!isSold && ['active','inactive','pending'].includes(l.status))
-          btns.push(`<button onclick="openVipModal('${l.id}','${esc(l.title || '').replace(/'/g,"\\'")}')" style="font-size:10px;padding:3px 8px;background:var(--gd);border:1px solid var(--gd2);border-radius:6px;color:var(--gold);cursor:pointer">&#x2B50; ${l.is_vip ? 'გახანგრძლ.' : 'VIP'}</button>`);
+        // VIP ახლა ანგარიშის (account-level) სტატუსია — თუ ეს კონკრეტული
+        // განცხადება უკვე VIP-ია, ის იმიტომ, რომ მთელი ანგარიში VIP-ია
+        // (POST /api/listings ავტ. აყენებს), ამიტომ per-listing ღილაკი
+        // საჭირო აღარაა. თუ არა — ვთავაზობთ ანგარიშის VIP-ის ყიდვას.
+        if (!isSold && !l.is_vip && ['active','inactive','pending'].includes(l.status))
+          btns.push(`<button onclick="openVipPicker()" style="font-size:10px;padding:3px 8px;background:var(--gd);border:1px solid var(--gd2);border-radius:6px;color:var(--gold);cursor:pointer">&#x2B50; VIP</button>`);
         if (!isSold && (l.status === 'active' || l.status === 'pending'))
           btns.push(`<button onclick="delistListing('${l.id}')" style="font-size:10px;padding:3px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--muted);cursor:pointer">&#x1F4E4; აღება</button>`);
         if (!isSold && l.status === 'inactive')
@@ -2577,47 +2558,29 @@ async function loadMyListings(filter) {
 }
 
 // ══════════════════════════════════════════════════════════
-// VIP ყიდვა — მოდალი + რეალური API გამოძახება
+// VIP ყიდვა — Account-level, listing აღარ ირჩევა
 // ══════════════════════════════════════════════════════════
-let vipModalListingId = null;
 
-// ბანერი ("VIP ყიდვა") ან პროფილის მენიუდან ("VIP სტატუსი") — კონკრეტული
-// listing ჯერ არჩეული არაა, ამიტომ ჯერ საკუთარი განცხადებებიდან ვირჩევთ
-async function openVipPicker() {
+// ბანერი ("VIP ყიდვა"), პროფილის მენიუ ("VIP სტატუსი") ან "ჩემი
+// განცხადებები" — ყველგან ერთი და იგივე მოდალი იხსნება, რადგან VIP
+// მთელ ანგარიშს ეხება და listing-ის არჩევა საერთოდ აღარ სჭირდება.
+function openVipPicker() {
   if (!currentUser) { showToast('ჯერ შედი სისტემაში', 'err'); openM('loginModal'); return; }
 
-  vipModalListingId = null;
-  document.getElementById('vip-modal-listing-name').textContent = '';
-  document.getElementById('vip-modal-picker').style.display = 'block';
-  const select = document.getElementById('vip-modal-listing-select');
-  select.innerHTML = '<option value="">იტვირთება...</option>';
-  openM('vipModal');
-
-  try {
-    const data = await api('/api/listings?seller_id=' + encodeURIComponent(currentUser.id) + '&include_sold=true&limit=50');
-    const eligible = (data.listings || []).filter(l => ['active','pending','inactive'].includes(l.status));
-    if (!eligible.length) {
-      select.innerHTML = '<option value="">არ გაქვს შესაფერისი განცხადება</option>';
-      return;
+  const statusEl = document.getElementById('vip-modal-status');
+  if (statusEl) {
+    if (currentUser.is_vip && currentUser.vip_expires_at) {
+      const until = new Date(currentUser.vip_expires_at).toLocaleDateString('ka-GE');
+      statusEl.innerHTML = `✅ VIP აქტიურია — ვადა: <b>${until}</b> (ახალი პაკეტი ამ ვადას დაემატება)`;
+    } else {
+      statusEl.textContent = 'გახდი VIP — შენი ყველა განცხადება ავტ. გამოჩნდება კატეგორიის სათავეში';
     }
-    select.innerHTML = '<option value="">— აირჩიე —</option>' +
-      eligible.map(l => `<option value="${l.id}">${esc(l.title || '')}${l.is_vip ? ' ⭐' : ''}</option>`).join('');
-  } catch (e) {
-    select.innerHTML = '<option value="">ჩატვირთვის შეცდომა</option>';
   }
-}
-
-// "ჩემი განცხადებები"-ში კონკრეტული ⭐ ღილაკიდან — listing უკვე ცნობილია,
-// ამიტომ picker-ი აღარ სჭირდება
-function openVipModal(id, title) {
-  vipModalListingId = id;
-  document.getElementById('vip-modal-picker').style.display = 'none';
-  document.getElementById('vip-modal-listing-name').textContent = title || '';
   openM('vipModal');
 }
 
 async function buyVip() {
-  if (!vipModalListingId) { showToast('ჯერ აირჩიე განცხადება', 'err'); return; }
+  if (!currentUser) { showToast('ჯერ შედი სისტემაში', 'err'); openM('loginModal'); return; }
   const days = document.querySelector('input[name="vip-package-radio"]:checked')?.value;
   if (!days) { showToast('აირჩიე პაკეტი', 'err'); return; }
 
@@ -2625,7 +2588,7 @@ async function buyVip() {
   if (btn) { btn.dataset.origText = btn.textContent; btn.textContent = '⏳...'; btn.disabled = true; }
 
   try {
-    const data = await api('/api/listings/' + vipModalListingId + '/vip', {
+    const data = await api('/api/users/me/vip', {
       method: 'POST',
       body: JSON.stringify({ duration_days: Number(days) })
     });
@@ -2637,14 +2600,11 @@ async function buyVip() {
     loadListingsFromAPI('l-grid');
   } catch (e) {
     // ბექენდი { error: 'კოდი' } ფორმატს აგზავნის და არა { message } — იხ. იგივე
-    // პატერნი doWithdraw()-ში. აქამდე ეს modal საერთოდ არ იძახებდა API-ს, ამიტომ
-    // ეს შეცდომების დამუშავებაც არასდროს გამოიყენებოდა.
+    // პატერნი doWithdraw()-ში.
     const msg = e?.error === 'insufficient_balance'
       ? `არასაკმარისი ბალანსი — საჭიროა ₾${Number(e.needed || 0).toFixed(2)}`
       : e?.error === 'invalid_vip_package'
       ? 'ეს პაკეტი აღარ არსებობს — გვერდი განაახლე'
-      : e?.error === 'forbidden'
-      ? 'ეს განცხადება არ გეკუთვნის'
       : (e?.error || 'შეცდომა — სცადე მოგვიანებით');
     showToast(msg, 'err');
   } finally {
@@ -4277,32 +4237,33 @@ function clResetForm() {
   const label = document.getElementById('cl-selected-cat-label'); if (label) label.innerHTML = '';
   const toggle = document.getElementById('cl-type-toggle'); if (toggle) toggle.innerHTML = '';
   ['post-title','post-desc','post-price'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
-  const freeRadio = document.querySelector('input[name="post-vip-radio"][value="no"]');
-  if (freeRadio) freeRadio.checked = true;
   renderImgStrip();
-  updateVipPrice();
+  renderVipStatusBox();
   clGoToStep(1);
 }
 
-function updateVipPrice() {
-  const vipInfo   = document.getElementById('vip-info');
-  const vipCost   = document.getElementById('vip-cost');
-  const vipLabel  = document.getElementById('vip-price-label');
-  const isVip     = document.querySelector('input[name="post-vip-radio"]:checked')?.value === 'yes';
+// STEP 3-ის საინფორმაციო ბოქსი — VIP აღარ ირჩევა per-listing, უბრალოდ
+// ვაჩვენებთ, რას მიიღებს მომხმარებელი მისი ანგარიშის მიმდ. სტატუსის
+// მიხედვით. თუ ანგარიში VIP-ია, ეს განცხადება ავტ. VIP იქნება (ბექენდი
+// POST /api/listings-ში ამას თავად აკეთებს, დამატებითი მოთხოვნა არ სჭირდება).
+function renderVipStatusBox() {
+  const box = document.getElementById('post-vip-status-box');
+  if (!box) return;
 
-  // ⚠️ ბაგ-ფიქსი: ეს ადრე ითვლიდა "ფასის 5%"-ს client-ზე, მაგრამ ბექენდის
-  // /:id/vip endpoint-ი დღეს ფიქსირებულ, hardcode-ილ ფასს იღებს
-  // (VIP_PACKAGES, listings.js) და client-ისგან გამოგზავნილ price-ს
-  // საერთოდ არ იყენებს — ეს ორი რიცხვი ერთმანეთს არასდროს ემთხვეოდა.
-  // 30-დღიანი პაკეტის ფასი ახლა პირდაპირ საერთო VIP_PACKAGES-იდან მოდის.
-  const cost = VIP_PACKAGES[30];
-
-  if (vipLabel) vipLabel.textContent = `₾${cost} / 30 დღე`;
-  if (vipCost)  vipCost.textContent  = cost.toFixed(2);
-  if (vipInfo)  vipInfo.style.display = isVip ? 'block' : 'none';
-  // ბარათების ვიზუალური მდგომარეობა (checked/unchecked) CSS-ით იმართება
-  // (`.cl-package input:checked + .cl-package-box`) — JS-ს აქ აღარაფერი სჭირდება.
+  if (currentUser?.is_vip) {
+    const until = currentUser.vip_expires_at ? new Date(currentUser.vip_expires_at).toLocaleDateString('ka-GE') : '';
+    box.style.background = 'var(--gd)';
+    box.style.border = '1px solid var(--gd2)';
+    box.style.color = 'var(--gold)';
+    box.innerHTML = `⭐ <b>თქვენი ანგარიში VIP-ია</b> — ეს განცხადება ავტ. გამოჩნდება კატეგორიის სათავეში, დამატებითი გადახდის გარეშე${until ? ` (ვადა: ${until})` : ''}`;
+  } else {
+    box.style.background = 'var(--bg3)';
+    box.style.border = '1px solid var(--border)';
+    box.style.color = 'var(--muted)';
+    box.innerHTML = `📋 სტანდარტული განთავსება. გინდა, შენი ყველა განცხადება ავტ. იყოს VIP? <button onclick="openVipPicker()" style="margin-left:4px;font-size:11px;padding:3px 10px;background:var(--gd);border:1px solid var(--gd2);border-radius:6px;color:var(--gold);cursor:pointer">⭐ გახდი VIP</button>`;
+  }
 }
+
 
 
 // ── Post Image Preview — multi (მაქს. 5) ──────────────────────
@@ -4375,29 +4336,20 @@ async function postListing() {
   const title    = (document.getElementById('post-title') || {}).value?.trim();
   const price_gel= parseFloat((document.getElementById('post-price') || {}).value);
   const desc     = (document.getElementById('post-desc')  || {}).value?.trim() || '';
-  const isVip    = document.querySelector('input[name="post-vip-radio"]:checked')?.value === 'yes';
+  const isVip    = !!currentUser.is_vip;
 
   if (!category)        { showToast('აირჩიე კატეგორია', 'err'); clGoToStep(1); return; }
   if (!title)           { showToast('სათაური სავალდებულოა', 'err'); clGoToStep(2); return; }
   if (!price_gel || price_gel < 1) { showToast('ფასი სავალდებულოა', 'err'); clGoToStep(2); return; }
-
-  // VIP ფასი ბექენდზეა ფიქსირებული (30-დღიანი პაკეტი) — იხ. VIP_PACKAGES
-  const vipCost = VIP_PACKAGES[30];
-
-  if (isVip) {
-    const bal = Number(currentUser.balance_gel) || 0;
-    if (bal < vipCost) {
-      showToast(`VIP-ისთვის გჭირდება ₾${vipCost}, ბალანსი: ₾${bal.toFixed(2)}`, 'err');
-      return;
-    }
-  }
 
   // ორივე submit ღილაკი (მობილურის sticky bottom-nav + დესკტოპის) ერთდროულად ვმართავთ
   const btns = [document.getElementById('cl-next-btn'), document.getElementById('post-submit-btn-desktop')].filter(Boolean);
   btns.forEach(b => { b.dataset.origText = b.textContent; b.textContent = '⏳ ქმნება...'; b.disabled = true; });
 
   try {
-    // 1. განცხ. შექმნა
+    // 1. განცხ. შექმნა — VIP დროშას ბექენდი თავად ანიჭებს ავტ., თუ
+    // ანგარიში ამჟამად VIP-ია (checkVipStatus middleware, POST /api/listings) —
+    // ცალკე VIP-ის შესყიდვის მოთხოვნა აქედან აღარ იგზავნება.
     const newL = await api('/api/listings', {
       method: 'POST',
       body: JSON.stringify({ category, game, listing_type, title, description: desc, price_gel, tags: [] })
@@ -4417,29 +4369,8 @@ async function postListing() {
       } catch(e) { console.warn('img upload:', e.message); }
     }
 
-    // 3. VIP გააქტ.
-    // ⚠️ ბაგ-ფიქსი: ადრე ამ ნაწილის შეცდომა მხოლოდ console.warn-ში იკარგებოდა
-    // და იუზერს მაინც "წარმატების" toast უჩნდებოდა — განცხადება იქმნებოდა,
-    // მაგრამ VIP რეალურად არასდროს ერთვებოდა (ხშირად ზუსტად იმიტომ, რომ ზემოთ
-    // მცდარად გამოთვლილი "5%" ფასი აცდენდა ბალანსის შემოწმებას რეალურ,
-    // ფიქსირებულ ფასს) — და იუზერი ვერასდროს გებულობდა, რატომ.
-    let vipError = null;
-    if (isVip && newL.id) {
-      try {
-        btns.forEach(b => b.textContent = '⏳ VIP...');
-        await api('/api/listings/' + newL.id + '/vip', {
-          method: 'POST',
-          body: JSON.stringify({ duration_days: 30 })
-        });
-      } catch(e) { console.warn('vip failed:', e); vipError = e; }
-    }
-
     clResetForm();
-    if (isVip && vipError) {
-      showToast('განცხადება შეიქმნა, მაგრამ VIP ვერ ჩაირთო (' + (vipError.error || 'შეცდომა') + ') — სცადე ხელახლა „ჩემი განცხადებები"-დან', 'err');
-    } else {
-      showToast(isVip ? '⭐ VIP განცხ. მოდ. მოლოდინშია' : '⏳ განცხ. გაიგზავნა მოდ-ზე — დადასტ. შემდეგ გამოჩნდება', 'ok');
-    }
+    showToast(isVip ? '⭐ VIP განცხ. მოდ. მოლოდინშია' : '⏳ განცხ. გაიგზავნა მოდ-ზე — დადასტ. შემდეგ გამოჩნდება', 'ok');
     loadListingsFromAPI('home-grid');
     loadListingsFromAPI('l-grid');
     loadHomeStats();
@@ -4806,7 +4737,7 @@ const BOT_FAQ = [
   },
   {
     keys: ['vip','ვიპ','vip განცხ','პრემიუმ'],
-    answer: `⭐ <b>VIP განცხადება</b> — ეს სპეციალური განთავსებაა:\n\n• VIP განცხ. <b>კატეგორიის სათავეში</b> ჩანს\n• ფასი = განცხ. ფასის <b>5%</b> (მინ. ₾1)\n• ბალანსიდან ჩამოიჭრება ავტომატურად\n\nმაგ: ₾100 ღირი განცხ-სთვის VIP = ₾5\n\nVIP-ის ასაღებად: <b>➕ განცხ. დამატება → VIP</b> ვარიანტი`
+    answer: `⭐ <b>VIP სტატუსი</b> — ეს ანგარიშის დონის ბეჯია (არა კონკრეტული განცხადების):\n\n• იყიდება 7 / 30 / 90 დღით — <b>პროფილი → VIP სტატუსი</b>\n• როცა ანგარიში VIP-ია, <b>ყველა შენი განცხადება</b> ავტ. ჩანს <b>კატეგორიის სათავეში</b>, დამატებითი გადახდის გარეშე\n• ფასი ფიქსირებულია: ₾5 / ₾15 / ₾35 (7/30/90 დღე)\n• ბალანსიდან ჩამოიჭრება ავტომატურად`
   },
   {
     keys: ['ბალანს','შეტანა','deposit','დეპოზიტ','გადახდა','შევტანო'],
@@ -4818,7 +4749,7 @@ const BOT_FAQ = [
   },
   {
     keys: ['განცხ','დამატება','გამოქვეყნება','post','დავდო','როგორ ვყიდო','გავყიდო'],
-    answer: `➕ <b>განცხადების დამატება:</b>\n\n1. დააჭირე <b>➕ განცხ. დამატება</b> (კატეგ. ბარათი ან nav)\n2. აირჩიე <b>თამაში / კატეგ.</b>\n3. შეავსე <b>სათაური, ფასი, აღწ.</b>\n4. სურვ. — ავირჩიე <b>VIP</b> ან ატვირთე ფოტო\n5. დააჭირე <b>გამოქვეყნება</b>\n\n⚠️ ყიდვა/გაყიდვა მოითხოვს <b>რეგისტრაციას</b>!`
+    answer: `➕ <b>განცხადების დამატება:</b>\n\n1. დააჭირე <b>➕ განცხ. დამატება</b> (კატეგ. ბარათი ან nav)\n2. აირჩიე <b>თამაში / კატეგ.</b>\n3. შეავსე <b>სათაური, ფასი, აღწ.</b>\n4. სურვ. — ატვირთე ფოტო\n5. დააჭირე <b>გამოქვეყნება</b>\n\n💡 თუ ანგარიში <b>VIP</b>-ია, განცხადება ავტ. ჩანს კატეგორიის სათავეში\n⚠️ ყიდვა/გაყიდვა მოითხოვს <b>რეგისტრაციას</b>!`
   },
   {
     keys: ['ყიდვა','შევიძინო','buy','შეძენა','შემიძლია შევიძინო'],
@@ -4838,7 +4769,7 @@ const BOT_FAQ = [
   },
   {
     keys: ['კომის','5%','პლატფ. კომ','commission','fee'],
-    answer: `💸 <b>პლატფ. კომისია:</b>\n\nGamerBazar იღებს <b>5%</b> გაყიდვაზე, გამოტანასა და VIP-ზე. <b>დეპოზიტზე (თანხის შეტანაზე) საკომისიო არ არის</b>.\n\nმაგ: ₾100 გაყიდვაზე:\n• გამყ. მიიღებს: <b>₾95</b>\n• პლატფ. კომ: <b>₾5</b>\n\nVIP ყიდვაც იგივე <b>5%-ია</b> (ფასიდან)`
+    answer: `💸 <b>პლატფ. კომისია:</b>\n\nGamerBazar იღებს <b>5%</b> გაყიდვასა და გამოტანაზე. <b>დეპოზიტზე (თანხის შეტანაზე) საკომისიო არ არის</b>.\n\nმაგ: ₾100 გაყიდვაზე:\n• გამყ. მიიღებს: <b>₾95</b>\n• პლატფ. კომ: <b>₾5</b>\n\nVIP სტატუსს ცალკე, ფიქსირებული ფასი აქვს: ₾5 / ₾15 / ₾35 (7/30/90 დღე)`
   },
   {
     keys: ['ჩატი','chat','შეტყობ','გამყ. დაკ','დაუკავშირ'],
@@ -5188,9 +5119,6 @@ try { registerServiceWorker(); } catch(e) { console.error('SW register:', e); }
 setTimeout(() => {
   try {
     clResetForm();
-    document.querySelectorAll('input[name="post-vip-radio"]').forEach(r => {
-      r.addEventListener('change', updateVipPrice);
-    });
   } catch(e) { console.error('create-listing init:', e); }
 }, 200);
 

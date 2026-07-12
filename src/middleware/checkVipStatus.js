@@ -25,6 +25,7 @@ async function checkVipStatus(req, res, next) {
   try {
     if (!req.user?.id) {
       req.isVip = false;
+      req.vipExpiresAt = null;
       return next();
     }
 
@@ -39,10 +40,16 @@ async function checkVipStatus(req, res, next) {
     // ავტომატურად არ მოხსნის ვადაგასულ სტატუსებს
     req.isVip = !!(u && u.is_vip && u.vip_expires_at && new Date(u.vip_expires_at) > new Date());
 
+    // req.vipExpiresAt — მომხმარებლის ანგარიშის VIP ვადა, საჭიროა route-ებში
+    // (მაგ. POST /api/listings), რომ ახალ განცხადებას პირდაპირ იმავე
+    // ვადით მოვნიშნოთ is_vip=TRUE, ცალკე DB query-ის გარეშე.
+    req.vipExpiresAt = req.isVip ? u.vip_expires_at : null;
+
     next();
   } catch (err) {
     console.error('checkVipStatus error:', err.message);
     req.isVip = false; // შეცდომისას fail-safe — ჩვეულებრივ (non-VIP) რეჟიმზე
+    req.vipExpiresAt = null;
     next();
   }
 }

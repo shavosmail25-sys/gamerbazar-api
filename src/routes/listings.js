@@ -8,7 +8,6 @@ const db      = require('../db');
 const { requireAuth, optionalAuth, requireAdmin } = require('../middleware/auth');
 const { requireModerator } = require('../middleware/requireModerator');
 const { checkVipStatus }   = require('../middleware/checkVipStatus');
-const ledger  = require('../utils/ledger');
 
 const router = express.Router();
 
@@ -194,13 +193,14 @@ router.get('/:id', optionalAuth, async (req, res) => {
 // ══════════════════════════════════════════════════════════════
 // POST /api/listings  — განცხადების შექმნა
 //
-// ⚠️ შენიშვნა: ამ ეტაპზე listings.js-ში განცხადების დამატება ისედაც
-// უფასოა ყველასთვის — არსად არ იკლებოდა თანხა POST-ის დროს (მხოლოდ
-// VIP-ის შემდგომი, ცალკე „დაწინაურება" ღირს ფული, იხ. /:id/vip).
-// ანუ checkVipStatus middleware-ს ამჟამად კონკრეტულად „გასათავისუფლებელი"
-// საფასური არ აქვს — უბრალოდ ადგენს req.isVip-ს, რომ თუ მომავალში
-// non-VIP მომხმარებლებს განცხადების საფასური/ლიმიტი დაუწესდებათ,
-// საკმარისი იქნება `if (!req.isVip) { ... }` ამ handler-ში.
+// ⚠️ VIP მოდელის რადიკალური ცვლილება: VIP აღარ არის კონკრეტული
+// განცხადების თვისება, რომელსაც ცალკე ვყიდულობთ per-listing — ის
+// ექაუნთის (User-level) სტატუსია. checkVipStatus middleware-ი აქ
+// ადგენს req.isVip / req.vipExpiresAt-ს — თუ მომხმარებლის ანგარიში
+// ამჟამად VIP-ია, ახალი განცხადება ავტომატურად, დამატებითი გადახდის
+// გარეშე იბადება is_vip=TRUE დროშითა და იმავე ვადით, რაც ანგარიშს
+// აქვს. VIP-ის ცალკე ყიდვა აღარ არის listing-ზე მიბმული — იხ.
+// POST /api/users/me/vip.
 // ══════════════════════════════════════════════════════════════
 router.post('/', requireAuth, checkVipStatus, async (req, res) => {
   try {
@@ -225,13 +225,17 @@ router.post('/', requireAuth, checkVipStatus, async (req, res) => {
       return res.status(400).json({ error: 'invalid_listing_type' });
     }
 
+    // ── ავტ. VIP მემკვიდრეობა ექაუნთიდან — უფასოდ ──────────────
+    const isVip        = !!req.isVip;
+    const vipExpiresAt  = isVip ? req.vipExpiresAt : null;
+
     const { rows } = await db.query(`
       INSERT INTO listings
-        (seller_id, category, game, listing_type, title, description, tags, price_gel, status)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pending')
+        (seller_id, category, game, listing_type, title, description, tags, price_gel, status, is_vip, vip_expires_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pending',$9,$10)
       RETURNING *
     `, [req.user.id, category, game, normalizedType, title,
-        description || '', tags || [], Number(price_gel)]);
+        description || '', tags || [], Number(price_gel), isVip, vipExpiresAt]);
 
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -313,123 +317,13 @@ router.delete('/:id', requireAuth, async (req, res) => {
 });
 
 // ══════════════════════════════════════════════════════════════
-// POST /api/listings/:id/vip  — VIP-ის გააქტ.
+// ⚠️ POST /api/listings/:id/vip გადატანილია — VIP აღარ არის listing-ზე
+// მიბმული "დაწინაურება". ახალი, account-level ყიდვის endpoint-ია
+// POST /api/users/me/vip (src/routes/users.js) — ის მხოლოდ
+// მომხმარებლის ანგარიშს ანიჭებს VIP სტატუსს (duration_days: 7/30/90),
+// listing_id საერთოდ აღარ სჭირდება. ახალი განცხადებები ავტ. იღებენ
+// VIP დროშას ზემოთა POST / handler-ში, თუ ანგარიში VIP-ია.
 // ══════════════════════════════════════════════════════════════
-
-// ⚠️ უსაფრთხოების გასწორება: VIP პაკეტების მკაცრი Whitelist.
-// ადრე duration_days და price ორივე ფაქტობრივად frontend-იდან
-// გამოგზავნილ მონაცემებზე იყო დამოკიდებული — clientPrice პირდაპირ
-// გამოიყენებოდა, თუ ის "დაახლოებით" ემთხვეოდა გამოთვლილს, ხოლო
-// duration_days საერთოდ არ მოწმდებოდა. თავდამსხმელს შეეძლო API-ზე
-// პირდაპირი მოთხოვნით ნებისმიერი duration_days და price გაეგზავნა.
-// ახლა ნებადართულია მხოლოდ ქვემოთ ჩამოთვლილი კონკრეტული პაკეტები
-// (7 / 30 / 90 დღე), თითოეულის ფასი კი მკაცრად, უცვლელად გაწერილია
-// ბექენდზე (Hardcode) — client-ის მიერ გამოგზავნილი price საერთოდ
-// აღარ გამოიყენება.
-// ⚠️ ქვემოთ მითითებული ₾ ღირებულებები მაგალითია — production-ში
-// გაშვებამდე შეცვალეთ თქვენი რეალური ბიზნეს ფასებით.
-const VIP_PACKAGES = {
-  7:  5,
-  30: 15,
-  90: 35,
-};
-
-router.post('/:id/vip', requireAuth, async (req, res) => {
-  try {
-    const duration_days = Number(req.body.duration_days);
-
-    // მკაცრი whitelist შემოწმება — მხოლოდ ზემოთ განსაზღვრული პაკეტები
-    if (!Object.prototype.hasOwnProperty.call(VIP_PACKAGES, duration_days)) {
-      return res.status(400).json({
-        error: 'invalid_vip_package',
-        allowed_days: Object.keys(VIP_PACKAGES).map(Number),
-      });
-    }
-    const price = VIP_PACKAGES[duration_days];
-
-    const { rows: listing } = await db.query(
-      'SELECT * FROM listings WHERE id=$1', [req.params.id]
-    );
-    if (!listing.length || listing[0].seller_id !== req.user.id) {
-      return res.status(403).json({ error: 'forbidden' });
-    }
-
-    // ბალანსის + მიმდ. VIP ვადების შემოწ. (stacking-ისთვის გვჭირდება ორივე)
-    const { rows: u } = await db.query(
-      'SELECT balance_gel, is_vip, vip_expires_at FROM users WHERE id=$1', [req.user.id]
-    );
-    if (Number(u[0].balance_gel) < price) {
-      return res.status(402).json({ error: 'insufficient_balance', needed: price });
-    }
-
-    const now         = new Date();
-    const durationMs  = duration_days * 86400000;
-
-    // ── Stacking ლოგიკა (ბაგ-ფიქსი): ძველი კოდი ყოველთვის თარიღს
-    // Date.now()+duration-ით *სანაცვლებდა* — ანუ თუ განცხადებას უკვე
-    // 20 დღე VIP ჰქონდა დარჩენილი და მფლობელი ახალ 7-დღიან პაკეტს
-    // იყიდდა, ის 20 დღე უბრალოდ ქრებოდა (30-იდან 7-ზე ეცემოდა).
-    // ახლა: თუ ვადა ჯერ არ ამოწურულა, ახალი დღეები არსებულს ემატება;
-    // თუ ვადა გავიდა ან პირველი შესყ.-ია — დღევანდელი დღიდან ითვლება.
-    const listingBaseTime = (listing[0].is_vip && listing[0].vip_expires_at && new Date(listing[0].vip_expires_at) > now)
-      ? new Date(listing[0].vip_expires_at).getTime()
-      : now.getTime();
-    const newListingExpiry = new Date(listingBaseTime + durationMs);
-
-    // ── User მოდელის სინქრონიზაცია: იგივე stacking, მაგრამ GREATEST-ის
-    // პრინციპით — თუ ამ გამყიდველს ერთდროულად რამდენიმე VIP განცხადება
-    // აქვს, ერთის განახლებამ არ უნდა "დაუწიოს" პროფილის საერთო VIP
-    // ვადა უფრო ადრეულ თარიღზე, ვიდრე მას სხვა აქტიური VIP განცხადებით
-    // უკვე ჰქონდა. ბეჯი ეკუთვნის მომხმარებელს, არა ერთ კონკრეტულ ლისტინგს.
-    const userBaseTime = (u[0].is_vip && u[0].vip_expires_at && new Date(u[0].vip_expires_at) > now)
-      ? new Date(u[0].vip_expires_at).getTime()
-      : now.getTime();
-    const candidateUserExpiry = new Date(userBaseTime + durationMs);
-    const newUserExpiry = candidateUserExpiry > newListingExpiry ? candidateUserExpiry : newListingExpiry;
-
-    // ატომური ოპ.
-    await db.transaction(async (client) => {
-      await client.query(
-        'UPDATE users SET balance_gel = balance_gel - $1 WHERE id=$2',
-        [price, req.user.id]
-      );
-      await client.query(
-        'UPDATE listings SET is_vip=TRUE, vip_expires_at=$1 WHERE id=$2',
-        [newListingExpiry, req.params.id]
-      );
-      // ── მოთხოვნილი კავშირი User მოდელთან — "სანდო გამყიდველის" ბეჯისთვის ──
-      await client.query(
-        'UPDATE users SET is_vip=TRUE, vip_expires_at=$1 WHERE id=$2',
-        [newUserExpiry, req.user.id]
-      );
-      await client.query(
-        `INSERT INTO transactions(user_id,type,amount_gel,gross_amount_gel,net_amount_gel,commission_fee_gel,description)
-         VALUES($1,'vip_purchase',$2,$3,0,$3,$4)`,
-        [req.user.id, -price, price, `VIP ${duration_days} დღიანი პაკეტი`]
-      );
-      await client.query(
-        'INSERT INTO vip_purchases(listing_id,user_id,duration_days,price_gel,expires_at) VALUES($1,$2,$3,$4,$5)',
-        [req.params.id, req.user.id, duration_days, price, newListingExpiry]
-      );
-      // VIP საკომისიო — ეს არის პლატფორმის შემოსავალი (არა escrow-ის
-      // ნაწილი), ამიტომ პირდაპირ platform_stats.admin_earnings_gel-ს
-      // ემატება — იგივე ადგილი, საიდანაც Watch Tower-ში ადმინი (ერთადერთი
-      // admin ანგარიში — shavosmail25@gmail.com) ხედავს პლატფორმის
-      // მთლიან შემოსავალს.
-      await ledger.recordPlatformFee(client, price);
-    });
-
-    res.json({
-      ok: true,
-      vip_until:      newListingExpiry,
-      user_vip_until: newUserExpiry,
-      price_paid:     price,
-    });
-  } catch (err) {
-    console.error('vip purchase error:', err.message);
-    res.status(500).json({ error: 'server_error' });
-  }
-});
 
 // ══════════════════════════════════════════════════════════════
 // POST /api/listings/:id/images  — სურათების ატვირთვა (Cloudinary)

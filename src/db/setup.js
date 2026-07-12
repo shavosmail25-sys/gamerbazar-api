@@ -156,9 +156,12 @@ CREATE TABLE IF NOT EXISTS disputes (
 );
 
 -- ── VIP PURCHASES ─────────────────────────────────────────────
+-- ⚠️ listing_id აღარ არის სავალდებულო — VIP ყიდვა ახლა account-level-ია
+-- (POST /api/users/me/vip), listing_id-ის გარეშე. სვეტი NULL-ადი დარჩა
+-- უკუთავსებადობისთვის ძველ, listing-დაკავშირებულ ჩანაწერებთან.
 CREATE TABLE IF NOT EXISTS vip_purchases (
   id            UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
-  listing_id    UUID        NOT NULL REFERENCES listings(id),
+  listing_id    UUID        REFERENCES listings(id),
   user_id       UUID        NOT NULL REFERENCES users(id),
   duration_days INT         NOT NULL,
   price_gel     NUMERIC(8,2) NOT NULL,
@@ -323,6 +326,13 @@ async function setupDatabase() {
       // ზემოთა ორი ALTER-ის შემდეგ არსებობს is_vip სვეტი, ამიტომ ინდექსიც
       // მხოლოდ მათ შემდეგ შეიძლება აშენდეს, არა ერთდროულად CREATE TABLE-თან.
       `CREATE INDEX IF NOT EXISTS idx_users_vip_expiry ON users(vip_expires_at) WHERE is_vip = TRUE`,
+      // ── VIP მოდელის რადიკალური ცვლილება: VIP ყიდვა აღარ არის
+      // კონკრეტულ განცხადებაზე მიბმული (POST /api/users/me/vip,
+      // ცალკე listing_id აღარ სჭირდება) — ამიტომ vip_purchases.listing_id
+      // ძველი NOT NULL შეზღუდვა ვხსნით. თავად სვეტი ისტორიის
+      // შესანარჩუნებლად რჩება ცხრილში (ძველი listing-დაკავშირებული
+      // ჩანაწერებისთვის), უბრალოდ ახალ ჩანაწერებში NULL იქნება.
+      `ALTER TABLE vip_purchases ALTER COLUMN listing_id DROP NOT NULL`,
     ];
     for (const sql of migrations) {
       try { await client.query(sql); } catch (e) { /* უკვე არსებობს */ }
