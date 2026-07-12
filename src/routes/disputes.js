@@ -257,6 +257,12 @@ router.put('/:id/resolve', requireAuth, requireAdmin, async (req, res) => {
           'UPDATE users SET escrow_hold_gel=escrow_hold_gel-$1 WHERE id=$2',
           [order.amount_gel, order.buyer_id]
         );
+        // ── "სანდო გამყიდველის" ბეჯი — დავის 'release' გადაწყვ.-იც
+        // ითვლება დასრულ. გაყიდვად, იგივე ლოგიკა რაც orders.js /confirm-ში ──
+        await client.query(
+          'UPDATE users SET total_sales_gel = total_sales_gel + $1 WHERE id=$2',
+          [order.amount_gel, order.seller_id]
+        );
         await client.query(
           "UPDATE orders SET escrow_status='released',status='completed',completed_at=NOW(),updated_at=NOW() WHERE id=$1",
           [order.id]

@@ -27,6 +27,12 @@ router.get('/:id', async (req, res) => {
       SELECT
         u.id, u.username, u.display_name, u.bio, u.avatar_url,
         u.is_verified_seller, u.created_at,
+        -- is_vip დროშას ვამოწმებთ ვადასთან ერთად — cron ყოველ საათში
+        -- ასუფთავებს ვადაგასულებს, მაგრამ ეს defense-in-depth ხდის
+        -- პასუხს სწორს იმ საათამდეც, სანამ cron არ ჩაირთვება
+        (u.is_vip AND u.vip_expires_at IS NOT NULL AND u.vip_expires_at > NOW()) AS is_vip,
+        u.vip_expires_at,
+        u.total_sales_gel,
         COALESCE(ss.avg_rating, 0)        AS avg_rating,
         COALESCE(ss.review_count, 0)      AS review_count,
         COALESCE(ss.completed_orders, 0)  AS completed_orders

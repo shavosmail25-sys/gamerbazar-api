@@ -309,6 +309,13 @@ router.post('/:id/confirm', requireAuth, async (req, res) => {
       // საიტის 5%-იანი საკომისიო → admin_earnings
       await ledger.recordPlatformFee(client, fee);
 
+      // ── "სანდო გამყიდველის" ბეჯი — total_sales_gel (gross, ანუ მთლ.
+      // თანხა რაც მყიდველმა გადაიხადა, საკომისიოს გამოკლებამდე) ──
+      await client.query(
+        'UPDATE users SET total_sales_gel = total_sales_gel + $1 WHERE id=$2',
+        [order.amount_gel, order.seller_id]
+      );
+
       await client.query(`
         UPDATE orders SET
           escrow_status='released', status='completed',

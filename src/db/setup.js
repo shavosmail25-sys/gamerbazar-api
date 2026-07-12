@@ -239,6 +239,9 @@ CREATE INDEX IF NOT EXISTS idx_push_subs_user    ON push_subscriptions(user_id);
 CREATE INDEX IF NOT EXISTS idx_otp_email         ON otp_codes(email, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_holds_pending     ON balance_holds(released, hold_until);
 CREATE INDEX IF NOT EXISTS idx_holds_user        ON balance_holds(user_id);
+-- ვადაგასული VIP-ების საათური cron-ისთვის — partial index, მხოლოდ VIP მწკრივებზე
+CREATE INDEX IF NOT EXISTS idx_users_vip_expiry    ON users(vip_expires_at)    WHERE is_vip = TRUE;
+CREATE INDEX IF NOT EXISTS idx_listings_vip_expiry ON listings(vip_expires_at) WHERE is_vip = TRUE;
 
 -- ── SELLER STATS VIEW ─────────────────────────────────────────
 CREATE OR REPLACE VIEW seller_stats AS
@@ -306,6 +309,14 @@ async function setupDatabase() {
       `ALTER TABLE transactions ADD COLUMN IF NOT EXISTS gross_amount_gel   NUMERIC(12,2)`,
       `ALTER TABLE transactions ADD COLUMN IF NOT EXISTS net_amount_gel     NUMERIC(12,2)`,
       `ALTER TABLE transactions ADD COLUMN IF NOT EXISTS commission_fee_gel NUMERIC(12,2)`,
+      // ── VIP სისტემა — User მოდელთან სინქრონიზაცია ("სანდო გამყიდველის" ბეჯი) ──
+      // listings-ს already ჰქონდა is_vip/vip_expires_at; ეს იგივე ორი ველი
+      // ემატება users-საც, რომ VIP სტატუსი კონკრეტულ განცხადებას კი არა,
+      // მთლიან პროფილს დაუკავშირდეს. + total_sales_gel — გამყიდველის
+      // სანდოობის საჯარო მაჩვენებელი (მთლიანი, gross გაყიდვების მოცულობა).
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS is_vip           BOOLEAN NOT NULL DEFAULT FALSE`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS vip_expires_at   TIMESTAMPTZ`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS total_sales_gel  NUMERIC(12,2) NOT NULL DEFAULT 0.00`,
     ];
     for (const sql of migrations) {
       try { await client.query(sql); } catch (e) { /* უკვე არსებობს */ }

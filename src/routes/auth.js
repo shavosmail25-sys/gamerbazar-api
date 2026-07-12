@@ -399,6 +399,8 @@ router.get('/me', requireAuth, async (req, res) => {
              u.notif_email, u.notif_push, u.notif_chat,
              u.profile_public, u.show_online,
              u.email_verified, u.created_at, u.last_seen_at,
+             (u.is_vip AND u.vip_expires_at IS NOT NULL AND u.vip_expires_at > NOW()) AS is_vip,
+             u.vip_expires_at, u.total_sales_gel,
              COALESCE(ss.completed_orders, 0) AS completed_orders,
              COALESCE(ss.avg_rating, 0)       AS avg_rating,
              COALESCE(ss.review_count, 0)     AS review_count
