@@ -240,7 +240,9 @@ CREATE INDEX IF NOT EXISTS idx_otp_email         ON otp_codes(email, created_at 
 CREATE INDEX IF NOT EXISTS idx_holds_pending     ON balance_holds(released, hold_until);
 CREATE INDEX IF NOT EXISTS idx_holds_user        ON balance_holds(user_id);
 -- ვადაგასული VIP-ების საათური cron-ისთვის — partial index, მხოლოდ VIP მწკრივებზე
-CREATE INDEX IF NOT EXISTS idx_users_vip_expiry    ON users(vip_expires_at)    WHERE is_vip = TRUE;
+-- ⚠️ idx_users_vip_expiry აქ აღარაა: users.is_vip ამ batch-ში ჯერ არ არსებობს
+-- (ის მხოლოდ ქვემოთ, migrations loop-ში ემატება ALTER TABLE-ით) — ინდექსი
+-- listings-ისთვის კი აქ რჩება, რადგან listings.is_vip თავიდანვეა CREATE TABLE-ში.
 CREATE INDEX IF NOT EXISTS idx_listings_vip_expiry ON listings(vip_expires_at) WHERE is_vip = TRUE;
 
 -- ── SELLER STATS VIEW ─────────────────────────────────────────
@@ -317,6 +319,10 @@ async function setupDatabase() {
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS is_vip           BOOLEAN NOT NULL DEFAULT FALSE`,
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS vip_expires_at   TIMESTAMPTZ`,
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS total_sales_gel  NUMERIC(12,2) NOT NULL DEFAULT 0.00`,
+      // ── users.is_vip ინდექსი აქაა გადმოტანილი (SCHEMA batch-იდან) — მხოლოდ
+      // ზემოთა ორი ALTER-ის შემდეგ არსებობს is_vip სვეტი, ამიტომ ინდექსიც
+      // მხოლოდ მათ შემდეგ შეიძლება აშენდეს, არა ერთდროულად CREATE TABLE-თან.
+      `CREATE INDEX IF NOT EXISTS idx_users_vip_expiry ON users(vip_expires_at) WHERE is_vip = TRUE`,
     ];
     for (const sql of migrations) {
       try { await client.query(sql); } catch (e) { /* უკვე არსებობს */ }
