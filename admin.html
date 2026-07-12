@@ -1076,8 +1076,14 @@ async function loadListings() {
       return;
     }
     const statusTag = { active: 'tag-ok', blocked: 'tag-crit', sold: 'tag-blue', deleted: 'tag-neutral', pending: 'tag-warn', inactive: 'tag-neutral' };
-    list.innerHTML = listingsData.map(l => `
-      <div class="row" style="${l.status === 'pending' ? 'border-left:3px solid #f59e0b' : ''}">
+    list.innerHTML = listingsData.map(l => {
+      // ⚠️ ბიზნეს წესი: დასადასტურებლად საჭიროა მინ. 2 ფოტო (POST /api/listings/:id/approve
+      // ამას ბექენდზე ამოწმებს) — აქ წინასწარ ვაჩვენებთ, რომ "შეცდომა: ..." toast-ის
+      // ნაცვლად მოდერატორმა თავიდანვე დაინახოს, რატომ არ დასტურდება.
+      const imgCount = (l.images || []).length;
+      const notEnoughImgs = l.status === 'pending' && imgCount < 2;
+      return `
+      <div class="row" style="${l.status === 'pending' ? `border-left:3px solid ${notEnoughImgs ? '#ef4444' : '#f59e0b'}` : ''}">
         <div class="row-main">
           <div class="row-title">${esc(l.title)} <span class="tag ${statusTag[l.status] || 'tag-neutral'}">${l.status.toUpperCase()}</span> ${l.is_vip ? '<span class="tag tag-warn">VIP</span>' : ''}</div>
           <div class="row-meta">
@@ -1090,11 +1096,15 @@ async function loadListings() {
             <span><b>ნახვები</b> ${l.views_count}</span>
             <span><b>შეკვ.</b> ${l.orders_count}</span>
             <span><b>თარიღი</b> ${fmtDate(l.created_at)}</span>
+            <span style="${notEnoughImgs ? 'color:#ef4444;font-weight:600' : ''}"><b>ფოტო</b> ${imgCount}</span>
           </div>
+          ${notEnoughImgs ? `<div class="row-meta" style="margin-top:3px;color:#ef4444">⚠️ ნაკლები ვიდრე 2 ფოტო — დასადასტურებლად გამყიდველმა ჯერ ფოტო უნდა დაამატოს</div>` : ''}
         </div>
         <div class="row-actions">
           ${l.status === 'pending' ? `
-            <button class="btn btn-ok" onclick="approveListing('${l.id}')">✅ დადასტ.</button>
+            ${notEnoughImgs
+              ? `<button class="btn btn-ok" disabled style="opacity:.4;cursor:not-allowed" title="საჭიროა მინ. 2 ფოტო">✅ დადასტ.</button>`
+              : `<button class="btn btn-ok" onclick="approveListing('${l.id}')">✅ დადასტ.</button>`}
             <button class="btn btn-signal" onclick="rejectListing('${l.id}')">❌ უარყოფა</button>
           ` : `
             <button class="btn btn-ghost" onclick="openModerateModal('${l.id}')">სტატუსი</button>
@@ -1102,7 +1112,8 @@ async function loadListings() {
           `}
         </div>
       </div>
-    `).join('');
+    `;
+    }).join('');
     renderPagination('listings-pagination', data.pages || 1, data.page || 1, (p) => { listingsPage = p; loadListings(); });
   } catch (e) {
     list.innerHTML = '<div class="empty"><div class="empty-ico">⚠</div><div class="empty-t">ჩატვირთვის შეცდომა</div></div>';
