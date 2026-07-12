@@ -1396,6 +1396,20 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
   </div>
 </div>
 
+<!-- MODERATION QUEUE — მხოლოდ moderator/admin როლისთვის (showPageGuarded) -->
+<div id="page-moderation" class="page main">
+  <div class="prof-wrap">
+    <div class="oh-head">
+      <div class="oh-back" onclick="pg('profile');act(document.querySelectorAll('.nl')[4])">←</div>
+      <div class="oh-h-title">🛡️ მოდერაციის რიგი</div>
+    </div>
+    <div id="mod-queue-count" style="font-size:12px;color:var(--muted);margin:-4px 0 12px"></div>
+    <div id="mod-queue-list">
+      <div class="empty"><div class="empty-ico">🛡️</div><div class="empty-t">იტვირთება...</div></div>
+    </div>
+  </div>
+</div>
+
 <!-- CREATE LISTING — Full-page, Multi-step (ძველი modal-ის ნაცვლად) -->
 <div id="page-create-listing" class="page main">
   <div class="cl-wrap">
@@ -1998,7 +2012,7 @@ async function api(path, opts = {}) {
 // AUTH GUARD — გვერდების დაცვა
 // ══════════════════════════════════════════════════════════
 function showPageGuarded(id) {
-  const guarded = ['profile', 'edit', 'wallet', 'chat', 'order-history', 'create-listing'];
+  const guarded = ['profile', 'edit', 'wallet', 'chat', 'order-history', 'create-listing', 'moderation'];
   if (!guarded.includes(id)) return true;
   // სანამ საწყისი auth-შემოწმება არ დასრულებულა, არ ვიცით ნამდვილად
   // სტუმარია თუ არა — ამ დროს login-მოდალს არ ვხსნით (Flash ეფექტის თავიდან აცილება).
@@ -2007,6 +2021,12 @@ function showPageGuarded(id) {
   if (!currentUser) {
     openM('loginModal');
     showToast('პირველ შედი სისტემაში', 'err');
+    return false;
+  }
+  // მოდერაციის რიგი — მხოლოდ moderator/admin როლს ხედავს, სხვას პროფილზე ვაბრუნებთ
+  if (id === 'moderation' && !['moderator','admin'].includes(currentUser.role)) {
+    showToast('წვდომა შეზღუდულია', 'err');
+    pg('profile');
     return false;
   }
   return true;
@@ -2135,6 +2155,7 @@ function pg(id) {
   if (id === 'chat')    { loadChatRooms(); showChatSidebar(); }
   if (id === 'edit')    { loadMyProfile(); }
   if (id === 'order-history') { loadOrderHistory(); }
+  if (id === 'moderation') { loadModerationQueue(); }
 }
 function act(el) {
   document.querySelectorAll('.nl').forEach(n => n.classList.remove('on'));
@@ -2516,7 +2537,11 @@ async function loadMyProfile() {
     let b = '';
     if (currentUser.is_verified_seller) b += '<span class="pb pb-v">✓ ვერიფ.</span>';
     if (currentUser.is_vip)              b += '<span class="pb pb-t">⭐ VIP</span>';
-    if (currentUser.role === 'admin')    b += `<span class="pb pb-t" style="cursor:pointer" onclick="window.open('/admin.html','_blank')">⚙️ Admin Panel →</span>`;
+    if (currentUser.role === 'moderator') b += `<span class="pb pb-t" style="cursor:pointer" onclick="pg('moderation')">🛡️ მოდერაციის რიგი →</span>`;
+    if (currentUser.role === 'admin') {
+      b += `<span class="pb pb-t" style="cursor:pointer" onclick="pg('moderation')">🛡️ მოდერაცია →</span>`;
+      b += `<span class="pb pb-t" style="cursor:pointer" onclick="window.open('/admin.html','_blank')">⚙️ Admin Panel →</span>`;
+    }
     badges.innerHTML = b;
   }
 
@@ -4589,6 +4614,83 @@ function ohFilter(btn, status) {
   OH_STATUS = status;
   OH_PAGE   = 1;
   loadOrderHistory();
+}
+
+// ══════════════════════════════════════════════════════════
+// MODERATION QUEUE (moderator/admin) — GET /api/listings/moderation/pending
+// + POST /:id/approve, POST /:id/reject. ეს endpoint-ები ადრეც არსებობდა
+// ბექენდზე, უბრალოდ ფრონტში მისასვლელი UI არ იყო — moderator-ს role
+// ჰქონდა, მაგრამ არსად ჰქონდა სად წასულიყო.
+// ══════════════════════════════════════════════════════════
+async function loadModerationQueue() {
+  const list    = document.getElementById('mod-queue-list');
+  const countEl = document.getElementById('mod-queue-count');
+  if (!list) return;
+  list.innerHTML = '<div class="empty"><div class="empty-ico">🛡️</div><div class="empty-t">იტვირთება...</div></div>';
+  try {
+    const rows = await api('/api/listings/moderation/pending');
+    if (countEl) countEl.textContent = rows.length ? `${rows.length} განცხადება ელოდება განხილვას` : '';
+    renderModerationQueue(rows);
+  } catch (e) {
+    list.innerHTML = '<div class="empty"><div class="empty-ico">⚠️</div><div class="empty-t">ჩატვირთვის შეცდომა</div></div>';
+  }
+}
+
+function renderModerationQueue(rows) {
+  const list = document.getElementById('mod-queue-list');
+  if (!list) return;
+  if (!rows.length) {
+    list.innerHTML = '<div class="empty"><div class="empty-ico">✅</div><div class="empty-t">რიგი ცარიელია — ყველაფერი განხილულია</div></div>';
+    return;
+  }
+  list.innerHTML = rows.map(l => {
+    const img      = (l.images && l.images[0]) ? imgUrl(l.images[0]) : '';
+    const catLabel = CAT_LABELS[l.category] || l.category || '';
+    const seller   = esc(l.seller_display_name || l.seller_username || '—');
+    const joined   = l.seller_joined_at ? fmtDate(l.seller_joined_at) : '—';
+    const desc     = esc((l.description || '').slice(0, 200)) + ((l.description || '').length > 200 ? '…' : '');
+    return `
+      <div class="mod-card" style="display:flex;gap:12px;padding:14px;border:1px solid var(--border);border-radius:12px;margin-bottom:10px;background:var(--bg2)">
+        <div style="width:80px;height:80px;flex-shrink:0;border-radius:8px;overflow:hidden;background:var(--bg3);display:flex;align-items:center;justify-content:center">
+          ${img ? `<img src="${img}" style="width:100%;height:100%;object-fit:cover">` : '<span style="font-size:26px">📦</span>'}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:14px;margin-bottom:2px">${esc(l.title || '')}</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:4px">${catLabel} · ${esc(l.game || '')} · ₾${Number(l.price_gel).toFixed(2)}${l.is_vip ? ' · ⭐VIP' : ''}</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px">გამყიდველი: <b>${seller}</b> · შემოუერთდა: ${joined}</div>
+          ${desc ? `<div style="font-size:12px;color:var(--text);margin-bottom:8px;white-space:pre-wrap">${desc}</div>` : ''}
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+            <button class="btn btn-a btn-sm" onclick="modApprove('${l.id}')">✅ დადასტ.</button>
+            <input type="text" id="mod-reason-${l.id}" placeholder="უარყოფის მიზეზი..." style="flex:1;min-width:140px;font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--text)">
+            <button class="btn btn-g btn-sm" onclick="modReject('${l.id}')">❌ უარყოფა</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function modApprove(id) {
+  try {
+    await api('/api/listings/' + id + '/approve', { method: 'POST' });
+    showToast('✅ განცხადება დადასტურდა', 'ok');
+    loadModerationQueue();
+  } catch (e) {
+    showToast(e?.error || 'შეცდომა', 'err');
+  }
+}
+
+async function modReject(id) {
+  const input  = document.getElementById('mod-reason-' + id);
+  const reason = input?.value?.trim();
+  if (!reason) { showToast('უარყოფის მიზეზი სავალდებულოა', 'err'); input?.focus(); return; }
+  try {
+    await api('/api/listings/' + id + '/reject', { method: 'POST', body: JSON.stringify({ reason }) });
+    showToast('❌ განცხადება უარყოფილია', 'ok');
+    loadModerationQueue();
+  } catch (e) {
+    showToast(e?.error || 'შეცდომა', 'err');
+  }
 }
 
 async function loadOrderHistory() {
