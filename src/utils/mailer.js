@@ -228,6 +228,41 @@ async function sendDisputeResolvedEmail(recipient, dispute, order, listing, outc
 }
 
 // ══════════════════════════════════════════════════════════════
+// LISTING MODERATION EMAILS — მოხსნა / უარყოფა (+ ჩატის მიზეზი)
+// ══════════════════════════════════════════════════════════════
+async function sendListingRemovedEmail(seller, listing, reason) {
+  if (!seller.notif_email || !seller.email) return;
+  return sendMail({
+    to: seller.email,
+    subject: `🚫 განცხადება მოხსნილია — ${listing.title}`,
+    html: wrap(
+      'თქვენი განცხადება მოხსნილია',
+      `თქვენი განცხადება <b>${listing.title}</b> ადმინისტრაციის მიერ საიტიდან მოიხსნა.<br><br>
+       მიზეზი: <b>${reason}</b><br><br>
+       იგივე შეტყობინება ასევე გაქვთ მიღებული საიტის ჩატში. კითხვების შემთხვევაში
+       დაგვიკავშირდით მხარდაჭერის ჩატის საშუალებით.`,
+      'პროფილის ნახვა', `${FRONTEND}/?page=profile`
+    ),
+  });
+}
+
+async function sendListingRejectedEmail(seller, listing, reason) {
+  if (!seller.notif_email || !seller.email) return;
+  return sendMail({
+    to: seller.email,
+    subject: `❌ განცხადება უარყოფილია — ${listing.title}`,
+    html: wrap(
+      'თქვენი განცხადება უარყოფილია მოდერაციაში',
+      `თქვენი განცხადება <b>${listing.title}</b> მოდერაციამ ვერ დაადასტურა და ის აქტიური არ გახდება.<br><br>
+       მიზეზი: <b>${reason}</b><br><br>
+       შეგიძლიათ განცხადება შეასწოროთ და ხელახლა გაგზავნოთ მოდერაციაზე პროფილიდან.
+       იგივე შეტყობინება ასევე გაქვთ მიღებული საიტის ჩატში.`,
+      'პროფილის ნახვა', `${FRONTEND}/?page=profile`
+    ),
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
 // WALLET EMAILS — ადმინს შეტყობინება
 // ══════════════════════════════════════════════════════════════
 async function sendDepositRequestEmail(adminEmail, user, amount, ref) {
@@ -269,6 +304,8 @@ module.exports = {
   send24hReminderEmail,
   sendDisputeOpenedEmail,
   sendDisputeResolvedEmail,
+  sendListingRemovedEmail,
+  sendListingRejectedEmail,
   sendDepositRequestEmail,
   sendWithdrawRequestEmail,
 };
