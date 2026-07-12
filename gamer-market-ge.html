@@ -1291,6 +1291,12 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
         <button class="btn btn-g btn-sm" onclick="pg('edit');act(document.querySelectorAll('.nl')[5])">✏️ რედ.</button>
         <button class="btn btn-g btn-sm" onclick="doLogout()">🚪 გასვლა</button>
       </div>
+
+      <!-- VIP სტატუსის მუდმივი ბლოკი — ადრე ეს არსად ჩანდა პროფილში,
+           მომხმარებელს მოდალის გახსნის გარეშე არ შეეძლო გაეგო, VIP
+           აქვს თუ არა და რამდენი დღე რჩება ვადის ამოწურვამდე. -->
+      <div id="prof-vip-card" style="margin:12px 0;border-radius:12px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"></div>
+
       <div class="prof-tabs">
         <div class="ptab on" onclick="ptab(this,'pl');loadMyListings('active')">ჩემი განცხადებები</div>
         <div class="ptab" onclick="ptab(this,'pl-sold');loadMyListings('sold')">გაყიდული</div>
@@ -1931,6 +1937,25 @@ function imgUrl(u) {
 // ფასის საჩვენებლადაა.
 const VIP_PACKAGES = { 7: 5, 30: 15, 90: 35 };
 
+// ── თარიღის უსაფრთხო ფორმატერი ─────────────────────────────
+// ⚠️ ბაგ-ფიქსი: new Date(x).toLocaleDateString('ka-GE') ბრაუზერების
+// ნაწილში ka-GE ლოკალის სრულ მხარდაჭერას ვერ პოულობს და ბრუნდება
+// default რიცხვითი ფორმატით (მაგ. "10/10/2026") — რომლის წაკითხვისას
+// მომხმარებელს ჰგონია, რომ თვე/დღე შებრუნებულია და თარიღი არასწორია.
+// ეს ფუნქცია ყოველთვის ცალსახა, სიტყვიერ ქართულ ფორმატს იძლევა.
+const KA_MONTHS = ['იანვარი','თებერვალი','მარტი','აპრილი','მაისი','ივნისი','ივლისი','აგვისტო','სექტემბერი','ოქტომბერი','ნოემბერი','დეკემბერი'];
+function fmtDate(d) {
+  const date = (d instanceof Date) ? d : new Date(d);
+  if (isNaN(date.getTime())) return '';
+  return `${date.getDate()} ${KA_MONTHS[date.getMonth()]}, ${date.getFullYear()}`;
+}
+// დარჩენილი დღეების რაოდ. (მომრგვალებული ზემოთ, 0-ზე დაბლა არ ჩამოდის)
+function daysUntil(d) {
+  const date = (d instanceof Date) ? d : new Date(d);
+  if (isNaN(date.getTime())) return 0;
+  return Math.max(0, Math.ceil((date.getTime() - Date.now()) / 86400000));
+}
+
 let currentUser  = null;
 let CUR          = 'GEL';
 let FILT         = 'ყველა';
@@ -2490,8 +2515,34 @@ async function loadMyProfile() {
   if (badges) {
     let b = '';
     if (currentUser.is_verified_seller) b += '<span class="pb pb-v">✓ ვერიფ.</span>';
+    if (currentUser.is_vip)              b += '<span class="pb pb-t">⭐ VIP</span>';
     if (currentUser.role === 'admin')    b += `<span class="pb pb-t" style="cursor:pointer" onclick="window.open('/admin.html','_blank')">⚙️ Admin Panel →</span>`;
     badges.innerHTML = b;
+  }
+
+  // VIP სტატუსის ბლოკი — ცალსახად აჩვენებს, აქვს თუ არა VIP და
+  // რამდენი დღე რჩება, ისე რომ მოდალის გახსნა აღარ დასჭირდეს.
+  const vipCard = document.getElementById('prof-vip-card');
+  if (vipCard) {
+    if (currentUser.is_vip && currentUser.vip_expires_at) {
+      const left  = daysUntil(currentUser.vip_expires_at);
+      const until = fmtDate(currentUser.vip_expires_at);
+      vipCard.style.background = 'var(--gd)';
+      vipCard.style.border = '1px solid var(--gd2)';
+      vipCard.innerHTML = `
+        <div style="color:var(--gold);font-weight:600">⭐ VIP აქტიურია</div>
+        <div style="font-size:13px;color:var(--gold)">დარჩენილია <b>${left} დღე</b> · ვადა: ${until}</div>
+        <button class="btn btn-a btn-sm" onclick="openVipPicker()">გახანგრძლ.</button>
+      `;
+    } else {
+      vipCard.style.background = 'var(--bg3)';
+      vipCard.style.border = '1px solid var(--border)';
+      vipCard.innerHTML = `
+        <div style="color:var(--muted);font-weight:600">VIP არ გაქვს</div>
+        <div style="font-size:13px;color:var(--muted)">გახდი VIP — შენი განცხადებები ავტ. კატეგორიის სათავეში გამოჩნდება</div>
+        <button class="btn btn-a btn-sm" onclick="openVipPicker()">⭐ გახდი VIP</button>
+      `;
+    }
   }
 
   syncPushToggleState();
@@ -2570,8 +2621,9 @@ function openVipPicker() {
   const statusEl = document.getElementById('vip-modal-status');
   if (statusEl) {
     if (currentUser.is_vip && currentUser.vip_expires_at) {
-      const until = new Date(currentUser.vip_expires_at).toLocaleDateString('ka-GE');
-      statusEl.innerHTML = `✅ VIP აქტიურია — ვადა: <b>${until}</b> (ახალი პაკეტი ამ ვადას დაემატება)`;
+      const until = fmtDate(currentUser.vip_expires_at);
+      const left  = daysUntil(currentUser.vip_expires_at);
+      statusEl.innerHTML = `✅ VIP აქტიურია — <b>${left} დღე</b> დარჩა (ვადა: ${until}) · ახალი პაკეტი ამ ვადას დაემატება`;
     } else {
       statusEl.textContent = 'გახდი VIP — შენი ყველა განცხადება ავტ. გამოჩნდება კატეგორიის სათავეში';
     }
@@ -2790,7 +2842,7 @@ async function loadTransactions() {
     const html  = rows.slice(0, 20).map(t => {
       const c = cls[t.type] || 'hold';
       const sign = Number(t.amount_gel) > 0 ? '+' : '';
-      const d = new Date(t.created_at).toLocaleDateString('ka-GE');
+      const d = fmtDate(t.created_at);
       return `<div class="tx-row">
         <div class="tx-ico ${c}">${icons[t.type] || '💳'}</div>
         <div class="tx-info"><div class="tx-t">${t.description || t.type}</div><div class="tx-d">${d}</div>
@@ -2999,7 +3051,7 @@ function ldShowImage(url, thumbEl) {
 
 function fmtListingDate(d) {
   if (!d) return '—';
-  return new Date(d).toLocaleDateString('ka-GE', { year: 'numeric', month: 'short', day: 'numeric' });
+  return fmtDate(d);
 }
 
 function esc(str) {
@@ -4251,11 +4303,12 @@ function renderVipStatusBox() {
   if (!box) return;
 
   if (currentUser?.is_vip) {
-    const until = currentUser.vip_expires_at ? new Date(currentUser.vip_expires_at).toLocaleDateString('ka-GE') : '';
+    const until = currentUser.vip_expires_at ? fmtDate(currentUser.vip_expires_at) : '';
+    const left  = currentUser.vip_expires_at ? daysUntil(currentUser.vip_expires_at) : 0;
     box.style.background = 'var(--gd)';
     box.style.border = '1px solid var(--gd2)';
     box.style.color = 'var(--gold)';
-    box.innerHTML = `⭐ <b>თქვენი ანგარიში VIP-ია</b> — ეს განცხადება ავტ. გამოჩნდება კატეგორიის სათავეში, დამატებითი გადახდის გარეშე${until ? ` (ვადა: ${until})` : ''}`;
+    box.innerHTML = `⭐ <b>თქვენი ანგარიში VIP-ია</b> — ეს განცხადება ავტ. გამოჩნდება კატეგორიის სათავეში, დამატებითი გადახდის გარეშე${until ? ` (${left} დღე დარჩა, ვადა: ${until})` : ''}`;
   } else {
     box.style.background = 'var(--bg3)';
     box.style.border = '1px solid var(--border)';
@@ -4417,7 +4470,7 @@ async function loadMyReviews() {
                  style="width:26px;height:26px;border-radius:50%;object-fit:cover">
             <span style="font-size:12px;font-weight:600">${escHtml(r.reviewer_username || 'მომხმარებელი')}</span>
           </div>
-          <span style="font-size:11px;color:var(--muted)">${new Date(r.created_at).toLocaleDateString('ka-GE')}</span>
+          <span style="font-size:11px;color:var(--muted)">${fmtDate(r.created_at)}</span>
         </div>
         <div style="color:var(--gold);font-size:14px;margin-bottom:4px">${'⭐'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</div>
         ${r.comment ? `<div style="font-size:12px;color:var(--muted)">${escHtml(r.comment)}</div>` : ''}
@@ -4462,7 +4515,7 @@ async function loadMyOrders() {
           <span>${isBuyer ? '🛒 მყიდველი' : '💰 გამყიდველი'}</span>
           <span>👤 ${isBuyer ? o.seller_username : o.buyer_username || '?'}</span>
           <span style="font-family:var(--mono);color:var(--accent);font-weight:700">₾${Number(o.amount_gel).toFixed(2)}</span>
-          <span>${new Date(o.created_at).toLocaleDateString('ka-GE')}</span>
+          <span>${fmtDate(o.created_at)}</span>
         </div>
         <div style="display:flex;gap:8px">
           ${canDeliver ? `<button class="btn btn-a btn-sm" onclick="markDelivered('${o.id}')">📦 გადავეცი</button>` : ''}
@@ -4668,7 +4721,7 @@ function renderOhCard(o) {
       <span>${role}</span>
       <span>👤 ${partner || '?'}</span>
       <span class="oh-amt">₾${Number(o.amount_gel).toFixed(2)}</span>
-      <span>${new Date(o.created_at).toLocaleDateString('ka-GE')}</span>
+      <span>${fmtDate(o.created_at)}</span>
       <span class="oh-orderid">#${o.id.slice(0,8)}</span>
     </div>
     ${countdownHtml}
