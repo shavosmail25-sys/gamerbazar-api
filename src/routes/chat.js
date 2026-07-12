@@ -12,13 +12,17 @@ const router  = express.Router();
 // ══════════════════════════════════════════════════════════════
 router.get('/rooms', requireAuth, async (req, res) => {
   try {
+    // ⚠️ order-ზე JOIN → LEFT JOIN გახდა: ადმინის სისტ. შეტყობინებების
+    // ოთახებს (იხ. sendAdminNotice ქვემოთ) order_id არ გააჩნია — INNER
+    // JOIN-ით ეს ოთახები საერთოდ არ გამოჩნდებოდა სიაში.
     const { rows } = await db.query(`
       SELECT
         r.*,
+        CASE WHEN r.order_id IS NULL THEN 'admin_notice' ELSE 'order' END AS room_type,
         o.status        AS order_status,
         o.amount_gel,
         o.escrow_status,
-        l.title         AS listing_title,
+        COALESCE(l.title, 'ადმინისტრაციის შეტყობინებები') AS listing_title,
         l.game,
         ua.username     AS participant_a_name,
         ua.avatar_url   AS participant_a_avatar,
@@ -31,8 +35,8 @@ router.get('/rooms', requireAuth, async (req, res) => {
         (SELECT COUNT(*) FROM messages m
          WHERE m.room_id=r.id AND m.sender_id!=$1 AND m.is_read=FALSE) AS unread_count
       FROM chat_rooms r
-      JOIN orders o   ON o.id=r.order_id
-      JOIN listings l ON l.id=o.listing_id
+      LEFT JOIN orders o   ON o.id=r.order_id
+      LEFT JOIN listings l ON l.id=o.listing_id
       JOIN users ua   ON ua.id=r.participant_a
       JOIN users ub   ON ub.id=r.participant_b
       WHERE r.participant_a=$1 OR r.participant_b=$1
@@ -259,6 +263,63 @@ function broadcastEventToRoom(roomId, event) {
   conns.forEach(c => { if (c.ws.readyState === 1) c.ws.send(payload); });
 }
 
+// ══════════════════════════════════════════════════════════════
+// ადმინის სისტ. შეტყობინებები (listing removal/rejection და მისთ.) —
+// გამოიყენება admin.js და listings.js-დან, როცა ადმინს/მოდერატორს
+// სჭირდება გამყიდველთან შეტყობინების გაგზავნა ჩატში, თუმცა არ
+// არსებობს order-ზე დაფუძნებული chat_room (chat_rooms.order_id
+// NULL-ადია სქემაში სპეციალურად ამ შემთხვევისთვის).
+//
+// თითო გამყიდველთან ერთი მუდმივი "ადმინისტრაციის" ოთახი იქმნება
+// (participant_a=გამყიდველი, participant_b=SUPER_ADMIN_EMAIL-ის
+// მომხმარებელი) — ყველა შემდგომი admin-notice იმავე ოთახში ჩნდება.
+// ══════════════════════════════════════════════════════════════
+async function getOrCreateAdminRoom(sellerId) {
+  const { rows: existing } = await db.query(
+    `SELECT id, participant_a, participant_b FROM chat_rooms
+     WHERE order_id IS NULL AND (participant_a=$1 OR participant_b=$1)
+     LIMIT 1`,
+    [sellerId]
+  );
+  if (existing.length) return existing[0];
+
+  const superAdminEmail = (process.env.SUPER_ADMIN_EMAIL || '').toLowerCase().trim();
+  if (!superAdminEmail) throw new Error('SUPER_ADMIN_EMAIL_not_configured');
+
+  const { rows: adminRows } = await db.query(
+    'SELECT id FROM users WHERE LOWER(email)=$1', [superAdminEmail]
+  );
+  if (!adminRows.length) throw new Error('super_admin_user_not_found');
+  const adminId = adminRows[0].id;
+
+  const { rows: created } = await db.query(
+    `INSERT INTO chat_rooms(order_id, participant_a, participant_b, status)
+     VALUES (NULL, $1, $2, 'open')
+     RETURNING id, participant_a, participant_b`,
+    [sellerId, adminId]
+  );
+  return created[0];
+}
+
+// გამყიდველისთვის ადმინისტრაციის სისტ. შეტყობინების გაგზავნა ჩატში —
+// ავტ. პოულობს/ქმნის ოთახს და აგზავნის 'system' ტიპის მესიჯს (რეალურ
+// დროშიც, თუ გამყიდველს ჩატი აქვს ღია — broadcastMessageToRoom-ის გავლით)
+async function sendAdminNotice(sellerId, content) {
+  const room = await getOrCreateAdminRoom(sellerId);
+  const senderId = room.participant_a === sellerId ? room.participant_b : room.participant_a;
+
+  const { rows: msgRows } = await db.query(`
+    INSERT INTO messages(room_id, sender_id, content, content_type)
+    VALUES ($1, $2, $3, 'system')
+    RETURNING *
+  `, [room.id, senderId, content]);
+
+  broadcastMessageToRoom(room.id, msgRows[0]);
+  return msgRows[0];
+}
+
 module.exports.setupWebSocket         = setupWebSocket;
 module.exports.broadcastMessageToRoom = broadcastMessageToRoom;
 module.exports.broadcastEventToRoom   = broadcastEventToRoom;
+module.exports.getOrCreateAdminRoom   = getOrCreateAdminRoom;
+module.exports.sendAdminNotice        = sendAdminNotice;

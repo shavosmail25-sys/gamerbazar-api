@@ -374,17 +374,67 @@ router.put('/listings/:id/moderate', async (req, res) => {
 });
 
 // ══════════════════════════════════════════════════════════════
-// DELETE /api/admin/listings/:id  — soft delete
+// DELETE /api/admin/listings/:id  — მოხსნა (მიზეზით) + შეტყობინებები
+//
+// ⚠️ ცვლილება: ადმინის მიერ განცხადების მოხსნა ახლა მოითხოვს
+// სავალდებულო "reason"-ს request body-ში (frontend-ზე მოდალით
+// შეყვანილს — იხ. admin.html openRemoveModal). წაშლის შემდეგ
+// გამყიდველს ეგზავნება:
+//   A) Email — იმავე მიზეზის ტექსტით (mailer.sendListingRemovedEmail)
+//   B) ჩატის სისტ. შეტყობინება — იმავე ზუსტი მიზეზით (chat.sendAdminNotice)
+//   C) Push შეტყობინება (არსებული პატერნის მიხედვით)
 // ══════════════════════════════════════════════════════════════
 router.delete('/listings/:id', async (req, res) => {
   try {
+    const { reason = '' } = req.body;
+    if (!reason.trim()) {
+      return res.status(400).json({
+        error: 'reason_required',
+        message: 'განცხადების მოხსნის მიზეზი სავალდებულოა',
+      });
+    }
+
     const { rows } = await db.query(
-      "UPDATE listings SET status='deleted', updated_at=NOW() WHERE id=$1 RETURNING id",
-      [req.params.id]
+      `UPDATE listings SET
+         status='deleted', rejection_reason=$2,
+         moderated_by=$3, moderated_at=NOW(), updated_at=NOW()
+       WHERE id=$1 RETURNING *`,
+      [req.params.id, reason.trim(), req.user.id]
     );
     if (!rows.length) return res.status(404).json({ error: 'not_found' });
+    const listing = rows[0];
+
     res.json({ ok: true });
+
+    // ── შეტყობ. — Email + ჩატი + push, ყველა იმავე ზუსტი მიზეზით ──
+    (async () => {
+      try {
+        const { rows: sellerRows } = await db.query(
+          'SELECT id, email, username, display_name, notif_email FROM users WHERE id=$1',
+          [listing.seller_id]
+        );
+        const seller = sellerRows[0];
+        if (!seller) return;
+
+        if (seller.notif_email) {
+          await mailer.sendListingRemovedEmail(seller, listing, reason.trim());
+        }
+
+        await chat.sendAdminNotice(
+          seller.id,
+          `🚫 თქვენი განცხადება „${listing.title}“ მოხსნილია საიტიდან ადმინისტრაციის მიერ.\nმიზეზი: ${reason.trim()}`
+        );
+
+        await push.sendToUser(seller.id, {
+          title: '🚫 განცხადება მოხსნილია',
+          body: reason.trim(),
+          url: '/?page=profile',
+          tag: `listing-removed-${listing.id}`,
+        });
+      } catch (e) { console.error('admin listing remove notify error:', e.message); }
+    })();
   } catch (err) {
+    console.error('admin listing remove error:', err.message);
     res.status(500).json({ error: 'server_error' });
   }
 });

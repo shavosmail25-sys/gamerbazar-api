@@ -11,6 +11,16 @@ const { checkVipStatus }   = require('../middleware/checkVipStatus');
 
 const router = express.Router();
 
+// ── Premium Gaming Fields — Whitelist ვალიდაცია (feature 4) ──────────
+// frontend dropdown-ების 1:1 ასლი — client-ის მიერ გამოგზავნილი
+// თვითნებური მნიშვნელობა არასდროს ჩაიწერება ბაზაში.
+const VALID_PLATFORMS = ['pc', 'mobile', 'playstation', 'xbox', 'nintendo'];
+const VALID_REGIONS   = ['global', 'europe', 'north_america', 'asia'];
+const VALID_SECURITY  = [
+  'full_access', 'mail_included', 'facebook_linked', 'google_linked',
+  'apple_linked', 'phone_linked', 'no_link',
+];
+
 // ვადაგასული VIP სტატუსის საათური cron-ი — ერთხელ, მოდულის პირველ
 // ჩატვირთვაზე (იგივე პატერნი, რაც orders.js-ში ledger.startHoldsScheduler()-ს აქვს)
 require('../cron/vipExpiry').startVipExpiryScheduler();
@@ -74,6 +84,7 @@ router.get('/', optionalAuth, async (req, res) => {
   try {
     const {
       category, game, listing_type, vip,
+      platform, region,
       min_price, max_price,
       search, sort = 'newest',
       page = 1, limit = 20,
@@ -99,10 +110,26 @@ router.get('/', optionalAuth, async (req, res) => {
     if (vip === 'true') {
       conditions.push(`l.is_vip = TRUE AND (l.vip_expires_at IS NULL OR l.vip_expires_at > NOW())`);
     }
+    // ── Advanced Search: multi-parameter — პლატფორმა + რეგიონი/სერვერი ──
+    if (platform && VALID_PLATFORMS.includes(platform)) {
+      conditions.push(`l.platform = $${p++}`); params.push(platform);
+    }
+    if (region && VALID_REGIONS.includes(region)) {
+      conditions.push(`l.region = $${p++}`); params.push(region);
+    }
     if (min_price)    { conditions.push(`l.price_gel >= $${p++}`);      params.push(min_price); }
     if (max_price)    { conditions.push(`l.price_gel <= $${p++}`);      params.push(max_price); }
     if (search)       {
-      conditions.push(`(l.title ILIKE $${p} OR l.description ILIKE $${p})`);
+      // ── Advanced Search: სათაური + აღწერა + კატეგორია + თამაში ერთდროულად ──
+      // ერთი საძებნო ველი მოიცავს ყველა ამ სვეტს, რომ იუზერმა
+      // "pubg" თუ "boosting" თუ ნაწილობრივი აღწერის სიტყვა მოძებნოს
+      // ერთი და იმავე search ბარიდან.
+      conditions.push(`(
+        l.title       ILIKE $${p} OR
+        l.description ILIKE $${p} OR
+        l.category    ILIKE $${p} OR
+        l.game        ILIKE $${p}
+      )`);
       params.push(`%${search}%`); p++;
     }
 
@@ -204,7 +231,10 @@ router.get('/:id', optionalAuth, async (req, res) => {
 // ══════════════════════════════════════════════════════════════
 router.post('/', requireAuth, checkVipStatus, async (req, res) => {
   try {
-    const { category, game, listing_type, title, description, tags, price_gel } = req.body;
+    const {
+      category, game, listing_type, title, description, tags, price_gel,
+      platform, region, account_security,
+    } = req.body;
 
     if (!category || !game || !listing_type || !title || !price_gel) {
       return res.status(400).json({ error: 'required_fields' });
@@ -216,6 +246,19 @@ router.post('/', requireAuth, checkVipStatus, async (req, res) => {
     const VALID_CATEGORIES = ['mobile', 'pc', 'social', 'boosting', 'currency'];
     if (!VALID_CATEGORIES.includes(category)) {
       return res.status(400).json({ error: 'invalid_category' });
+    }
+
+    // ── Premium Gaming Fields — სავალდებულო: პლატფორმა + რეგიონი/სერვერი ──
+    // account_security სურვილისამებრ (ბუსტინგ/ვალუტის განცხადებას "მიბმა"
+    // ხშირად საერთოდ არ სჭირდება), მაგრამ თუ მოვიდა, whitelist-ს უნდა ემთხვეოდეს.
+    if (!platform || !VALID_PLATFORMS.includes(platform)) {
+      return res.status(400).json({ error: 'invalid_platform', allowed: VALID_PLATFORMS });
+    }
+    if (!region || !VALID_REGIONS.includes(region)) {
+      return res.status(400).json({ error: 'invalid_region', allowed: VALID_REGIONS });
+    }
+    if (account_security && !VALID_SECURITY.includes(account_security)) {
+      return res.status(400).json({ error: 'invalid_account_security', allowed: VALID_SECURITY });
     }
 
     // listing_type ვალიდაცია — service → boosting alias
@@ -231,11 +274,13 @@ router.post('/', requireAuth, checkVipStatus, async (req, res) => {
 
     const { rows } = await db.query(`
       INSERT INTO listings
-        (seller_id, category, game, listing_type, title, description, tags, price_gel, status, is_vip, vip_expires_at)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pending',$9,$10)
+        (seller_id, category, game, listing_type, title, description, tags, price_gel, status, is_vip, vip_expires_at,
+         platform, region, account_security)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pending',$9,$10,$11,$12,$13)
       RETURNING *
     `, [req.user.id, category, game, normalizedType, title,
-        description || '', tags || [], Number(price_gel), isVip, vipExpiresAt]);
+        description || '', tags || [], Number(price_gel), isVip, vipExpiresAt,
+        platform, region, account_security || null]);
 
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -258,8 +303,18 @@ router.put('/:id', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'forbidden' });
     }
 
-    const { title, description, tags, price_gel } = req.body;
+    const { title, description, tags, price_gel, platform, region, account_security } = req.body;
     let { status } = req.body;
+
+    if (platform && !VALID_PLATFORMS.includes(platform)) {
+      return res.status(400).json({ error: 'invalid_platform', allowed: VALID_PLATFORMS });
+    }
+    if (region && !VALID_REGIONS.includes(region)) {
+      return res.status(400).json({ error: 'invalid_region', allowed: VALID_REGIONS });
+    }
+    if (account_security && !VALID_SECURITY.includes(account_security)) {
+      return res.status(400).json({ error: 'invalid_account_security', allowed: VALID_SECURITY });
+    }
 
     // ⚠️ უსაფრთხოების გასწორება: ჩვეულებრივ გამყიდველს (არა admin/moderator)
     // აქამდე შეეძლო ამ endpoint-ით ნებისმიერი status გაეგზავნა — მათ შორის
@@ -272,7 +327,7 @@ router.put('/:id', requireAuth, async (req, res) => {
       if (!allowedResubmit) status = undefined;
     }
 
-    const params = [title, description, tags, price_gel, status, req.params.id];
+    const params = [title, description, tags, price_gel, status, platform, region, account_security, req.params.id];
     const { rows } = await db.query(`
       UPDATE listings SET
         title       = COALESCE($1, title),
@@ -280,9 +335,12 @@ router.put('/:id', requireAuth, async (req, res) => {
         tags        = COALESCE($3, tags),
         price_gel   = COALESCE($4, price_gel),
         status      = COALESCE($5, status),
+        platform    = COALESCE($6, platform),
+        region      = COALESCE($7, region),
+        account_security = COALESCE($8, account_security),
         rejection_reason = CASE WHEN $5 = 'pending' THEN NULL ELSE rejection_reason END,
         updated_at  = NOW()
-      WHERE id=$6
+      WHERE id=$9
       RETURNING *
     `, params);
 
@@ -361,6 +419,20 @@ router.post('/:id/images', requireAuth, imgUpload.array('images', 5), async (req
     if (rows[0].seller_id !== req.user.id && req.user.role !== 'admin')
       return res.status(403).json({ error: 'forbidden' });
 
+    // ── სავალდებულო მინიმუმ 2 ფოტო ──────────────────────────────
+    // პირველი ატვირთვისას (როცა განცხადებას ჯერ საერთოდ არ აქვს
+    // სურათი) სულ მცირე 2 ფაილი უნდა მოვიდეს ერთდროულად — ეს
+    // ბექენდის მხარეს ამოწმებს frontend-ის ვალიდაციას (იხ. create
+    // listing ფორმა), რომ API-ის პირდაპირი გამოძახებითაც ვერ
+    // გვერდის ავლით შემოვა 0-1 სურათიანი განცხადება.
+    const existingCount = (rows[0].images || []).length;
+    if (existingCount === 0 && req.files.length < 2) {
+      return res.status(400).json({
+        error: 'minimum_2_photos_required',
+        message: 'განცხადების დასაპოსტად საჭიროა მინიმუმ 2 ფოტოს ატვირთვა',
+      });
+    }
+
     // Cloudinary-ში ატვირთვა — თითოეული ფაილი ცალკე, პარალელურად
     const uploaded = await Promise.all(req.files.map((f, i) => {
       const publicId = `listing_${req.params.id}_${Date.now()}_${i}_${Math.random().toString(36).slice(2,7)}`;
@@ -399,13 +471,23 @@ router.delete('/:id/images', requireAuth, async (req, res) => {
     if (!url) return res.status(400).json({ error: 'url required' });
 
     const { rows } = await db.query(
-      'SELECT seller_id, images FROM listings WHERE id=$1', [req.params.id]
+      'SELECT seller_id, images, status FROM listings WHERE id=$1', [req.params.id]
     );
     if (!rows.length) return res.status(404).json({ error: 'not_found' });
     if (rows[0].seller_id !== req.user.id && req.user.role !== 'admin')
       return res.status(403).json({ error: 'forbidden' });
 
     const updated = (rows[0].images || []).filter(u => u !== url);
+
+    // ── მინიმუმ 2 ფოტოს წესი აქაც მოქმედებს — აქტიურ/მოლოდინში
+    // მყოფ განცხადებას არ დავანებოთ 2-ზე ნაკლებ სურათამდე დაცლა ──
+    if (['active', 'pending'].includes(rows[0].status) && updated.length < 2) {
+      return res.status(400).json({
+        error: 'minimum_2_photos_required',
+        message: 'აქტიურ/მოლოდინში მყოფ განცხადებას მინიმუმ 2 ფოტო მაინც უნდა ჰქონდეს',
+      });
+    }
+
     await db.query(
       'UPDATE listings SET images=$1, updated_at=NOW() WHERE id=$2',
       [updated, req.params.id]
@@ -427,6 +509,20 @@ router.delete('/:id/images', requireAuth, async (req, res) => {
 // ══════════════════════════════════════════════════════════════
 router.post('/:id/approve', requireAuth, requireModerator, async (req, res) => {
   try {
+    // ── Defense-in-depth: 2-ფოტოს მინიმუმი აქაც მოწმდება, imgUpload
+    // route-ის ვალიდაციის დამატებით — რომ არცერთ გზით (data ჩანაწერის
+    // პირდაპირი მანიპულაციის ჩათვლით) არ დადასტურდეს <2 ფოტოიანი განცხადება ──
+    const { rows: pending } = await db.query(
+      "SELECT images FROM listings WHERE id=$1 AND status='pending'", [req.params.id]
+    );
+    if (!pending.length) return res.status(404).json({ error: 'not_found_or_not_pending' });
+    if ((pending[0].images || []).length < 2) {
+      return res.status(400).json({
+        error: 'minimum_2_photos_required',
+        message: 'დასადასტურებლად განცხადებას სჭირდება მინიმუმ 2 ფოტო',
+      });
+    }
+
     const { rows } = await db.query(
       `UPDATE listings SET status='active', moderated_by=$2, moderated_at=NOW(), updated_at=NOW()
        WHERE id=$1 AND status='pending' RETURNING *`,
@@ -452,7 +548,9 @@ router.post('/:id/approve', requireAuth, requireModerator, async (req, res) => {
   }
 });
 
-// POST /api/listings/:id/reject  — Moderator/Admin: pending → rejected (+ მიზეზი) + push
+// POST /api/listings/:id/reject  — Moderator/Admin: pending → rejected (+ მიზეზი)
+// ⚠️ ცვლილება: push-ის გარდა ახლა ასევე იგზავნება Email + ჩატის სისტ.
+// შეტყობინება იმავე ზუსტი მიზეზის ტექსტით (იხ. chat.js sendAdminNotice).
 router.post('/:id/reject', requireAuth, requireModerator, async (req, res) => {
   try {
     const { reason = '' } = req.body;
@@ -465,17 +563,36 @@ router.post('/:id/reject', requireAuth, requireModerator, async (req, res) => {
       [req.params.id, reason.trim(), req.user.id]
     );
     if (!rows.length) return res.status(404).json({ error: 'not_found_or_not_pending' });
-    res.json({ ok: true, listing: rows[0] });
+    const listing = rows[0];
+    res.json({ ok: true, listing });
 
     (async () => {
       try {
-        const push = require('../utils/push');
-        await push.sendToUser(rows[0].seller_id, {
+        const push   = require('../utils/push');
+        const mailer = require('../utils/mailer');
+        const chat   = require('./chat');
+
+        await push.sendToUser(listing.seller_id, {
           title: '❌ განცხადება უარყოფილია',
           body: reason.trim(),
           url: '/?page=profile',
-          tag: `listing-rejected-${rows[0].id}`,
+          tag: `listing-rejected-${listing.id}`,
         });
+
+        const { rows: sellerRows } = await db.query(
+          'SELECT id, email, username, display_name, notif_email FROM users WHERE id=$1',
+          [listing.seller_id]
+        );
+        const seller = sellerRows[0];
+        if (seller) {
+          if (seller.notif_email) {
+            await mailer.sendListingRejectedEmail(seller, listing, reason.trim());
+          }
+          await chat.sendAdminNotice(
+            seller.id,
+            `❌ თქვენი განცხადება „${listing.title}“ უარყოფილია მოდერაციაში.\nმიზეზი: ${reason.trim()}`
+          );
+        }
       } catch(e) { console.error('reject notify:', e.message); }
     })();
   } catch (err) {

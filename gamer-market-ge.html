@@ -127,7 +127,10 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 
 /* GRID */
 .wrap{max-width:1120px;margin:0 auto;padding:28px 20px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;transition:opacity .18s ease}
+.grid.grid-loading{opacity:.35}
+.lcard{animation:lcardIn .25s ease}
+@keyframes lcardIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .sec-title{font-size:17px;font-weight:700;letter-spacing:-.3px}
 .sec-count{font-size:11px;color:var(--muted);font-family:var(--mono)}
@@ -181,8 +184,41 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
   content-visibility:auto;contain-intrinsic-size:auto 268px;contain:layout style paint;
 }
 .lcard:hover{border-color:var(--accent)40;transform:translateY(-3px);box-shadow:0 10px 28px #00000050}
-.lcard.vip{border-color:#f0b42930}
-.lcard.vip::after{content:'VIP';position:absolute;top:9px;right:9px;background:linear-gradient(135deg,#f0b429,#e07d29);color:#08090d;font-size:8px;font-weight:800;padding:2px 6px;border-radius:3px;letter-spacing:.04em}
+
+/* ── VIP CARD — Playerok-style premium treatment ──────────────────
+   ვირჩევთ სულ სხვა ვიზუალურ კლასს ჩვეულებრივი (Free) ბარათისგან:
+   ანიმირებული ოქროსფერი/ნეონისებრი ნათება, მუქი გრადიენტი ფონად,
+   და გამორჩეული "VIP" ბეჯი კუთხეში — ისე, რომ ფიდში დაუყოვნებლივ
+   გამოირჩეოდეს Free ბარათებისგან. Sorting (VIP პირველი) უკვე
+   ბექენდზეა გარანტირებული (listings.js: `l.is_vip DESC`). */
+.lcard.vip{
+  border:1px solid #ffcc0055;
+  background:linear-gradient(165deg,#1c1808f0,#14161ce6 55%);
+  box-shadow:0 0 0 1px #ffcc0022,0 14px 34px -12px #ffcc0035;
+  animation:vipGlow 3.2s ease-in-out infinite;
+}
+.lcard.vip:hover{transform:translateY(-4px);box-shadow:0 0 0 1px #ffcc0044,0 18px 42px -10px #ffcc0055}
+@keyframes vipGlow{
+  0%,100%{box-shadow:0 0 0 1px #ffcc0022,0 14px 34px -12px #ffcc0035}
+  50%{box-shadow:0 0 0 1px #ffcc0044,0 14px 40px -8px #ffcc0060}
+}
+.lcard.vip::before{
+  content:'';position:absolute;inset:-1px;border-radius:inherit;padding:1px;pointer-events:none;z-index:1;
+  background:linear-gradient(120deg,#ffcc00,#fff3b0 25%,#e0a800 50%,#ffcc00 75%,#fff3b0);
+  background-size:300% 300%;
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;
+  animation:vipBorderShift 4s linear infinite;
+}
+@keyframes vipBorderShift{0%{background-position:0% 50%}100%{background-position:300% 50%}}
+.lcard.vip::after{
+  content:'⭐ VIP';position:absolute;top:9px;right:9px;z-index:2;
+  background:linear-gradient(135deg,#ffe680,#ffcc00 45%,#e0a800);
+  color:#1a1400;font-size:9px;font-weight:800;padding:3px 8px;border-radius:20px;
+  letter-spacing:.04em;box-shadow:0 3px 10px -2px #ffcc0090,inset 0 1px 0 #ffffff80;
+}
+.lcard.vip .lcard-price{color:var(--gold)}
+.lcard.vip .lcard-title{color:#fff5da}
 .lcard-img{height:100px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:38px;position:relative;overflow:hidden}
 .lcard-img img{width:100%;height:100%;object-fit:cover;display:block}
 .lcard-img-empty{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:30px;opacity:.35}
@@ -532,6 +568,10 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 .cl-price-usd{font-size:11.5px;color:var(--muted);white-space:nowrap;font-family:var(--mono)}
 .cl-dropzone{border:2px dashed var(--border2);border-radius:12px;padding:18px;cursor:pointer;transition:border-color .15s,background .15s;position:relative}
 .cl-dropzone.drag{border-color:var(--accent);background:var(--ad)}
+.cl-dropzone.needs-photos{border-color:#ef4444;background:#ef444412;animation:dzShake .4s ease}
+@keyframes dzShake{10%,90%{transform:translateX(-1px)}20%,80%{transform:translateX(2px)}30%,50%,70%{transform:translateX(-4px)}40%,60%{transform:translateX(4px)}}
+.cl-two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:520px){.cl-two-col{grid-template-columns:1fr}}
 #post-img-strip{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
 .cl-package-grid{display:grid;grid-template-columns:1fr;gap:10px}
 @media(min-width:520px){.cl-package-grid{grid-template-columns:1fr 1fr}}
@@ -1033,6 +1073,21 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
       <button class="fbtn" onclick="filt(this,'social')">📲 სოც.</button>
       <button class="fbtn" onclick="filt(this,'boosting')">⚡ ბუსტი</button>
       <button class="fbtn" onclick="filt(this,'VIP')">⭐ VIP</button>
+      <select class="sort-sel" id="s-platform" onchange="handleAdvFilterChange()" style="margin-left:4px">
+        <option value="">🖥️ ყველა პლატფორმა</option>
+        <option value="pc">PC</option>
+        <option value="mobile">Mobile</option>
+        <option value="playstation">PlayStation</option>
+        <option value="xbox">Xbox</option>
+        <option value="nintendo">Nintendo</option>
+      </select>
+      <select class="sort-sel" id="s-region" onchange="handleAdvFilterChange()">
+        <option value="">🌍 ყველა რეგიონი</option>
+        <option value="global">Global</option>
+        <option value="europe">Europe</option>
+        <option value="north_america">North America</option>
+        <option value="asia">Asia</option>
+      </select>
       <div class="cur-tog"><button class="ct on" onclick="setCur(this,'GEL')">₾</button><button class="ct" onclick="setCur(this,'USD')">$</button></div>
     </div>
   </div>
@@ -1477,6 +1532,44 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
         <div class="cl-type-toggle" id="cl-type-toggle"></div>
       </div>
 
+      <div class="cl-two-col">
+        <div class="form-g">
+          <label class="form-l">🖥️ პლატფორმა</label>
+          <select class="form-i" id="post-platform" onchange="updateCreateListingSubmitState()">
+            <option value="">აირჩიე...</option>
+            <option value="pc">PC</option>
+            <option value="mobile">Mobile</option>
+            <option value="playstation">PlayStation</option>
+            <option value="xbox">Xbox</option>
+            <option value="nintendo">Nintendo</option>
+          </select>
+        </div>
+        <div class="form-g">
+          <label class="form-l">🌍 რეგიონი / სერვერი</label>
+          <select class="form-i" id="post-region" onchange="updateCreateListingSubmitState()">
+            <option value="">აირჩიე...</option>
+            <option value="global">Global</option>
+            <option value="europe">Europe</option>
+            <option value="north_america">North America</option>
+            <option value="asia">Asia</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-g">
+        <label class="form-l">🔐 მიბმები / უსაფრთხოება <span style="color:var(--muted);font-weight:400">(სურვილისამებრ)</span></label>
+        <select class="form-i" id="post-security">
+          <option value="">არ არის მითითებული</option>
+          <option value="full_access">Full Access / Mail Included</option>
+          <option value="mail_included">Mail Included</option>
+          <option value="facebook_linked">Facebook Linked</option>
+          <option value="google_linked">Google Linked</option>
+          <option value="apple_linked">Apple Linked</option>
+          <option value="phone_linked">Phone Linked</option>
+          <option value="no_link">No Link / Unlinked</option>
+        </select>
+      </div>
+
       <div class="form-g"><label class="form-l">სათაური</label>
         <input class="form-i" id="post-title" placeholder="მაგ.: Global Elite · 2500+ საათი">
       </div>
@@ -1492,7 +1585,7 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
       </div>
 
       <div class="form-g">
-        <label class="form-l">📸 ფოტო (სურვ. · JPG/PNG · მაქ. 3MB · მაქს. 5)</label>
+        <label class="form-l">📸 ფოტოები (<span style="color:#ef4444;font-weight:700">სავალდებულო — მინიმუმ 2</span> · JPG/PNG · მაქ. 3MB · მაქს. 5)</label>
         <div id="post-img-area" class="cl-dropzone"
              onclick="document.getElementById('post-img-input').click()"
              ondragover="event.preventDefault();this.classList.add('drag')"
@@ -1503,9 +1596,12 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
           <div id="post-img-strip" style="display:none"></div>
           <div id="post-img-placeholder" style="text-align:center">
             <div style="font-size:22px;margin-bottom:4px">📷</div>
-            <div style="font-size:12px;font-weight:600">დააჭირე ან ჩააგდე ფოტო</div>
+            <div style="font-size:12px;font-weight:600">დააჭირე ან ჩააგდე მინიმუმ 2 ფოტო</div>
             <div style="font-size:10px;color:var(--muted);margin-top:2px">jpeg · png · webp</div>
           </div>
+        </div>
+        <div id="post-img-err" style="display:none;margin-top:7px;font-size:11.5px;color:#ef4444;font-weight:600">
+          ⚠️ განცხადების დასადებად საჭიროა მინიმუმ 2 ფოტოს ატვირთვა!
         </div>
       </div>
 
@@ -2891,9 +2987,17 @@ function mapApiListing(l) {
     sc: 'var(--accent)', r: Number(l.seller_rating) || 0,
     rc: Number(l.seller_review_count) || 0,
     vip: l.is_vip, cat: l.category, id: l.id,
-    images: l.images || []
+    images: l.images || [],
+    platform: l.platform || '', region: l.region || '', account_security: l.account_security || ''
   };
 }
+
+const PLATFORM_LABELS = { pc: '🖥️ PC', mobile: '📱 Mobile', playstation: '🎮 PlayStation', xbox: '🎮 Xbox', nintendo: '🎮 Nintendo' };
+const REGION_LABELS   = { global: '🌍 Global', europe: '🇪🇺 Europe', north_america: '🌎 N. America', asia: '🌏 Asia' };
+const SECURITY_LABELS = {
+  full_access: 'Full Access', mail_included: 'Mail Included', facebook_linked: 'Facebook Linked',
+  google_linked: 'Google Linked', apple_linked: 'Apple Linked', phone_linked: 'Phone Linked', no_link: 'No Link',
+};
 
 // კატეგორიის მიხედვით მუქი fallback ინიციალი — მხოლოდ მაშინ ჩანს, თუ განცხადებას
 // საერთოდ არ აქვს ატვირთული ფოტო (აღარ ვდებთ დიდ დეკორატიულ სტიკერს ყველგან).
@@ -2926,7 +3030,7 @@ function buildCard(l, isMob) {
     <div class="lcard-body">
       <div class="lcard-game">${l.game} · ${l.type}</div>
       <div class="lcard-title">${l.title}</div>
-      <div class="lcard-tags">${(l.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+      <div class="lcard-tags">${l.platform ? `<span class="tag">${PLATFORM_LABELS[l.platform] || l.platform}</span>` : ''}${l.region ? `<span class="tag">${REGION_LABELS[l.region] || l.region}</span>` : ''}${(l.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div>
       <div class="lcard-foot">
         <div class="lcard-seller"><div class="s-ava" style="color:${l.sc}">${l.si}</div>
         <div><div class="s-name">${l.seller}</div><div class="s-rat">★${l.r}(${l.rc})</div></div></div>
@@ -3037,6 +3141,9 @@ function renderListingDetail(l) {
     <div class="ld-meta-item"><span class="ld-meta-label">კატეგორია</span><span class="ld-meta-val">${esc(l.category || '—')}</span></div>
     <div class="ld-meta-item"><span class="ld-meta-label">თამაში</span><span class="ld-meta-val">${esc(l.game || '—')}</span></div>
     <div class="ld-meta-item"><span class="ld-meta-label">ტიპი</span><span class="ld-meta-val">${esc(l.listing_type || '—')}</span></div>
+    ${l.platform ? `<div class="ld-meta-item"><span class="ld-meta-label">პლატფორმა</span><span class="ld-meta-val">${esc(PLATFORM_LABELS[l.platform] || l.platform)}</span></div>` : ''}
+    ${l.region ? `<div class="ld-meta-item"><span class="ld-meta-label">რეგიონი / სერვერი</span><span class="ld-meta-val">${esc(REGION_LABELS[l.region] || l.region)}</span></div>` : ''}
+    ${l.account_security ? `<div class="ld-meta-item"><span class="ld-meta-label">მიბმები / უსაფრთხოება</span><span class="ld-meta-val">${esc(SECURITY_LABELS[l.account_security] || l.account_security)}</span></div>` : ''}
     <div class="ld-meta-item"><span class="ld-meta-label">გამოქვეყნდა</span><span class="ld-meta-val">${fmtListingDate(l.created_at)}</span></div>
   `;
 
@@ -3259,7 +3366,18 @@ function filterL(q, page = 1) {
   if (L_SEARCH) params.search = L_SEARCH;
   if (FILT && FILT !== 'ყველა' && FILT !== 'VIP') params.category = FILT;
   if (FILT === 'VIP') params.vip = 'true';
+  // ── Advanced Search — მრავალპარამეტრიანი ფილტრი: სათაური/კატეგორია
+  // (search) + პლატფორმა + რეგიონი/სერვერი ერთდროულად, გვერდის
+  // გადატვირთვის გარეშე (loadListingsFromAPI → renderGrid, fetch-ით) ──
+  const platformSel = document.getElementById('s-platform');
+  const regionSel    = document.getElementById('s-region');
+  if (platformSel && platformSel.value) params.platform = platformSel.value;
+  if (regionSel && regionSel.value)     params.region   = regionSel.value;
+
+  const grid = document.getElementById('l-grid');
+  if (grid) grid.classList.add('grid-loading');
   loadListingsFromAPI('l-grid', params).then(data => {
+    if (grid) grid.classList.remove('grid-loading');
     if (!data) {
       const el = document.getElementById('l-grid');
       if (el) el.innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="empty-ico">🔍</div><div class="empty-t">განცხადებები ვერ მოიძებნა</div></div>';
@@ -3268,6 +3386,12 @@ function filterL(q, page = 1) {
     }
     renderPagination(data.pages || 1, data.page || 1);
   });
+}
+
+// პლატფორმა/რეგიონის dropdown-ის ცვლილება — იმავე debounce-ის გარეშე
+// ცვლილების ცხრილს (search input) ვამატებთ, live filter გადატვირთვის გარეშე
+function handleAdvFilterChange() {
+  filterL(document.getElementById('s-input')?.value || '', 1);
 }
 
 function filt(btn, cat) {
@@ -4284,7 +4408,7 @@ function clGoToStep(n) {
   if (nextBtn) {
     nextBtn.disabled = (n === 1 && !document.getElementById('post-category').value);
     if (n === 1) { nextBtn.textContent = 'აირჩიე კატეგორია'; nextBtn.onclick = clNext; }
-    else if (n === 2) { nextBtn.textContent = 'გაგრძელება →'; nextBtn.onclick = clNext; nextBtn.disabled = false; }
+    else if (n === 2) { nextBtn.textContent = 'გაგრძელება →'; nextBtn.onclick = clNext; nextBtn.disabled = !postImgMinMet(); }
     else { nextBtn.textContent = 'გამოქვეყნება'; nextBtn.onclick = postListing; nextBtn.disabled = false; }
   }
   window.scrollTo(0, 0);
@@ -4295,8 +4419,20 @@ function clNext() {
   if (clStep === 2) {
     const title = document.getElementById('post-title')?.value?.trim();
     const price = parseFloat(document.getElementById('post-price')?.value);
+    const platform = document.getElementById('post-platform')?.value;
+    const region   = document.getElementById('post-region')?.value;
     if (!title)               { showToast('სათაური სავალდებულოა', 'err'); return; }
     if (!price || price < 1)  { showToast('ფასი სავალდებულოა', 'err'); return; }
+    if (!platform)             { showToast('აირჩიე პლატფორმა', 'err'); return; }
+    if (!region)                { showToast('აირჩიე რეგიონი/სერვერი', 'err'); return; }
+    if (!postImgMinMet()) {
+      showToast('განცხადების დასადებად საჭიროა მინიმუმ 2 ფოტოს ატვირთვა!', 'err');
+      const zone = document.getElementById('post-img-area');
+      const err  = document.getElementById('post-img-err');
+      if (zone) { zone.classList.remove('needs-photos'); void zone.offsetWidth; zone.classList.add('needs-photos'); zone.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+      if (err)  err.style.display = 'block';
+      return;
+    }
     clGoToStep(3);
   }
 }
@@ -4314,6 +4450,9 @@ function clResetForm() {
   const label = document.getElementById('cl-selected-cat-label'); if (label) label.innerHTML = '';
   const toggle = document.getElementById('cl-type-toggle'); if (toggle) toggle.innerHTML = '';
   ['post-title','post-desc','post-price'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
+  ['post-platform','post-region','post-security'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
+  const imgErr = document.getElementById('post-img-err'); if (imgErr) imgErr.style.display = 'none';
+  const imgZone = document.getElementById('post-img-area'); if (imgZone) imgZone.classList.remove('needs-photos');
   renderImgStrip();
   renderVipStatusBox();
   clGoToStep(1);
@@ -4361,15 +4500,29 @@ function previewPostImgs(input) {
   input.value = '';
 }
 
+// მინიმუმ 2 ფოტოს წესი — ერთი ცენტრალური შემოწმება, რომელსაც
+// renderImgStrip (live highlighting), clNext (ნაბიჯზე გადასვლის ბლოკი)
+// და postListing (საბოლოო submit-ის დაცვა) ყველა იყენებს.
+function postImgMinMet() { return postImgFiles.length >= 2; }
+
 function renderImgStrip() {
   const strip = document.getElementById('post-img-strip');
   const ph    = document.getElementById('post-img-placeholder');
+  const zone  = document.getElementById('post-img-area');
+  const err   = document.getElementById('post-img-err');
   if (!strip) return;
+
+  // Live validity highlight — მოთხოვნილ მინიმუმზე ნაკლები ფოტოსას
+  // dropzone წითლად იფერება და გაფრთხილება ჩნდება; 2+ ატვირთვისას ქრება.
+  const valid = postImgMinMet();
+  if (zone) zone.classList.toggle('needs-photos', !valid && postImgFiles.length > 0);
+  if (err)  err.style.display = 'none'; // მხოლოდ ცდაზე (clNext/postListing) გამოჩნდეს, არა ტიპავადვე
 
   if (!postImgFiles.length) {
     strip.innerHTML = '';
     strip.style.display = 'none';
     if (ph) ph.style.display = 'block';
+    updateCreateListingSubmitState();
     return;
   }
 
@@ -4389,6 +4542,16 @@ function renderImgStrip() {
     strip.innerHTML += `<div onclick="document.getElementById('post-img-input').click()"
       style="width:60px;height:60px;border:2px dashed var(--border2);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;color:var(--muted)">+</div>`;
   }
+
+  updateCreateListingSubmitState();
+}
+
+// ღილაკების (both "გაგრძელება" სტეპ 2-ზე და "გამოქვეყნება" სტეპ 3-ზე)
+// live disable/enable — 2 ფოტოზე ნაკლებისას ვერც წავალთ შემდეგ ნაბიჯზე.
+function updateCreateListingSubmitState() {
+  if (clStep !== 2) return;
+  const nextBtn = document.getElementById('cl-next-btn');
+  if (nextBtn) nextBtn.disabled = !postImgMinMet();
 }
 
 function removePostImg(idx) {
@@ -4414,11 +4577,28 @@ async function postListing() {
   const title    = (document.getElementById('post-title') || {}).value?.trim();
   const price_gel= parseFloat((document.getElementById('post-price') || {}).value);
   const desc     = (document.getElementById('post-desc')  || {}).value?.trim() || '';
+  const platform = (document.getElementById('post-platform') || {}).value || '';
+  const region   = (document.getElementById('post-region')   || {}).value || '';
+  const account_security = (document.getElementById('post-security') || {}).value || '';
   const isVip    = !!currentUser.is_vip;
 
   if (!category)        { showToast('აირჩიე კატეგორია', 'err'); clGoToStep(1); return; }
   if (!title)           { showToast('სათაური სავალდებულოა', 'err'); clGoToStep(2); return; }
   if (!price_gel || price_gel < 1) { showToast('ფასი სავალდებულოა', 'err'); clGoToStep(2); return; }
+  if (!platform)        { showToast('აირჩიე პლატფორმა', 'err'); clGoToStep(2); return; }
+  if (!region)          { showToast('აირჩიე რეგიონი/სერვერი', 'err'); clGoToStep(2); return; }
+  // ── საბოლოო დაცვა: მინიმუმ 2 ფოტო (defense-in-depth, clNext-ის
+  // ვალიდაციის დამატებით — publish ღილაკამდე ვერანაირად ვერ მოხვდება
+  // 0-1 ფოტოიანი განცხადება) ──
+  if (!postImgMinMet()) {
+    showToast('განცხადების დასადებად საჭიროა მინიმუმ 2 ფოტოს ატვირთვა!', 'err');
+    clGoToStep(2);
+    const zone = document.getElementById('post-img-area');
+    const err  = document.getElementById('post-img-err');
+    if (zone) zone.classList.add('needs-photos');
+    if (err)  err.style.display = 'block';
+    return;
+  }
 
   // ორივე submit ღილაკი (მობილურის sticky bottom-nav + დესკტოპის) ერთდროულად ვმართავთ
   const btns = [document.getElementById('cl-next-btn'), document.getElementById('post-submit-btn-desktop')].filter(Boolean);
@@ -4430,7 +4610,10 @@ async function postListing() {
     // ცალკე VIP-ის შესყიდვის მოთხოვნა აქედან აღარ იგზავნება.
     const newL = await api('/api/listings', {
       method: 'POST',
-      body: JSON.stringify({ category, game, listing_type, title, description: desc, price_gel, tags: [] })
+      body: JSON.stringify({
+        category, game, listing_type, title, description: desc, price_gel, tags: [],
+        platform, region, account_security: account_security || undefined,
+      })
     });
 
     // 2. სურ-ების ატვირთვა (multipart)

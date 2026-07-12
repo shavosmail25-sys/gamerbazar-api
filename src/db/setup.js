@@ -333,6 +333,16 @@ async function setupDatabase() {
       // შესანარჩუნებლად რჩება ცხრილში (ძველი listing-დაკავშირებული
       // ჩანაწერებისთვის), უბრალოდ ახალ ჩანაწერებში NULL იქნება.
       `ALTER TABLE vip_purchases ALTER COLUMN listing_id DROP NOT NULL`,
+      // ── Premium Gaming Fields — პლატფორმა / რეგიონი-სერვერი / მიბმები ──
+      // სამივე სვეტი სავალდებულო არაა ძველი ჩანაწერებისთვის (migration-ი
+      // არსებულ მწკრივებს არ არღვევს), ახალ განცხადებებზე კი listings.js
+      // ვალიდაციით მოითხოვება. platform/region ინდექსდება, რადგან
+      // ძებნის/ფილტრის ფორმაში ორივეზე ხშირი query მოსალოდნელია.
+      `ALTER TABLE listings ADD COLUMN IF NOT EXISTS platform          VARCHAR(20)`,
+      `ALTER TABLE listings ADD COLUMN IF NOT EXISTS region            VARCHAR(20)`,
+      `ALTER TABLE listings ADD COLUMN IF NOT EXISTS account_security  VARCHAR(40)`,
+      `CREATE INDEX IF NOT EXISTS idx_listings_platform ON listings(platform)`,
+      `CREATE INDEX IF NOT EXISTS idx_listings_region   ON listings(region)`,
     ];
     for (const sql of migrations) {
       try { await client.query(sql); } catch (e) { /* უკვე არსებობს */ }
