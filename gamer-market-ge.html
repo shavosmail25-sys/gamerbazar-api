@@ -80,19 +80,28 @@ input,select,textarea{font-family:var(--font)}
 /* DISPLAY TYPE — ლათინური ბრენდი/სათაურები */
 .brand-display,.nav-logo{font-family:var(--display)}
 
-/* NAV */
-nav{position:fixed;top:0;left:0;right:0;z-index:200;height:56px;background:#08090de8;backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:0}
-.nav-logo{font-size:16px;font-weight:800;letter-spacing:-.5px;margin-right:28px;cursor:pointer;flex-shrink:0;transition:all .2s}
+/* NAV — premium glass header */
+nav{position:fixed;top:0;left:0;right:0;z-index:200;height:60px;background:linear-gradient(180deg,#090d18c7,#090d18a8);backdrop-filter:blur(22px) saturate(160%);-webkit-backdrop-filter:blur(22px) saturate(160%);border-bottom:1px solid var(--border2);box-shadow:0 1px 0 #ffffff0a inset;display:flex;align-items:center;padding:0 22px;gap:0}
+nav::after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:1px;background:linear-gradient(90deg,transparent,#34d39950,#22d3ee50,transparent);pointer-events:none}
+.nav-logo{font-size:16px;font-weight:800;letter-spacing:-.5px;margin-right:30px;cursor:pointer;flex-shrink:0;transition:all .2s}
 .nav-logo:hover{opacity:.85}
 .nav-logo em{background:var(--grad-accent);-webkit-background-clip:text;background-clip:text;color:transparent;font-style:normal}
-.nav-links{display:flex;gap:1px;flex:1;overflow-x:auto}.nav-links::-webkit-scrollbar{display:none}
-.nl{padding:5px 11px;border-radius:6px;font-size:12px;font-weight:500;color:var(--muted);cursor:pointer;transition:all .15s;white-space:nowrap;flex-shrink:0}
-.nl:hover,.nl.on{color:var(--text);background:var(--bg3)}
+.nav-links{display:flex;gap:2px;flex:1;overflow-x:auto;justify-content:center}.nav-links::-webkit-scrollbar{display:none}
+.nl{position:relative;display:flex;align-items:center;gap:7px;padding:9px 15px;border-radius:8px;font-size:12.5px;font-weight:500;color:var(--muted2);cursor:pointer;white-space:nowrap;flex-shrink:0;transition:color .2s ease}
+.nl svg{width:15px;height:15px;flex-shrink:0;opacity:.6;transition:opacity .2s ease,transform .2s ease}
+.nl::after{content:'';position:absolute;left:50%;bottom:3px;width:0;height:2px;border-radius:2px;background:var(--grad-accent);box-shadow:0 0 10px #22d3ee80;transform:translateX(-50%);transition:width .28s cubic-bezier(.4,0,.2,1)}
+.nl:hover{color:var(--cyan)}
+.nl:hover svg{opacity:1;transform:translateY(-1px)}
+.nl:hover::after{width:20px}
 .nl.on{color:var(--accent)}
-.nav-r{display:flex;align-items:center;gap:7px;flex-shrink:0}
-.hamburger-btn{display:none;width:32px;height:32px;border-radius:8px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-left:6px}
+.nl.on svg{opacity:1}
+.nl.on::after{width:26px}
+.nav-r{display:flex;align-items:center;gap:9px;flex-shrink:0}
+.hamburger-btn{display:none;width:32px;height:32px;border-radius:8px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-left:6px;transition:all .18s}
+.hamburger-btn:hover{border-color:var(--border3);background:var(--bg4)}
 .hamburger-btn svg{pointer-events:none}
-.bal-chip{display:flex;align-items:center;gap:5px;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:4px 10px;font-size:11px;cursor:pointer}
+.bal-chip{display:flex;align-items:center;gap:6px;background:var(--glass-bg);border:1px solid var(--border2);border-radius:20px;padding:5px 12px 5px 10px;font-size:11px;cursor:pointer;transition:all .18s}
+.bal-chip:hover{border-color:#34d39945;background:#34d3990f}
 .bal-chip .v{color:var(--accent);font-weight:700;font-family:var(--mono);font-size:12px}
 .btn{padding:5px 14px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;transition:all .18s;border:none}
 .btn-g{background:transparent;color:var(--muted2);border:1px solid var(--border2)}.btn-g:hover{color:var(--text);border-color:var(--border3);background:var(--glass-bg)}
@@ -926,12 +935,30 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 <nav>
   <div class="nav-logo" onclick="pg('home')">Gamer<em>Bazar</em>.ge</div>
   <div class="nav-links">
-    <div class="nl on" onclick="pg('home');act(this)">მთავარი</div>
-    <div class="nl" onclick="pg('listings');act(this)">განცხადებები</div>
-    <div class="nl" onclick="pg('chat');act(this)">ჩატი</div>
-    <div class="nl" onclick="pg('wallet');act(this)">საფულე</div>
-    <div class="nl" onclick="pg('profile');act(this)">პროფილი</div>
-    <div class="nl" onclick="pg('edit');act(this)">⚙️ პარამეტრები</div>
+    <div class="nl on" onclick="pg('home');act(this)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M3 11L12 4l9 7v8a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-8z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+      მთავარი
+    </div>
+    <div class="nl" onclick="pg('listings');act(this)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M7 9h10M7 13h10M7 17h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      განცხადებები
+    </div>
+    <div class="nl" onclick="pg('chat');act(this)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 4h16v12H8l-4 4V4z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+      ჩატი
+    </div>
+    <div class="nl" onclick="pg('wallet');act(this)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 8a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v1h1.5a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H6a2 2 0 0 1-2-2V8z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="17" cy="13.5" r="1" fill="currentColor" stroke="none"/></svg>
+      საფულე
+    </div>
+    <div class="nl" onclick="pg('profile');act(this)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.4" stroke="currentColor" stroke-width="1.6"/><path d="M4.5 20c1.4-3.8 4.6-6 7.5-6s6.1 2.2 7.5 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      პროფილი
+    </div>
+    <div class="nl" onclick="pg('edit');act(this)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      პარამეტრები
+    </div>
   </div>
   <div class="nav-r">
     <div class="bal-chip" onclick="pg('wallet')" id="nav-bal-chip" style="display:none">
