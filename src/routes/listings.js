@@ -5,6 +5,9 @@
 
 const express = require('express');
 const db      = require('../db');
+const crypto  = require('crypto');
+const multer  = require('multer');
+const cloudinary = require('../utils/cloudinary');
 const { requireAuth, optionalAuth, requireAdmin } = require('../middleware/auth');
 const { requireModerator } = require('../middleware/requireModerator');
 const { checkVipStatus }   = require('../middleware/checkVipStatus');
@@ -20,6 +23,22 @@ const VALID_SECURITY  = [
   'full_access', 'mail_included', 'facebook_linked', 'google_linked',
   'apple_linked', 'phone_linked', 'no_link',
 ];
+
+// ── სურათების ატვირთვის middleware — გამოიყენება ორივეგან: POST / (შექმნისას,
+// სავალდებულო) და POST /:id/images (მოგვიანებით დამატებისას). Render-ის
+// filesystem ephemeral-ია — დისკზე აღარ ვინახავთ, ფაილი მეხსიერებიდან
+// (multer memoryStorage) პირდაპირ Cloudinary-ში იტვირთება.
+const imgUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: (Number(process.env.MAX_FILE_SIZE_MB) || 3) * 1024 * 1024,
+    files: 5,
+  },
+  fileFilter: (req, file, cb) => {
+    const ok = /image\/(jpeg|png|webp)/.test(file.mimetype);
+    cb(ok ? null : new Error('only_images'), ok);
+  },
+});
 
 // ვადაგასული VIP სტატუსის საათური cron-ი — ერთხელ, მოდულის პირველ
 // ჩატვირთვაზე (იგივე პატერნი, რაც orders.js-ში ledger.startHoldsScheduler()-ს აქვს)
@@ -229,12 +248,37 @@ router.get('/:id', optionalAuth, async (req, res) => {
 // აქვს. VIP-ის ცალკე ყიდვა აღარ არის listing-ზე მიბმული — იხ.
 // POST /api/users/me/vip.
 // ══════════════════════════════════════════════════════════════
-router.post('/', requireAuth, checkVipStatus, async (req, res) => {
+// ══════════════════════════════════════════════════════════════
+// POST /api/listings  — ახალი განცხადების შექმნა (ატომური, multipart)
+//
+// ⚠️ არქიტექტურული გამოსწორება: ადრე შექმნა ორ ცალკე მოთხოვნად იყო
+// გაყოფილი — (1) POST / ქმნიდა 'pending' მწკრივს ბაზაში სურათების
+// გარეშე, (2) frontend შემდეგ ცალკე ხდიდა POST /:id/images-ს. ამ ორ
+// ნაბიჯს შორის ნებისმიერი შეფერხება (ქსელის წყვეტა, ჩაკეტილი ტაბი,
+// Cloudinary-ის დროებითი შეცდომა) ტოვებდა "ობოლ" pending განცხადებას
+// 0-1 ფოტოთი — ის, რაც ადმინის პანელში ჩანდა, ვერასდროს დადასტ.
+// ახლა ორივე ნაბიჯი ერთ ატომურ მოთხოვნადაა გაერთიანებული:
+// ჯერ სურათები (მინიმუმ 2) ვალიდირდება და იტვირთება Cloudinary-ში,
+// და მხოლოდ წარმატების შემთხვევაში იქმნება ბაზაში მწკრივი. თუ
+// სურათების ვალიდაცია/ატვირთვა ჩაიშლება — listing საერთოდ არ იქმნება.
+// ══════════════════════════════════════════════════════════════
+router.post('/', requireAuth, checkVipStatus, imgUpload.array('images', 5), async (req, res) => {
   try {
     const {
       category, game, listing_type, title, description, tags, price_gel,
       platform, region, account_security,
     } = req.body;
+
+    // ── სავალდებულო მინიმუმ 2 ფოტო — პირველი და ყველაზე მკაცრი ბარიერი.
+    // ვამოწმებთ ყველაფრის წინ, რომ API-ის პირდაპირი გამოძახებითაც
+    // (frontend-ის გვერდის ავლით) ვერანაირად ვერ შეიქმნას 0-1
+    // ფოტოიანი განცხადება. ──
+    if (!req.files || req.files.length < 2) {
+      return res.status(400).json({
+        error: 'minimum_2_photos_required',
+        message: 'განცხადების დასადებად საჭიროა მინიმუმ 2 ფოტოს ატვირთვა!',
+      });
+    }
 
     if (!category || !game || !listing_type || !title || !price_gel) {
       return res.status(400).json({ error: 'required_fields' });
@@ -268,22 +312,46 @@ router.post('/', requireAuth, checkVipStatus, async (req, res) => {
       return res.status(400).json({ error: 'invalid_listing_type' });
     }
 
+    if (!cloudinary.isConfigured())
+      return res.status(503).json({ error: 'image_upload_not_configured' });
+
     // ── ავტ. VIP მემკვიდრეობა ექაუნთიდან — უფასოდ ──────────────
     const isVip        = !!req.isVip;
     const vipExpiresAt  = isVip ? req.vipExpiresAt : null;
 
+    // ID-ს წინასწარ ვაგენერირებთ (uuid_generate_v4() default-ის ნაცვლად
+    // ექსპლიციტურად ვაწვდით), რომ Cloudinary-ის publicId-ებში
+    // listing-ის საბოლოო ID გამოვიყენოთ ჯერ კიდევ INSERT-მდე.
+    const listingId = crypto.randomUUID();
+
+    // სურათების ატვირთვა Cloudinary-ში — ბაზაში მწკრივი მხოლოდ ამის
+    // წარმატებით დასრულების შემდეგ იქმნება.
+    const uploaded = await Promise.all(req.files.map((f, i) => {
+      const publicId = `listing_${listingId}_${Date.now()}_${i}_${Math.random().toString(36).slice(2,7)}`;
+      return cloudinary.uploadBuffer(f.buffer, {
+        folder: 'gamerbazar/listings',
+        public_id: publicId,
+        resource_type: 'image',
+      });
+    }));
+    const imageUrls = uploaded.map(r => r.secure_url);
+
     const { rows } = await db.query(`
       INSERT INTO listings
-        (seller_id, category, game, listing_type, title, description, tags, price_gel, status, is_vip, vip_expires_at,
-         platform, region, account_security)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pending',$9,$10,$11,$12,$13)
+        (id, seller_id, category, game, listing_type, title, description, tags, price_gel, status, is_vip, vip_expires_at,
+         platform, region, account_security, images)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending',$10,$11,$12,$13,$14,$15)
       RETURNING *
-    `, [req.user.id, category, game, normalizedType, title,
+    `, [listingId, req.user.id, category, game, normalizedType, title,
         description || '', tags || [], Number(price_gel), isVip, vipExpiresAt,
-        platform, region, account_security || null]);
+        platform, region, account_security || null, imageUrls]);
 
     res.status(201).json(rows[0]);
   } catch (err) {
+    if (err.message === 'only_images')
+      return res.status(400).json({ error: 'only_images_allowed' });
+    if (err.code === 'LIMIT_FILE_SIZE')
+      return res.status(400).json({ error: 'file_too_large' });
     console.error('listing create error:', err.message);
     res.status(500).json({ error: 'server_error' });
   }
@@ -384,26 +452,11 @@ router.delete('/:id', requireAuth, async (req, res) => {
 // ══════════════════════════════════════════════════════════════
 
 // ══════════════════════════════════════════════════════════════
-// POST /api/listings/:id/images  — სურათების ატვირთვა (Cloudinary)
-// მაქს. 5 სურათი, თითო 3MB, jpeg/png/webp
-// Render-ის filesystem ephemeral-ია — დისკზე აღარ ვინახავთ,
-// ფაილი მეხსიერებიდან (multer memoryStorage) პირდაპირ Cloudinary-ში იტვირთება
+// POST /api/listings/:id/images  — დამატებითი სურათების ატვირთვა
+// (მაქს. 5 სულ ჯამში). შექმნისას სავალდებულო 2 ფოტო უკვე დანართულია
+// POST / handler-ში ატომურად — ეს endpoint მხოლოდ დამატებით
+// სურათებს ან ძველი (migration-ის წინა) ჩანაწერების შევსებას ემსახურება.
 // ══════════════════════════════════════════════════════════════
-const multer     = require('multer');
-const cloudinary = require('../utils/cloudinary');
-
-const imgUpload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: (Number(process.env.MAX_FILE_SIZE_MB) || 3) * 1024 * 1024,
-    files: 5,
-  },
-  fileFilter: (req, file, cb) => {
-    const ok = /image\/(jpeg|png|webp)/.test(file.mimetype);
-    cb(ok ? null : new Error('only_images'), ok);
-  },
-});
-
 router.post('/:id/images', requireAuth, imgUpload.array('images', 5), async (req, res) => {
   try {
     if (!cloudinary.isConfigured())

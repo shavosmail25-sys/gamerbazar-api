@@ -4636,30 +4636,32 @@ async function postListing() {
   btns.forEach(b => { b.dataset.origText = b.textContent; b.textContent = '⏳ ქმნება...'; b.disabled = true; });
 
   try {
-    // 1. განცხ. შექმნა — VIP დროშას ბექენდი თავად ანიჭებს ავტ., თუ
-    // ანგარიში ამჟამად VIP-ია (checkVipStatus middleware, POST /api/listings) —
-    // ცალკე VIP-ის შესყიდვის მოთხოვნა აქედან აღარ იგზავნება.
-    const newL = await api('/api/listings', {
-      method: 'POST',
-      body: JSON.stringify({
-        category, game, listing_type, title, description: desc, price_gel, tags: [],
-        platform, region, account_security: account_security || undefined,
-      })
-    });
+    // ── ატომური შექმნა — ტექსტური ველები + სურათები ერთ multipart
+    // მოთხოვნაში. ბექენდი listing-ის მწკრივს ბაზაში მხოლოდ მას შემდეგ
+    // ქმნის, რაც სურათები წარმატებით აიტვირთა Cloudinary-ში — ასე
+    // ფიზიკურად შეუძლებელია 0-1 ფოტოიანი "ობოლი" pending განცხადების
+    // შექმნა (მაგ. თუ ქსელი გაწყდა ან ტაბი დაიხურა ორ ცალკე მოთხოვნას
+    // შორის — რაც ძველ ორსაფეხურიან flow-ში ხდებოდა).
+    btns.forEach(b => b.textContent = '⏳ იტვირთება...');
+    const fd = new FormData();
+    fd.append('category', category);
+    fd.append('game', game);
+    fd.append('listing_type', listing_type);
+    fd.append('title', title);
+    fd.append('description', desc);
+    fd.append('price_gel', price_gel);
+    fd.append('platform', platform);
+    fd.append('region', region);
+    if (account_security) fd.append('account_security', account_security);
+    postImgFiles.forEach(f => fd.append('images', f));
 
-    // 2. სურ-ების ატვირთვა (multipart)
-    if (postImgFiles.length && newL.id) {
-      try {
-        btns.forEach(b => b.textContent = '⏳ სურ. ტვირთება...');
-        const fd = new FormData();
-        postImgFiles.forEach(f => fd.append('images', f));
-        await fetch(API_URL + '/api/listings/' + newL.id + '/images', {
-          method: 'POST',
-          headers: { Authorization: 'Bearer ' + getToken() },
-          body: fd
-        });
-      } catch(e) { console.warn('img upload:', e.message); }
-    }
+    const resp = await fetch(API_URL + '/api/listings', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + getToken() },
+      body: fd
+    });
+    const newL = await resp.json();
+    if (!resp.ok) throw new Error(newL.message || newL.error || 'server_error');
 
     clResetForm();
     showToast(isVip ? '⭐ VIP განცხ. მოდ. მოლოდინშია' : '⏳ განცხ. გაიგზავნა მოდ-ზე — დადასტ. შემდეგ გამოჩნდება', 'ok');

@@ -1077,15 +1077,12 @@ async function loadListings() {
     }
     const statusTag = { active: 'tag-ok', blocked: 'tag-crit', sold: 'tag-blue', deleted: 'tag-neutral', pending: 'tag-warn', inactive: 'tag-neutral' };
     list.innerHTML = listingsData.map(l => {
-      // ⚠️ ბიზნეს წესი: დასადასტურებლად საჭიროა მინ. 2 ფოტო (POST /api/listings/:id/approve
-      // ამას ბექენდზე ამოწმებს) — აქ წინასწარ ვაჩვენებთ, რომ "შეცდომა: ..." toast-ის
-      // ნაცვლად მოდერატორმა თავიდანვე დაინახოს, რატომ არ დასტურდება.
-      const imgCount = (l.images || []).length;
-      const notEnoughImgs = l.status === 'pending' && imgCount < 2;
+      const photoCount = (l.images || []).length;
+      const photosOk = photoCount >= 2;
       return `
-      <div class="row" style="${l.status === 'pending' ? `border-left:3px solid ${notEnoughImgs ? '#ef4444' : '#f59e0b'}` : ''}">
+      <div class="row" style="${l.status === 'pending' ? 'border-left:3px solid #f59e0b' : ''}">
         <div class="row-main">
-          <div class="row-title">${esc(l.title)} <span class="tag ${statusTag[l.status] || 'tag-neutral'}">${l.status.toUpperCase()}</span> ${l.is_vip ? '<span class="tag tag-warn">VIP</span>' : ''}</div>
+          <div class="row-title">${esc(l.title)} <span class="tag ${statusTag[l.status] || 'tag-neutral'}">${l.status.toUpperCase()}</span> ${l.is_vip ? '<span class="tag tag-warn">VIP</span>' : ''} <span class="tag ${photosOk ? 'tag-neutral' : 'tag-crit'}" title="ატვირთული ფოტოების რაოდენობა">📸 ${photoCount}/2</span></div>
           <div class="row-meta">
             <span><b>${esc(l.game)}</b></span>
             <span>${esc(l.category)} / ${esc(l.listing_type)}</span>
@@ -1096,15 +1093,16 @@ async function loadListings() {
             <span><b>ნახვები</b> ${l.views_count}</span>
             <span><b>შეკვ.</b> ${l.orders_count}</span>
             <span><b>თარიღი</b> ${fmtDate(l.created_at)}</span>
-            <span style="${notEnoughImgs ? 'color:#ef4444;font-weight:600' : ''}"><b>ფოტო</b> ${imgCount}</span>
           </div>
-          ${notEnoughImgs ? `<div class="row-meta" style="margin-top:3px;color:#ef4444">⚠️ ნაკლები ვიდრე 2 ფოტო — დასადასტურებლად გამყიდველმა ჯერ ფოტო უნდა დაამატოს</div>` : ''}
+          ${l.status === 'pending' && !photosOk ? `<div style="margin-top:6px;font-size:11px;color:#f59e0b">⚠️ დასადასტურებლად საჭიროა მინიმუმ 2 ფოტო — ამჟამად ${photoCount}-ია. „დადასტ.“ დაბლოკილი იქნება, სანამ გამყიდველი არ დაამატებს.</div>` : ''}
         </div>
         <div class="row-actions">
           ${l.status === 'pending' ? `
-            ${notEnoughImgs
-              ? `<button class="btn btn-ok" disabled style="opacity:.4;cursor:not-allowed" title="საჭიროა მინ. 2 ფოტო">✅ დადასტ.</button>`
-              : `<button class="btn btn-ok" onclick="approveListing('${l.id}')">✅ დადასტ.</button>`}
+            ${photosOk
+              ? `<button class="btn btn-ok" onclick="approveListing('${l.id}')">✅ დადასტ.</button>`
+              : `<button class="btn btn-ghost" disabled title="დასადასტურებლად საჭიროა მინიმუმ 2 ფოტო (ამჟამად: ${photoCount})" style="opacity:.5;cursor:not-allowed">📸 არასაკმ. ფოტო</button>
+                 <button class="btn btn-ghost" onclick="requestMorePhotos('${l.id}', ${photoCount})">✉️ ფოტოს მოთხოვნა</button>`
+            }
             <button class="btn btn-signal" onclick="rejectListing('${l.id}')">❌ უარყოფა</button>
           ` : `
             <button class="btn btn-ghost" onclick="openModerateModal('${l.id}')">სტატუსი</button>
@@ -1283,7 +1281,13 @@ function deleteListing(listingId) {
   openReasonModal('remove', listingId);
 }
 
-function openReasonModal(mode, listingId) {
+// ფოტოს დეფიციტის გამო სწრაფი უარყოფა — მოდალს წინასწარ ავსებთ
+// მზა ტექსტით, ადმინს მხოლოდ დადასტურება სჭირდება (ან შეცვლას).
+function requestMorePhotos(listingId, photoCount) {
+  openReasonModal('reject', listingId, `გთხოვთ ატვირთოთ მინიმუმ 2 ფოტო განცხადებაზე (ამჟამად ატვირთულია: ${photoCount}). განცხადება ამ დროისთვის ვერ დადასტურდება.`);
+}
+
+function openReasonModal(mode, listingId, prefillText) {
   reasonModalMode = mode;
   reasonModalTargetId = listingId;
 
@@ -1306,11 +1310,11 @@ function openReasonModal(mode, listingId) {
     sub.innerHTML = `${listingLabel} საიტიდან მოიხსნება. მიზეზი ავტ. გაეგზავნება გამყიდველს ჩატში, Push-ითა და Email-ით.`;
   }
 
-  text.value = '';
+  text.value = prefillText || '';
   err.style.display = 'none';
   document.getElementById('reason-modal-confirm-btn').disabled = false;
   document.getElementById('reasonModal').classList.add('show');
-  setTimeout(() => text.focus(), 50);
+  setTimeout(() => { text.focus(); text.setSelectionRange(text.value.length, text.value.length); }, 50);
 }
 
 function closeReasonModal() {
