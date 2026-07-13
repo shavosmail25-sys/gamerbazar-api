@@ -8,6 +8,15 @@ const push    = require('../utils/push');
 const chat    = require('./chat');
 const router  = express.Router();
 
+// ── NO-CACHE — ახალი შეფასება მაშინვე უნდა გამოჩნდეს, დაკეშილი ძველი
+// სია არ დაბრუნდეს.
+router.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
 // ★ სავარსკვლავო შეფასების ტექსტური რენდერი (system შეტყობინებისთვის)
 function starsText(rating) {
   return '⭐'.repeat(rating) + '☆'.repeat(5 - rating);

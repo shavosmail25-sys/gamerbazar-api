@@ -14,6 +14,19 @@ const { checkVipStatus }   = require('../middleware/checkVipStatus');
 
 const router = express.Router();
 
+// ══════════════════════════════════════════════════════════════
+// NO-CACHE — ეს router-ი მთლიანად დინამიური მონაცემია (განცხადებების
+// სია/დეტალი/სტატუსი მუდმივად იცვლება — sold/pending/deleted). ბრაუზერს
+// ან შუალედურ პროქსის (CDN, corporate proxy) ვუკრძალავთ ამ პასუხების
+// კეშირებას, რომ მომხმარებელმა ძველი (მაგ. უკვე გაყიდული) სტატუსი
+// ვერასდროს დაინახოს hard-refresh-მდე.
+router.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
 // ── Premium Gaming Fields — Whitelist ვალიდაცია (feature 4) ──────────
 // frontend dropdown-ების 1:1 ასლი — client-ის მიერ გამოგზავნილი
 // თვითნებური მნიშვნელობა არასდროს ჩაიწერება ბაზაში.

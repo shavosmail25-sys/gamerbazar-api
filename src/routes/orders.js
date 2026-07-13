@@ -10,6 +10,15 @@ const ledger  = require('../utils/ledger');
 const chat    = require('./chat');
 const router  = express.Router();
 
+// ── NO-CACHE — შეკვეთის სტატუსი (pending/completed/disputed) რეალურ
+// დროში იცვლება; ვუკრძალავთ ბრაუზერს/პროქსის დაკეშვას.
+router.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
 // 48სთ hold-ის scheduler-ი — ერთხელ, მოდულის პირველ ჩატვირთვაზე
 ledger.startHoldsScheduler();
 

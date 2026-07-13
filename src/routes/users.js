@@ -9,6 +9,15 @@ const ledger      = require('../utils/ledger');
 const { requireAuth } = require('../middleware/auth');
 const router  = express.Router();
 
+// ── NO-CACHE — პროფილი/ბალანსი/VIP სტატუსი ხშირად იცვლება; ვუკრძალავთ
+// ბრაუზერს/პროქსის ამ პასუხების დაკეშვას.
+router.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
 // ── VIP პაკეტების მკაცრი Whitelist — ფასები ბექენდზეა ფიქსირებული,
 // client-ის მიერ გამოგზავნილი ფასი არასდროს გამოიყენება (მხოლოდ
 // duration_days მოდის request-ში). იგივე პაკეტები 1:1 უნდა ემთხვეოდეს

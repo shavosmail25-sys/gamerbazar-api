@@ -2276,6 +2276,17 @@ function pg(id) {
   } else {
     window.history.replaceState({}, '', window.location.pathname + window.location.search);
   }
+  // ══════════════════════════════════════════════════════════════
+  // ⚠️ ეს იყო stale-data ბაგის ძირითადი მიზეზი: 'home' და 'listings'
+  // გვერდებზე გადასვლისას (SPA ნავიგაცია — nav ბმულები/bottom-nav)
+  // აქამდე ვერანაირი ხელახალი fetch არ ხდებოდა — უბრალოდ იმ DOM-ს
+  // აჩვენებდა, რაც ბოლოს იყო დარენდერებული (ხშირად პირველივე page
+  // load-იდან). ასე უკვე გაყიდული/წაშლილი განცხადება "ცოცხლობდა"
+  // ეკრანზე მანამ, სანამ იუზერი ხელით არ გადატვირთავდა გვერდს
+  // (რაც ხელახლა უშვებდა INIT-ის საწყის fetch-ს). ახლა ორივე გვერდზე
+  // ყოველ ჯერზე ახალი მონაცემი მოდის ბექენდიდან.
+  if (id === 'home')     { loadListingsFromAPI('home-grid'); loadHomeStats(); }
+  if (id === 'listings') { filterL(document.getElementById('s-input')?.value || '', 1); }
   if (id === 'wallet')  { updateNavUser(); loadWallet(); }
   if (id === 'create-listing') { clResetForm(); }
   if (id === 'profile') { updateNavUser(); loadMyProfile(); }

@@ -6,6 +6,18 @@ const express = require('express');
 const db      = require('../db');
 const router  = express.Router();
 
+// ── NO-CACHE (HTTP-დონე) — server-ის 5-წუთიანი in-memory cache
+// (ქვემოთ) განზრახ პატარა TTL-ია დატვირთვის შესამცირებლად, მაგრამ
+// ბრაუზერი/შუალედური პროქსი ამას არ უნდა აკეშავდეს დამატებით —
+// წინააღმდეგ შემთხვევაში 5-წუთიანი განახლება მომხმარებლისთვის
+// გაცილებით მეტ ხანს გამოჩნდება, ვიდრე რეალურად საჭიროა.
+router.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
 // მარტივი in-memory cache — DB-ს ყოველ request-ზე არ ვტვირთავთ
 let cache     = null;
 let cacheTime = 0;

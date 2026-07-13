@@ -10,6 +10,15 @@ const ledger  = require('../utils/ledger');
 const ADMIN_EMAIL = process.env.EMAIL_USER || process.env.SMTP_USER || 'shavosmail25@gmail.com';
 const router  = express.Router();
 
+// ── NO-CACHE — ბალანსი/ტრანზაქციები ხშირად იცვლება; ვუკრძალავთ
+// ბრაუზერს/პროქსის ამ პასუხების დაკეშვას.
+router.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
 // ══════════════════════════════════════════════════════════════
 // GET /api/wallet/balance
 // ══════════════════════════════════════════════════════════════
