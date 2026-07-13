@@ -115,7 +115,7 @@ router.get('/suggest', async (req, res) => {
 router.get('/', optionalAuth, async (req, res) => {
   try {
     const {
-      category, game, listing_type, vip,
+      category, game, subcategory, listing_type, vip,
       platform, region,
       min_price, max_price,
       search, sort = 'newest',
@@ -138,6 +138,14 @@ router.get('/', optionalAuth, async (req, res) => {
     if (seller_id)    { conditions.push(`l.seller_id = $${p++}`);      params.push(seller_id); }
     if (category)     { conditions.push(`l.category = $${p++}`);       params.push(category); }
     if (game)         { conditions.push(`l.game ILIKE $${p++}`);        params.push(`%${game}%`); }
+    // ── Sub-category — ზუსტი (case-insensitive) დამთხვევა კონკრეტულ
+    // თამაშზე/სერვისზე (მაგ. category=social + subcategory=TikTok).
+    // განსხვავებით ზემოთა `game` პარამეტრისგან (ILIKE, ნაწილობრივი
+    // დამთხვევა — Game Hub გვერდისთვის), subcategory ყოველთვის ზუსტი
+    // დამთხვევაა, რომ "PUBG" ვერასდროს დაემთხვეს "PUBG Mobile"-ს და
+    // პირიქით. Frontend-ის subcategory chips ამ ზუსტ, კატალოგიზებულ
+    // სახელებს აგზავნის (იხ. gamer-market-ge.html → SUBCATEGORIES).
+    if (subcategory)  { conditions.push(`LOWER(l.game) = LOWER($${p++})`); params.push(subcategory); }
     if (listing_type) { conditions.push(`l.listing_type = $${p++}`);    params.push(listing_type); }
     if (vip === 'true') {
       conditions.push(`l.is_vip = TRUE AND (l.vip_expires_at IS NULL OR l.vip_expires_at > NOW())`);

@@ -140,6 +140,17 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 .sbox input::placeholder{color:var(--muted)}
 .fbtn{padding:5px 10px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;font-size:11px;color:var(--muted);cursor:pointer;transition:all .15s;white-space:nowrap;font-weight:500}
 .fbtn:hover,.fbtn.on{color:var(--text);border-color:var(--border3)}.fbtn.on{color:var(--accent);border-color:var(--ad2);background:var(--ad)}
+
+/* SUB-CATEGORY BAR — მთავარი კატეგორიის ქვემოთ მეორე მწკრივი
+   (მაგ. „სოც.“-ზე დაჭერისას → TikTok / Instagram / Facebook / YouTube) */
+.sbar-sub{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 20px 9px;display:none}
+.sbar-sub.show{display:block;animation:subIn .15s ease}
+@keyframes subIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+.sbar-sub-inner{max-width:1120px;margin:0 auto;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.subfbtn{display:inline-flex;align-items:center;gap:5px;padding:4px 10px 4px 6px;background:var(--bg3);border:1px solid var(--border2);border-radius:20px;font-size:10.5px;color:var(--muted);cursor:pointer;transition:all .15s;white-space:nowrap;font-weight:500}
+.subfbtn:hover,.subfbtn.on{color:var(--text);border-color:var(--border3)}
+.subfbtn.on{color:var(--accent);border-color:var(--ad2);background:var(--ad)}
+.subfbtn img{width:15px;height:15px;object-fit:contain;border-radius:50%;flex-shrink:0}
 .cur-tog{display:flex;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;overflow:hidden}
 .ct{padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;background:none;border:none;color:var(--muted);transition:all .15s;font-family:var(--mono)}
 .ct.on{background:var(--accent);color:#08090d}
@@ -1103,6 +1114,7 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
       <button class="fbtn" onclick="filt(this,'pc')">🖥️ PC</button>
       <button class="fbtn" onclick="filt(this,'social')">📲 სოც.</button>
       <button class="fbtn" onclick="filt(this,'boosting')">⚡ ბუსტი</button>
+      <button class="fbtn" onclick="filt(this,'currency')">💎 ვალუტა</button>
       <button class="fbtn" onclick="filt(this,'VIP')">⭐ VIP</button>
       <select class="sort-sel" id="s-platform" onchange="handleAdvFilterChange()" style="margin-left:4px">
         <option value="">🖥️ ყველა პლატფორმა</option>
@@ -1121,6 +1133,9 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
       </select>
       <div class="cur-tog"><button class="ct on" onclick="setCur(this,'GEL')">₾</button><button class="ct" onclick="setCur(this,'USD')">$</button></div>
     </div>
+  </div>
+  <div class="sbar-sub" id="l-subcats-outer">
+    <div class="sbar-sub-inner" id="l-subcats"></div>
   </div>
   <div class="wrap">
     <div class="sec-head">
@@ -2100,6 +2115,7 @@ function daysUntil(d) {
 let currentUser  = null;
 let CUR          = 'GEL';
 let FILT         = 'ყველა';
+let SUBCAT       = '';
 let curGame      = null;
 let curGameTab   = 0;
 let L_PAGE       = 1;
@@ -3091,16 +3107,31 @@ function renderGrid(id, items, mob) {
   el.innerHTML = items.map(l => buildCard(l, mob)).join('');
 }
 
+// ⚠️ ადრე აქ `if (data.listings && data.listings.length)` პირობა იყო —
+// ანუ ვალიდური, "ნამდვილად ცარიელი" პასუხიც (listings=[]) null-ს
+// აბრუნებდა, ზუსტად ისევე, როგორც რეალური ქსელის/სერვერის შეცდომა
+// (catch ბლოკი). ამის გამო caller-ებს არ შეეძლოთ განესხვავებინათ
+// "ეს ფილტრი ნამდვილად ცარიელია" და "მოთხოვნა ჩავარდა" — ორივე
+// ერთნაირად უჩვენებდა ზოგად "ვერ მოიძებნა" ტექსტს, მათ შორის იმ
+// შემთხვევაშიც, როცა backend/ქსელი უბრალოდ დროებით არ პასუხობდა.
+// ახლა API success-ზე (თუნდაც listings=[]) ყოველთვის ვახარისხებთ
+// grid-ს და ვაბრუნებთ ნამდვილ (truthy) data ობიექტს; მხოლოდ ნამდვილი
+// fetch/სერვერის შეცდომაზე (catch) ვაბრუნებთ null-ს — caller-ებმა ეს
+// ორი შემთხვევა ცალ-ცალკე უნდა დაამუშაონ (იხ. filterL, renderGameTab).
 async function loadListingsFromAPI(gridId, params = {}) {
   try {
-    const q = new URLSearchParams({ limit: 12, ...params }).toString();
+    // ცარიელი/undefined/null მნიშვნელობების გასუფთავება, რომ query
+    // string-ში ცარიელი პარამეტრი (მაგ. subcategory=) არ ჩავარდეს
+    const cleanParams = {};
+    Object.keys(params).forEach(k => {
+      if (params[k] !== undefined && params[k] !== null && params[k] !== '') cleanParams[k] = params[k];
+    });
+    const q = new URLSearchParams({ limit: 12, ...cleanParams }).toString();
     const data = await api('/api/listings?' + q);
-    if (data.listings && data.listings.length) {
-      renderGrid(gridId, data.listings.map(mapApiListing), true);
-      const cnt = document.getElementById('l-count');
-      if (cnt) cnt.textContent = data.total + ' განცხ.';
-      return data;
-    }
+    renderGrid(gridId, (data.listings || []).map(mapApiListing), true);
+    const cnt = document.getElementById('l-count');
+    if (cnt) cnt.textContent = (data.total || 0) + ' განცხ.';
+    return data;
   } catch (e) { console.error('listings error:', e); }
   return null;
 }
@@ -3408,6 +3439,10 @@ function filterL(q, page = 1) {
   if (L_SEARCH) params.search = L_SEARCH;
   if (FILT && FILT !== 'ყველა' && FILT !== 'VIP') params.category = FILT;
   if (FILT === 'VIP') params.vip = 'true';
+  // ── Sub-category — კონკრეტული თამაში/სერვისი მიმდინარე კატეგორიის
+  // ფარგლებში (მაგ. category=social + subcategory=TikTok). SUBCAT
+  // იბერდება filt()/selectSubcat()-ის მიერ — იხ. ქვემოთ ──
+  if (SUBCAT) params.subcategory = SUBCAT;
   // ── Advanced Search — მრავალპარამეტრიანი ფილტრი: სათაური/კატეგორია
   // (search) + პლატფორმა + რეგიონი/სერვერი ერთდროულად, გვერდის
   // გადატვირთვის გარეშე (loadListingsFromAPI → renderGrid, fetch-ით) ──
@@ -3420,12 +3455,20 @@ function filterL(q, page = 1) {
   if (grid) grid.classList.add('grid-loading');
   loadListingsFromAPI('l-grid', params).then(data => {
     if (grid) grid.classList.remove('grid-loading');
+    // ── data === null ნიშნავს ნამდვილ fetch/სერვერის შეცდომას (იხ.
+    // loadListingsFromAPI) — ეს არ არის "0 შედეგი", ამიტომ ცალკე,
+    // პატიოსანი შეტყობინება უნდა ჩანდეს ("ვერ მოიძებნა"-საგან
+    // განსხვავებული), + toast, რომ მომხმარებელმა იცოდეს სცადოს თავიდან.
     if (!data) {
       const el = document.getElementById('l-grid');
-      if (el) el.innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="empty-ico">🔍</div><div class="empty-t">განცხადებები ვერ მოიძებნა</div></div>';
+      if (el) el.innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="empty-ico">⚠️</div><div class="empty-t">ჩატვირთვის შეცდომა — სცადეთ თავიდან</div></div>';
       renderPagination(0, 1);
+      showToast('განცხადებების ჩატვირთვა ვერ მოხერხდა', 'err');
       return;
     }
+    // data.listings=[] (ნამდვილად ცარიელი ფილტრი) — loadListingsFromAPI-მ
+    // grid-ში უკვე დარენდერა სწორი "ვერ მოიძებნა" empty-state, აქ
+    // მხოლოდ pagination-ია დასარეგულირებელი.
     renderPagination(data.pages || 1, data.page || 1);
   });
 }
@@ -3436,10 +3479,89 @@ function handleAdvFilterChange() {
   filterL(document.getElementById('s-input')?.value || '', 1);
 }
 
+// ══════════════════════════════════════════════════════════
+// SUB-CATEGORIES — თითო მთავარ კატეგორიაზე კონკრეტული თამაშ/სერვისების
+// სია (Playerok-ის მსგავსად). ეს ზუსტად იმეორებს create-listing wizard-ის
+// cl-cat-card სიას (იხ. ზემოთ POST-ის ფორმაში), რომ ერთი და იმავე
+// "game" მნიშვნელობებით მოხდეს გაფილტვრა, რომლითაც განცხადებები
+// რეალურად იქმნება — backend ზუსტ (case-insensitive) დამთხვევას
+// აკეთებს l.game სვეტზე (იხ. src/routes/listings.js → subcategory).
+// ══════════════════════════════════════════════════════════
+const SUBCATEGORIES = {
+  mobile: [
+    { name: 'PUBG Mobile',    logo: 'photos/logos/pubg-mobile.png' },
+    { name: 'Arena Breakout', logo: 'photos/logos/arena-breakout.jpg' },
+    { name: 'CoD Mobile',     logo: 'photos/logos/cod-mobile.jpg' },
+    { name: 'Mobile Legends', logo: 'photos/logos/mobile-legends.jpg' },
+    { name: 'Brawl Stars',    logo: 'photos/logos/brawl-stars.jpg' },
+    { name: 'Clash of Clans', logo: 'photos/logos/clash-of-clans.jpg' },
+    { name: 'Genshin Impact', logo: 'photos/logos/genshin-impact.jpg' },
+    { name: 'Roblox',         logo: 'photos/logos/roblox.jpg' },
+  ],
+  pc: [
+    { name: 'CS2',                 logo: 'photos/logos/cs2.jpg' },
+    { name: 'Valorant',            logo: 'photos/logos/valorant.jpg' },
+    { name: 'Dota 2',              logo: 'photos/logos/dota-2.jpg' },
+    { name: 'League of Legends',   logo: 'photos/logos/league-of-legends.jpg' },
+  ],
+  social: [
+    { name: 'Instagram', logo: 'photos/logos/instagram.jpg' },
+    { name: 'TikTok',    logo: 'photos/logos/tiktok.jpg' },
+    { name: 'YouTube',   logo: 'photos/logos/youtube.jpg' },
+    { name: 'Facebook',  logo: 'photos/logos/facebook.jpg' },
+  ],
+  boosting: [
+    { name: 'PUBG Mobile', logo: 'photos/logos/pubg-mobile.png' },
+    { name: 'CS2',         logo: 'photos/logos/cs2.jpg' },
+    { name: 'Valorant',    logo: 'photos/logos/valorant.jpg' },
+    { name: 'სხვა',        logo: '' },
+  ],
+  currency: [
+    { name: 'PUBG Mobile',   logo: 'photos/logos/pubg-mobile.png' },
+    { name: 'Mobile Legends',logo: 'photos/logos/mobile-legends.jpg' },
+    { name: 'Brawl Stars',   logo: 'photos/logos/brawl-stars.jpg' },
+    { name: 'CS2',           logo: 'photos/logos/cs2.jpg' },
+    { name: 'სხვა',          logo: '' },
+  ],
+};
+
+// ── მთავარი კატეგორიის მიხედვით ვაშენებთ/ვმალავთ subcategory chip-ების
+// მწკრივს. "ყველა" chip ყოველთვის პირველია და აქტიურია default-ად ──
+function renderSubcats(cat) {
+  const outer = document.getElementById('l-subcats-outer');
+  const inner = document.getElementById('l-subcats');
+  if (!outer || !inner) return;
+  const list = SUBCATEGORIES[cat];
+  if (!list || !list.length) {
+    outer.classList.remove('show');
+    inner.innerHTML = '';
+    return;
+  }
+  inner.innerHTML = `<button class="subfbtn on" onclick="selectSubcat(this,'')">ყველა</button>` +
+    list.map(s => {
+      const safeName = s.name.replace(/'/g, "\\'");
+      const img = s.logo ? `<img src="${s.logo}" alt="" onerror="this.remove()">` : '';
+      return `<button class="subfbtn" onclick="selectSubcat(this,'${safeName}')">${img}${esc(s.name)}</button>`;
+    }).join('');
+  outer.classList.add('show');
+}
+
+// ── subcategory chip-ზე დაჭერა — active state + დაუყოვნებელი,
+// გვერდის გადატვირთვის გარეშე fetch (filterL → loadListingsFromAPI) ──
+function selectSubcat(btn, sub) {
+  document.querySelectorAll('#l-subcats .subfbtn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  SUBCAT = sub || '';
+  filterL(document.getElementById('s-input')?.value || '', 1);
+}
+
 function filt(btn, cat) {
   document.querySelectorAll('#page-listings .fbtn').forEach(b => b.classList.remove('on'));
   btn.classList.add('on');
   FILT = cat;
+  // ახალი მთავარი კატეგორია ავტ. ასუფთავებს წინა subcategory არჩევანს
+  SUBCAT = '';
+  renderSubcats(cat === 'ყველა' || cat === 'VIP' ? null : cat);
   const catLabels = {
     'ყველა':'ყველა განცხადება', 'mobile':'📱 მობილური', 'pc':'🖥️ PC / Console',
     'social':'📲 სოციალური', 'boosting':'⚡ ბუსტინგი', 'currency':'💎 ვალუტა', 'VIP':'⭐ VIP'
@@ -3599,8 +3721,13 @@ function goCategory(cat) {
     const btn = btns.find(b => b.getAttribute('onclick')?.includes(`'${apiCat}'`));
     if (btn) filt(btn, apiCat);
     else {
-      // fallback — პირდაპ. API call
+      // fallback — პირდაპ. API call (თუ რაიმე მიზეზით fbtn ვერ მოიძებნა) —
+      // filt()-ის იგივე state-reset ლოგიკა (SUBCAT + subcategory chips),
+      // რომ ეს გზაც კონსისტენტური დარჩეს
+      document.querySelectorAll('#page-listings .fbtn').forEach(b => b.classList.remove('on'));
       FILT = apiCat;
+      SUBCAT = '';
+      renderSubcats(apiCat === 'ყველა' || apiCat === 'VIP' ? null : apiCat);
       filterL('');
     }
   }, 60);
@@ -3646,9 +3773,17 @@ function openGameHub(id) {
 async function renderGameTab() {
   if (!curGame) return;
   const typeMap = { 0: 'account', 1: 'boosting', 2: 'currency' };
-  const ok = await loadListingsFromAPI('gh-grid', { game: curGame.name, listing_type: typeMap[curGameTab], limit: 20 });
-  if (!ok) {
-    const el = document.getElementById('gh-grid');
+  const data = await loadListingsFromAPI('gh-grid', { game: curGame.name, listing_type: typeMap[curGameTab], limit: 20 });
+  const el = document.getElementById('gh-grid');
+  // data === null → ნამდვილი fetch/სერვერის შეცდომა (არა უბრალოდ 0 შედეგი)
+  if (!data) {
+    if (el) el.innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="empty-ico">⚠️</div><div class="empty-t">ჩატვირთვის შეცდომა — სცადეთ თავიდან</div></div>`;
+    return;
+  }
+  // data.listings=[] — ეს ნამდვილად ცარიელია (loadListingsFromAPI-მ grid
+  // უკვე დაარენდერა ზოგადი empty-state-ით), აქ თამაშისთვის სპეც.
+  // მეგობრული შეტყობინებით ვცვლით
+  if (!data.listings || !data.listings.length) {
     if (el) el.innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="empty-ico"><img src="${curGame.logo}" alt="${curGame.name}"></div><div class="empty-t">ამ კატეგორიაში განცხადებები ჯერ არ არის</div></div>`;
   }
 }
@@ -5364,9 +5499,12 @@ renderChats();
 
 // ბაზაში განცხ. ჩატვირთვა
 (async () => {
-  const ok = await loadListingsFromAPI('home-grid');
-  if (!ok) {
-    const hg = document.getElementById('home-grid');
+  const data = await loadListingsFromAPI('home-grid');
+  const hg = document.getElementById('home-grid');
+  if (!data) {
+    // ნამდვილი fetch/სერვერის შეცდომა — არა უბრალოდ ცარიელი კატალოგი
+    if (hg) hg.innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="empty-ico">⚠️</div><div class="empty-t">ჩატვირთვის შეცდომა — გვერდი განაახლეთ</div></div>';
+  } else if (!data.listings || !data.listings.length) {
     if (hg) hg.innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="empty-ico">🎮</div><div class="empty-t">განცხადებები მალე გამოჩნდება</div></div>';
   }
   loadListingsFromAPI('l-grid');
