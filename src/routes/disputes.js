@@ -11,6 +11,7 @@ const push       = require('../utils/push');
 const cloudinary = require('../utils/cloudinary');
 const ledger     = require('../utils/ledger');
 const chat       = require('./chat');
+const { checkAndSyncVerifiedSeller } = require('../utils/verifiedSeller');
 const router     = express.Router();
 
 // multer — memoryStorage, Cloudinary-ში ასატვირთად
@@ -267,6 +268,9 @@ router.put('/:id/resolve', requireAuth, requireAdmin, async (req, res) => {
           "UPDATE orders SET escrow_status='released',status='completed',completed_at=NOW(),updated_at=NOW() WHERE id=$1",
           [order.id]
         );
+        // ── ვერიფიც. გამყიდველის ავტ. სტატუსის სინქრონიზაცია — დავის
+        // "release" გადაწყვ.-იც დასრულებულ გაყიდვად ითვლება ──
+        await checkAndSyncVerifiedSeller(client, order.seller_id);
       } else {
         // მყიდველს დაბრ. — deposit-ი hold-ის გარეშე (მყიდველი არ სჯდება hold-ზე)
         await client.query(

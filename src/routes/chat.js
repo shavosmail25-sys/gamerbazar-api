@@ -35,8 +35,10 @@ router.get('/rooms', requireAuth, async (req, res) => {
         l.game,
         ua.username     AS participant_a_name,
         ua.avatar_url   AS participant_a_avatar,
+        ua.is_verified_seller AS participant_a_verified,
         ub.username     AS participant_b_name,
         ub.avatar_url   AS participant_b_avatar,
+        ub.is_verified_seller AS participant_b_verified,
         (SELECT content FROM messages m
          WHERE m.room_id=r.id ORDER BY m.created_at DESC LIMIT 1) AS last_message,
         (SELECT created_at FROM messages m

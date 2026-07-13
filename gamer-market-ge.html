@@ -534,6 +534,25 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 .pb-v{background:var(--bd);color:var(--blue);border:1px solid #4d9de020}
 .pb-t{background:var(--gd);color:var(--gold);border:1px solid var(--gd2)}
 .pb-tr{background:var(--ad);color:var(--accent);border:1px solid var(--ad2)}
+
+/* ── VERIFIED SELLER — checkmark ბეჯი, ჩნდება ყველგან სახელის გვერდით ── */
+.v-badge{position:relative;display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;margin-left:4px;cursor:default;line-height:0}
+.v-badge svg{display:block;filter:drop-shadow(0 0 3px #5b9cf690)}
+.v-badge::before,.v-badge::after{opacity:0;pointer-events:none;transition:opacity .15s ease,transform .15s ease}
+.v-badge::after{
+  content:'ვერიფიცირებული გამყიდველი';
+  position:absolute;bottom:calc(100% + 7px);left:50%;
+  transform:translateX(-50%) translateY(3px);
+  background:#0a0e1af0;color:var(--text);font-family:var(--font);
+  font-size:10.5px;font-weight:500;white-space:nowrap;
+  padding:6px 10px;border-radius:7px;border:1px solid var(--border2);
+  box-shadow:0 8px 20px #00000060;z-index:60;
+}
+.v-badge::before{
+  content:'';position:absolute;bottom:calc(100% + 3px);left:50%;transform:translateX(-50%);
+  border:4px solid transparent;border-top-color:#0a0e1af0;z-index:60;
+}
+.v-badge:hover::after,.v-badge:hover::before{opacity:1;transform:translateX(-50%) translateY(0)}
 .prof-stats{display:flex;gap:18px}
 .pstat-v{font-family:var(--mono);font-size:17px;font-weight:700}.pstat-l{font-size:9px;color:var(--muted)}
 .prof-tabs{display:flex;gap:1px;margin-bottom:12px}
@@ -3071,6 +3090,7 @@ function mapApiListing(l) {
     si: (l.seller_name || l.seller_username || '?').slice(0, 2).toUpperCase(),
     sc: 'var(--accent)', r: Number(l.seller_rating) || 0,
     rc: Number(l.seller_review_count) || 0,
+    verified: !!l.is_verified_seller,
     vip: l.is_vip, cat: l.category, id: l.id,
     images: l.images || [],
     platform: l.platform || '', region: l.region || '', account_security: l.account_security || ''
@@ -3118,7 +3138,7 @@ function buildCard(l, isMob) {
       <div class="lcard-tags">${l.platform ? `<span class="tag">${PLATFORM_LABELS[l.platform] || l.platform}</span>` : ''}${l.region ? `<span class="tag">${REGION_LABELS[l.region] || l.region}</span>` : ''}${(l.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div>
       <div class="lcard-foot">
         <div class="lcard-seller"><div class="s-ava" style="color:${l.sc}">${l.si}</div>
-        <div><div class="s-name">${l.seller}</div><div class="s-rat">★${l.r}(${l.rc})</div></div></div>
+        <div><div class="s-name">${esc(l.seller)}${verifiedBadge(l.verified)}</div><div class="s-rat">★${l.r}(${l.rc})</div></div></div>
         <div><div class="lcard-price">${price}</div><div class="lcard-price-s">${psub}</div></div>
       </div>
     </div>
@@ -3263,7 +3283,7 @@ function renderListingDetail(l) {
   const sellerName  = document.getElementById('ld-seller-name');
   const sellerStats = document.getElementById('ld-seller-stats');
   const sellerAva   = document.getElementById('ld-seller-ava');
-  sellerName.textContent = l.display_name || l.username || '?';
+  sellerName.innerHTML = esc(l.display_name || l.username || '?') + verifiedBadge(l.is_verified_seller);
   sellerStats.textContent =
     '★ ' + (Number(l.seller_rating) || 0).toFixed(1) +
     ' · ' + (l.seller_review_count || 0) + ' შეფ.' +
@@ -3289,6 +3309,18 @@ function fmtListingDate(d) {
 function esc(str) {
   if (str == null) return '';
   return String(str).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+// ვერიფიც. გამყიდველის checkmark ბეჯი — ერთი საერთო helper, გამოიყენება
+// ყველგან, სადაც გამყიდველის სახელი ჩანს (ბარათები, პროფილი, ჩატი),
+// რომ დიზაინი ყველგან ერთნაირი და ერთ ადგილას შესაცვლელი იყოს.
+function verifiedBadge(isVerified) {
+  if (!isVerified) return '';
+  return '<span class="v-badge" aria-label="ვერიფიცირებული გამყიდველი">'
+    + '<svg viewBox="0 0 24 24" width="13" height="13" fill="none">'
+    + '<path d="M12 2.7l2.35 1.66 2.86-.34 1.05 2.7 2.55 1.42-.56 2.86.56 2.86-2.55 1.42-1.05 2.7-2.86-.34L12 21.3l-2.35-1.66-2.86.34-1.05-2.7-2.55-1.42.56-2.86-.56-2.86 2.55-1.42 1.05-2.7 2.86.34L12 2.7z" fill="var(--blue)"/>'
+    + '<path d="M8.4 12.3l2.3 2.3 4.7-4.9" stroke="#08090d" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>'
+    + '</svg></span>';
 }
 
 async function loadSimilarListings(l) {
@@ -3403,7 +3435,7 @@ async function openSellerProfile() {
       api('/api/reviews/seller/' + sellerId)
     ]);
 
-    document.getElementById('sm-name').textContent    = profile.display_name || profile.username;
+    document.getElementById('sm-name').innerHTML      = esc(profile.display_name || profile.username) + verifiedBadge(profile.is_verified_seller);
     document.getElementById('sm-handle').textContent  = '@' + profile.username;
     document.getElementById('sm-bio').textContent     = profile.bio || '';
     document.getElementById('sm-sales').textContent   = profile.completed_orders || 0;
@@ -3863,6 +3895,7 @@ async function loadChatRooms() {
     el.innerHTML = rooms.map(r => {
       const isA      = r.participant_a === currentUser.id;
       const partner  = isA ? r.participant_b_name : r.participant_a_name;
+      const partnerVerified = !!(isA ? r.participant_b_verified : r.participant_a_verified);
       const initials = (partner || '?').slice(0,2).toUpperCase();
       const lastMsg  = r.last_message || 'შეტყობინება არ არის';
       const unread   = Number(r.unread_count) || 0;
@@ -3871,10 +3904,10 @@ async function loadChatRooms() {
         : '';
       const active   = r.id === currentRoomId ? ' on' : '';
 
-      return `<div class="ci${active}" data-room="${r.id}" data-order="${r.order_id}" data-amount="${r.amount_gel}" data-escrow="${r.escrow_status}" data-partner="${partner}" onclick="openChatRoom(this)">
+      return `<div class="ci${active}" data-room="${r.id}" data-order="${r.order_id}" data-amount="${r.amount_gel}" data-escrow="${r.escrow_status}" data-partner="${partner}" data-partner-verified="${partnerVerified ? 1 : 0}" onclick="openChatRoom(this)">
         <div class="ci-av" style="color:var(--blue)">${initials}</div>
         <div class="ci-inf">
-          <div class="ci-n">${partner || '?'}</div>
+          <div class="ci-n">${esc(partner) || '?'}${verifiedBadge(partnerVerified)}</div>
           <div class="ci-l">${r.listing_title || ''}</div>
           <div class="ci-l" style="font-size:10px">${lastMsg}</div>
         </div>
@@ -3901,6 +3934,7 @@ async function openChatRoom(el) {
   const amount   = el.dataset.amount;
   const escrow   = el.dataset.escrow;
   const partner  = el.dataset.partner;
+  const partnerVerified = el.dataset.partnerVerified === '1';
 
   currentRoomId  = roomId;
   currentOrderId = orderId;
@@ -3911,7 +3945,7 @@ async function openChatRoom(el) {
   const nameEl  = document.getElementById('chat-partner-name');
   const infoEl  = document.getElementById('chat-order-info');
   const avaEl   = document.getElementById('chat-partner-ava');
-  if (nameEl)  nameEl.textContent  = partner || '?';
+  if (nameEl)  nameEl.innerHTML   = (esc(partner) + verifiedBadge(partnerVerified)) || '?';
   if (infoEl)  infoEl.textContent  = `ორდ. · ₾${Number(amount).toFixed(2)}`;
   if (avaEl)   avaEl.textContent   = (partner||'?').slice(0,2).toUpperCase();
 

@@ -6,6 +6,7 @@ const db      = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const push    = require('../utils/push');
 const chat    = require('./chat');
+const { checkAndSyncVerifiedSeller } = require('../utils/verifiedSeller');
 const router  = express.Router();
 
 // ── NO-CACHE — ახალი შეფასება მაშინვე უნდა გამოჩნდეს, დაკეშილი ძველი
@@ -50,6 +51,11 @@ router.post('/', requireAuth, async (req, res) => {
       VALUES($1,$2,$3,$4,$5) RETURNING *
     `, [order_id, req.user.id, order.seller_id, rating, comment || null]);
     const review = rows[0];
+
+    // ── ვერიფიც. გამყიდველის ავტ. სტატუსის სინქრონიზაცია — ახალმა
+    // შეფასებამ შეიძლება საშ. რეიტინგი 4.80-ის ზღვარს იქით/აქეთ გადაიტანოს ──
+    await checkAndSyncVerifiedSeller(db, order.seller_id)
+      .catch(e => console.error('verified seller sync error:', e.message));
 
     res.status(201).json(review);
 

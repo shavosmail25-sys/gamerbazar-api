@@ -8,6 +8,7 @@ const mailer  = require('../utils/mailer');
 const push    = require('../utils/push');
 const ledger  = require('../utils/ledger');
 const chat    = require('./chat');
+const { checkAndSyncVerifiedSeller } = require('../utils/verifiedSeller');
 const router  = express.Router();
 
 // ── NO-CACHE — შეკვეთის სტატუსი (pending/completed/disputed) რეალურ
@@ -340,6 +341,10 @@ router.post('/:id/confirm', requireAuth, async (req, res) => {
         [order.seller_id, order.id, -fee]
       );
       await client.query("UPDATE listings SET status='sold' WHERE id=$1", [order.listing_id]);
+
+      // ── ვერიფიც. გამყიდველის ავტ. სტატუსის სინქრონიზაცია — ეს
+      // შეკვეთა completed_orders რიცხვს ზრდის, შესაძლოა ზღვარს გადააჭარბოს ──
+      await checkAndSyncVerifiedSeller(client, order.seller_id);
     });
 
     res.json({ ok: true, show_review: true, hold_until: holdUntil });

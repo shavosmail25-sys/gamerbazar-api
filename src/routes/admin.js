@@ -9,6 +9,7 @@ const mailer  = require('../utils/mailer');
 const push    = require('../utils/push');
 const ledger  = require('../utils/ledger');
 const chat    = require('./chat');
+const { checkAndSyncVerifiedSeller } = require('../utils/verifiedSeller');
 const router  = express.Router();
 
 // ── სუპერ-ადმინის Email ──────────────────────────────────────────
@@ -142,6 +143,9 @@ router.put('/disputes/:id/resolve', async (req, res) => {
           "INSERT INTO transactions(user_id,order_id,type,amount_gel,description) VALUES($1,$2,'sale_income',$3,'დავის გადაწყვ. — გამყ-ზე გადახდა (48სთ hold)')",
           [order.seller_id, order.id, order.seller_receives]
         );
+        // ── ვერიფიც. გამყიდველის ავტ. სტატუსის სინქრონიზაცია — დავის
+        // "release" გადაწყვ.-იც დასრულებულ გაყიდვად ითვლება ──
+        await checkAndSyncVerifiedSeller(client, order.seller_id);
       } else {
         await client.query(
           'UPDATE users SET balance_gel=balance_gel+$1, escrow_hold_gel=escrow_hold_gel-$1 WHERE id=$2',
