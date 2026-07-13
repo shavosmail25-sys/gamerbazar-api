@@ -555,6 +555,15 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 .v-badge:hover::after,.v-badge:hover::before{opacity:1;transform:translateX(-50%) translateY(0)}
 .prof-stats{display:flex;gap:18px}
 .pstat-v{font-family:var(--mono);font-size:17px;font-weight:700}.pstat-l{font-size:9px;color:var(--muted)}
+/* ── STATS DASHBOARD — კომპაქტური ჰორიზონტალური ზოლი პროფილის
+     ჰედერის ქვემოთ (გაყიდვა/რეიტინგი/შეფასება/დავა). ცალკეა
+     .prof-card-ის (ჰედერი) და .prof-tabs-ის (განცხადებები) შორის,
+     რომ ჰედერი მსუბუქი დარჩეს და მთავარი ყურადღება კონტენტზე იყოს. */
+.prof-statbar{display:flex;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px 10px;margin-bottom:14px}
+.prof-statbar>div{flex:1;text-align:center;padding:0 6px;position:relative}
+.prof-statbar>div+div::before{content:'';position:absolute;left:0;top:4px;bottom:4px;width:1px;background:var(--border2)}
+.prof-statbar .pstat-v{font-size:18px}
+.prof-statbar .pstat-l{font-size:10px;margin-top:2px}
 .prof-tabs{display:flex;gap:1px;margin-bottom:12px}
 .ptab{padding:5px 13px;border-radius:6px;font-size:12px;font-weight:500;color:var(--muted);cursor:pointer;transition:all .15s}
 .ptab:hover,.ptab.on{color:var(--text);background:var(--bg3)}.ptab.on{color:var(--accent)}
@@ -819,9 +828,9 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
   .prof-av-edit{width:22px;height:22px;font-size:10px;bottom:0;right:0}
   .prof-name{font-size:17px}
   .prof-handle{font-size:11px}
-  .prof-stats{justify-content:center;gap:12px;flex-wrap:wrap;margin-top:8px}
-  .pstat-v{font-size:16px}
-  .pstat-l{font-size:9.5px}
+  .prof-statbar{padding:11px 4px;margin-bottom:11px}
+  .prof-statbar .pstat-v{font-size:15px}
+  .prof-statbar .pstat-l{font-size:9px}
   .prof-bs{justify-content:center;flex-wrap:wrap;gap:5px}
   .prof-tabs{overflow-x:auto;padding-bottom:2px}
   .ptab{white-space:nowrap;flex-shrink:0;padding:7px 13px;font-size:12px}
@@ -1427,48 +1436,22 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
           <div class="prof-name" id="prof-name-display">—</div>
           <div class="prof-handle" id="prof-handle-display">@—</div>
           <div class="prof-bio" id="prof-bio-display"></div>
+          <!-- პატარა ბეჯები — მათ შორის ⭐ VIP, თუ ანგარიში VIP-ია (იხ. loadMyProfile()) -->
           <div class="prof-bs" id="prof-badges"></div>
-          <div class="prof-stats">
-            <div><div class="pstat-v" id="prof-sales">0</div><div class="pstat-l">გაყიდვა</div></div>
-            <div><div class="pstat-v" style="color:var(--gold)" id="prof-rating">—</div><div class="pstat-l">რეიტინგი</div></div>
-            <div><div class="pstat-v" id="prof-reviews-count">0</div><div class="pstat-l">შეფ.</div></div>
-            <div><div class="pstat-v" id="prof-disputes">0</div><div class="pstat-l">დავა</div></div>
-          </div>
         </div>
         <button class="btn btn-g btn-sm" onclick="pg('edit');act(document.querySelectorAll('.nl')[5])">✏️ რედ.</button>
         <button class="btn btn-g btn-sm" onclick="doLogout()">🚪 გასვლა</button>
       </div>
 
-      <!-- VIP სტატუსის მუდმივი ბლოკი — ადრე ეს არსად ჩანდა პროფილში,
-           მომხმარებელს მოდალის გახსნის გარეშე არ შეეძლო გაეგო, VIP
-           აქვს თუ არა და რამდენი დღე რჩება ვადის ამოწურვამდე. -->
-      <div id="prof-vip-card" style="margin:12px 0;border-radius:12px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"></div>
-
-      <!-- რეფერალური პროგრამა — Glassmorphism ბარათი, საიტის ესთეტიკის შესაბამისად -->
-      <div id="prof-referral-card" style="margin:0 0 12px;border-radius:12px;padding:18px 20px;background:var(--glass-bg);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--glass-border);position:relative;overflow:hidden">
-        <div style="position:absolute;top:-40px;right:-40px;width:140px;height:140px;border-radius:50%;background:radial-gradient(circle,var(--gd),transparent 70%);pointer-events:none"></div>
-        <div style="position:relative;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px">
-          <div style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px">
-            <span style="font-size:18px">🎁</span> რეფერალური პროგრამა
-          </div>
-          <div style="display:flex;gap:18px">
-            <div style="text-align:center">
-              <div class="pstat-v" id="ref-invited-count" style="color:var(--accent)">0</div>
-              <div class="pstat-l">მოწვეული მეგობრები</div>
-            </div>
-            <div style="text-align:center">
-              <div class="pstat-v" id="ref-earned-bonus" style="color:var(--gold)">₾0.00</div>
-              <div class="pstat-l">გამომუშავებული ბონუსი</div>
-            </div>
-          </div>
-        </div>
-        <div style="position:relative;display:flex;gap:8px;margin-bottom:10px">
-          <input id="ref-link-input" class="form-i" readonly value="" style="flex:1;font-family:var(--mono);font-size:12px;background:var(--bg3);cursor:text">
-          <button class="btn btn-a btn-sm" style="white-space:nowrap" onclick="copyReferralLink()">📋 დაკოპირება</button>
-        </div>
-        <div style="position:relative;font-size:11.5px;color:var(--muted2);line-height:1.5">
-          მიიღე <b style="color:var(--gold)">1₾</b> მეგობრის პირველ დეპოზიტზე და დამატებით <b style="color:var(--gold)">1₾</b> მის პირველ შენაძენზე!
-        </div>
+      <!-- STATS DASHBOARD — კომპაქტური, ჰორიზონტალური ზოლი ჰედერის
+           ქვემოთ. VIP-ისა და რეფერალის დიდი ბლოკები აქედან გატანილია
+           პროფილის → პარამეტრები გვერდზე (page-edit), რომ მთავარი
+           ხედი განცხადებებზე იყოს ორიენტირებული — იხ. იქ. -->
+      <div class="prof-statbar">
+        <div><div class="pstat-v" id="prof-sales">0</div><div class="pstat-l">გაყიდვა</div></div>
+        <div><div class="pstat-v" style="color:var(--gold)" id="prof-rating">—</div><div class="pstat-l">რეიტინგი</div></div>
+        <div><div class="pstat-v" id="prof-reviews-count">0</div><div class="pstat-l">შეფასება</div></div>
+        <div><div class="pstat-v" id="prof-disputes">0</div><div class="pstat-l">დავა</div></div>
       </div>
 
       <div class="prof-tabs">
@@ -1542,6 +1525,51 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
         </div>
       </div>
     </div>
+
+    <!-- ⭐ VIP სტატუსი — პროფილის მთავარი ხედიდან აქ გადმოტანილია, რომ
+         ის აღარ იკავებდეს ცენტრალურ ადგილს; ფუნქციონალურად უცვლელია
+         (loadMyProfile()-ის იგივე #prof-vip-card id ავსებს). VIP
+         ასევე ხელმისაწვდომია ფუტერიდან და "⭐ VIP" ბანერიდან. -->
+    <div class="edit-section">
+      <div class="edit-sec-title">⭐ VIP სტატუსი</div>
+      <div id="prof-vip-card" style="border-radius:10px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"></div>
+    </div>
+
+    <!-- 🎁 რეფერალური პროგრამა — ასევე გადმოტანილია მთავარი ხედიდან.
+         ბმულის ნაცვლად ახლა მოკლე, წაკითხვადი პრომო-კოდია (REF-XXXXXX),
+         რომელიც ცალკე ჩანს (ref-code-display) და ავტ. ერთვის სრულ
+         გასაზიარებელ ბმულსაც (ref-link-input) — იხ. loadMyProfile(). -->
+    <div class="edit-section" id="edit-referral-section">
+      <div class="edit-sec-title">🎁 რეფერალური პროგრამა</div>
+      <div style="display:flex;gap:18px;margin-bottom:12px">
+        <div style="text-align:center">
+          <div class="pstat-v" id="ref-invited-count" style="color:var(--accent)">0</div>
+          <div class="pstat-l">მოწვეული მეგობრები</div>
+        </div>
+        <div style="text-align:center">
+          <div class="pstat-v" id="ref-earned-bonus" style="color:var(--gold)">₾0.00</div>
+          <div class="pstat-l">გამომუშავებული ბონუსი</div>
+        </div>
+      </div>
+      <div class="form-g">
+        <label class="form-l">შენი პრომო კოდი</label>
+        <div style="display:flex;gap:8px">
+          <input id="ref-code-display" class="form-i" readonly value="" style="flex:1;font-family:var(--mono);font-size:15px;font-weight:700;letter-spacing:.5px;color:var(--gold);background:var(--bg3)">
+          <button class="btn btn-a btn-sm" style="white-space:nowrap" onclick="copyReferralCode()">📋</button>
+        </div>
+      </div>
+      <div class="form-g">
+        <label class="form-l">გასაზიარებელი ბმული</label>
+        <div style="display:flex;gap:8px">
+          <input id="ref-link-input" class="form-i" readonly value="" style="flex:1;font-family:var(--mono);font-size:12px;background:var(--bg3);cursor:text">
+          <button class="btn btn-a btn-sm" style="white-space:nowrap" onclick="copyReferralLink()">📋 დაკოპირება</button>
+        </div>
+      </div>
+      <div style="font-size:11.5px;color:var(--muted2);line-height:1.5">
+        მიიღე <b style="color:var(--gold)">1₾</b> მეგობრის პირველ დეპოზიტზე და დამატებით <b style="color:var(--gold)">1₾</b> მის პირველ შენაძენზე!
+      </div>
+    </div>
+
     <div style="display:flex;gap:8px">
       <button class="btn btn-a" style="flex:1;padding:10px" onclick="saveProfile()">✓ შენახვა</button>
       <button class="btn btn-g" style="padding:10px 16px" onclick="pg('profile');act(document.querySelectorAll('.nl')[4])">გაუქმება</button>
@@ -1816,6 +1844,12 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
     <!-- ნაბიჯი 1: ელ-ფოსტის შეყვანა -->
     <div id="otp-step-email">
       <div class="form-g"><label class="form-l">ელ-ფოსტა</label><input class="form-i" id="otp-email" type="email" placeholder="your@email.com" autocomplete="email"></div>
+      <div class="form-g">
+        <label class="form-l">რეფერალური / პრომო კოდი (არასავალდებულო)</label>
+        <input class="form-i" id="otp-referral-code" type="text" placeholder="REF-XXXXXX" autocomplete="off"
+               style="font-family:var(--mono);text-transform:uppercase"
+               oninput="this.value=this.value.toUpperCase()">
+      </div>
       <div style="font-size:11px;color:var(--muted);margin-bottom:10px">კოდს გამოგიგზავნით ელ-ფოსტაზე — პაროლი აღარ სჭირდება 🔐</div>
       <div class="m-acts">
         <button class="btn btn-g" onclick="closeM('loginModal')">გაუქმება</button>
@@ -2206,10 +2240,13 @@ const setToken  = t  => localStorage.setItem('gb_token', t);
 const clearToken= () => localStorage.removeItem('gb_token');
 
 // ══════════════════════════════════════════════════════════
-// REFERRAL CODE CAPTURE — ?ref=<user_id> URL პარამეტრიდან
+// REFERRAL CODE CAPTURE — ან ?ref=REF-XXXXXX URL პარამეტრიდან,
+// ან ხელით შეყვანილი "რეფერალური/პრომო კოდი" login მოდალში
 // ══════════════════════════════════════════════════════════
 const REF_STORAGE_KEY = 'gb_ref_code';
-const REF_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// ახალი მოკლე, წაკითხვადი ფორმატი (REF-XXXXXX) — ცვლის ძველ
+// UUID-ბმულს (იხ. src/utils/referral.js REFERRAL_CODE_RE).
+const REF_CODE_RE = /^REF-[A-Z0-9]{4,24}$/i;
 
 // "პირველი შეხების" (first-touch) ატრიბუცია — თუ უკვე გვაქვს შენახული
 // კოდი, ახალი ვიზიტი მას არ გადააწერს (ის მეგობარი ითვლება, ვინც
@@ -2218,8 +2255,8 @@ function captureReferralCode() {
   try {
     const params = new URLSearchParams(window.location.search);
     const ref = (params.get('ref') || '').trim();
-    if (ref && REF_UUID_RE.test(ref) && !localStorage.getItem(REF_STORAGE_KEY)) {
-      localStorage.setItem(REF_STORAGE_KEY, ref);
+    if (ref && REF_CODE_RE.test(ref) && !localStorage.getItem(REF_STORAGE_KEY)) {
+      localStorage.setItem(REF_STORAGE_KEY, ref.toUpperCase());
     }
   } catch (e) { /* localStorage მიუწვდომელია — უვნებელია, უბრალოდ რეფერალის გარეშე გრძელდება */ }
 }
@@ -2230,6 +2267,19 @@ function getReferralCode() {
 
 function clearReferralCode() {
   try { localStorage.removeItem(REF_STORAGE_KEY); } catch (e) {}
+}
+
+// ხელით შეყვანილი კოდი (login მოდალის "რეფერალური/პრომო კოდი" ველი) —
+// თუ მომხმარებელმა თავად ჩაწერა კოდი, ის URL-დან ავტ. დაჭერილს
+// გადააწერს (მომხმარებლის აშკარა არჩევანს პრიორიტეტი აქვს). ცარიელი
+// ველის შემთხვევაში კი ცვლილება არ ხდება — რაც უკვე იყო შენახული
+// (URL-ის ?ref=-დან), ისევე გამოიყენება.
+function setReferralCodeManual() {
+  try {
+    const el = document.getElementById('otp-referral-code');
+    const val = el ? el.value.trim().toUpperCase() : '';
+    if (val) localStorage.setItem(REF_STORAGE_KEY, val);
+  } catch (e) { /* უვნებელია */ }
 }
 
 // ══════════════════════════════════════════════════════════
@@ -2459,6 +2509,11 @@ function showEmailStep() {
   const stepCode  = document.getElementById('otp-step-code');
   if (stepCode)  stepCode.style.display  = 'none';
   if (stepEmail) stepEmail.style.display = 'block';
+  // თუ ?ref= URL-პარამეტრიდან უკვე გვაქვს ავტ. დაჭერილი კოდი, ველში
+  // წინასწარ ვავსებთ — მომხმარებელი ხედავს, რომ კოდი გამოყენებულია
+  // (ხელით შეცვლა/წაშლა კვლავ შესაძლებელია).
+  const refInput = document.getElementById('otp-referral-code');
+  if (refInput && !refInput.value) refInput.value = getReferralCode() || '';
 }
 
 let otpCountdownInterval = null;
@@ -2516,6 +2571,9 @@ async function requestLoginOtp(isResend) {
     showToast('მიუთითე სწორი ელ-ფოსტა', 'err');
     return;
   }
+  // მომხმარებლის მიერ ხელით ჩაწერილ პრომო კოდს (თუ არის) ვინახავთ
+  // localStorage-ში — verifyLoginOtp() მას იქიდან წაიღებს request-ში.
+  if (!isResend) setReferralCodeManual();
   const btn = document.getElementById('otp-send-btn');
   if (btn) { btn.textContent = '⏳ იგზავნება...'; btn.disabled = true; }
   try {
@@ -2558,6 +2616,8 @@ async function verifyLoginOtp() {
     // რეფერალის კოდი ერთხელადია — წარმატებული login/register-ის შემდეგ
     // (გამოყენებული იქნა თუ არა ბექენდზე) აღარ გვჭირდება.
     clearReferralCode();
+    const refInputDone = document.getElementById('otp-referral-code');
+    if (refInputDone) refInputDone.value = '';
     showToast(data.is_new_user ? '✅ ანგარიში შეიქმნა — კეთილი იყოს შენი მობრძანება!' : '✅ წარმატებით შეხვედი!', 'ok');
   } catch (e) {
     showToast(e.message || 'არასწორი კოდი', 'err');
@@ -2568,6 +2628,10 @@ async function verifyLoginOtp() {
 
 // Google OAuth
 function googleAuth() {
+  // Google-ზე გადასვლამდეც ვიჭერთ ხელით ჩაწერილ პრომო კოდს (თუ
+  // მომხმარებელმა Google ღილაკი პირდაპირ დააჭირა, request-otp ნაბიჯის
+  // გავლის გარეშე).
+  setReferralCodeManual();
   const ref = getReferralCode();
   const url = API_URL + '/api/auth/google' + (ref ? ('?ref=' + encodeURIComponent(ref)) : '');
   window.location.href = url;
@@ -2835,12 +2899,18 @@ async function loadMyProfile() {
     }
   }
 
-  // რეფერალური პროგრამა — ბმული + სტატისტიკა (თუ /auth/me-ს უკვე
-  // ჩატვირთული აქვს ეს ველები; ახალი login-ის შემდეგ, სანამ სრული
-  // პროფილი არ განახლდება, უბრალოდ 0/ცარიელი დარჩება — უვნებელია).
+  // რეფერალური პროგრამა — პრომო კოდი + ბმული + სტატისტიკა (თუ
+  // /auth/me-ს უკვე ჩატვირთული აქვს ეს ველები; ახალი login-ის შემდეგ,
+  // სანამ სრული პროფილი არ განახლდება, უბრალოდ 0/ცარიელი დარჩება —
+  // უვნებელია). ბმული ახლა მოკლე კოდზეა აგებული (`?ref=REF-XXXXXX`),
+  // აღარ არის მომხმარებლის საკუთარი UUID.
+  const refCodeDisplay = document.getElementById('ref-code-display');
+  if (refCodeDisplay) refCodeDisplay.value = currentUser.referral_code || '—';
   const refLinkInput = document.getElementById('ref-link-input');
-  if (refLinkInput && currentUser.id) {
-    refLinkInput.value = `${window.location.origin}/?ref=${currentUser.id}`;
+  if (refLinkInput) {
+    refLinkInput.value = currentUser.referral_code
+      ? `${window.location.origin}/?ref=${currentUser.referral_code}`
+      : '';
   }
   const refInvited = document.getElementById('ref-invited-count');
   if (refInvited) refInvited.textContent = currentUser.referral_invited_count || 0;
@@ -2850,6 +2920,19 @@ async function loadMyProfile() {
   syncPushToggleState();
 
   loadMyListings('active');
+}
+
+// პრომო კოდის კოპირება (მხოლოდ REF-XXXXXX, ბმულის გარეშე)
+function copyReferralCode() {
+  const input = document.getElementById('ref-code-display');
+  const text  = input?.value;
+  if (!text || text === '—') return;
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('✅ კოდი დაკოპირდა!', 'ok');
+  }).catch(() => {
+    input.select();
+    showToast('ხელით დააკოპირე: ' + text, 'ok');
+  });
 }
 
 // რეფერალური ბმულის კოპირება

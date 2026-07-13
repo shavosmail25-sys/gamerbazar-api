@@ -5,6 +5,7 @@
 'use strict';
 require('dotenv').config();
 const { pool } = require('./index');
+const referral = require('../utils/referral');
 
 const SCHEMA = `
 -- Extensions
@@ -362,11 +363,44 @@ async function setupDatabase() {
       // ინდექსი — "ვინ მოიწვია ვინ" საპირისპირო ძებნისთვის (COUNT(*) WHERE
       // referred_by=$1 — გამოიყენება პროფილში "მოწვეული მეგობრები" სტატისტიკაზე).
       `CREATE INDEX IF NOT EXISTS idx_users_referred_by ON users(referred_by)`,
+      // ── REFERRAL v2 — მოკლე, წაკითხვადი პრომო-კოდები (`REF-XXXXXX`),
+      // ძველი UUID-ბმულის ნაცვლად (იხ. src/utils/referral.js). თითო
+      // მომხმარებელს ერთი უნიკალური კოდი აქვს — გენერირდება
+      // რეგისტრაციისას (auth.js) ან lazy, პირველივე GET /auth/me-ზე
+      // ძველი ანგარიშებისთვის. UNIQUE constraint მრავალ NULL-საც
+      // უშვებს (მიგრაციამდელი მწკრივები დროებით NULL-ით დარჩება,
+      // სანამ ის მომხმარებელი ხელახლა არ შემოვა), მაგრამ ორ
+      // არა-NULL მნიშვნელობას შორის კოლიზიას კრძალავს.
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code VARCHAR(30) UNIQUE`,
+      `CREATE INDEX IF NOT EXISTS idx_users_referral_code ON users(referral_code)`,
     ];
     for (const sql of migrations) {
       try { await client.query(sql); } catch (e) { /* უკვე არსებობს */ }
     }
     console.log('✅ Migrations გამოყენებულია');
+
+    // ── REFERRAL v2 backfill — migration-მდე შექმნილ მომხმარებლებს
+    // (referral_code IS NULL) თითო-თითოდ ვუნიჭებთ ახალ პრომო-კოდს.
+    // GET /auth/me-შიც ხდება იგივე lazy-backfill ცალკეული user-ისთვის
+    // (auth.js), მაგრამ აქ ერთბაშად ვასუფთავებთ ყველა ძველ ჩანაწერს,
+    // რომ არც ერთ მომხმარებელს არ მოუწიოს ლოგინამდე კოდის გარეშე ყოფნა.
+    try {
+      const { rows: missingCode } = await client.query(
+        'SELECT id, username FROM users WHERE referral_code IS NULL'
+      );
+      if (missingCode.length) {
+        for (const u of missingCode) {
+          try {
+            await referral.ensureReferralCode(client, u.id, u.username);
+          } catch (e) {
+            console.error(`⚠️  referral_code backfill ვერ მოხერხდა user ${u.id}-სთვის:`, e.message);
+          }
+        }
+        console.log(`✅ Referral კოდები დაბრუნდა ${missingCode.length} ძველ მომხმარებელს`);
+      }
+    } catch (e) {
+      console.error('⚠️  referral_code backfill query ჩავარდა:', e.message);
+    }
 
     // Admin user (პირველი გაშვებისას) — OTP სისტემაზე გადასვლის შემდეგ
     // პაროლი აღარ სჭირდება, admin@gamerbazar.ge-ზე შესვლა ხდება Email+OTP-ით

@@ -8,9 +8,10 @@ const jwt     = require('jsonwebtoken');
 const db      = require('../db');
 const { requireAuth } = require('../middleware/auth');
 
-const mailer  = require('../utils/mailer');
-const otp     = require('../utils/otp');
-const router  = express.Router();
+const mailer   = require('../utils/mailer');
+const otp      = require('../utils/otp');
+const referral = require('../utils/referral');
+const router   = express.Router();
 
 // ── სუპერ-ადმინის Email — ავტ. აღიჭურვება 'admin' როლით ────────
 // უსაფრთხოების აუდიტის მოთხოვნით ჰარდქოდირებული fallback მისამართი
@@ -188,12 +189,16 @@ router.post('/verify-otp', async (req, res) => {
     const emailClean = email.toLowerCase().trim();
     const codeClean   = String(code).trim();
 
-    // ── რეფერალის ვალიდაცია — მკაცრი UUID ფორმატი, წინასწარ, request-ის
-    // დასაწყისში. თუ ფორმატი არასწორია, უბრალოდ იგნორირდება (null),
-    // რეგისტრაცია/login არასდროს ჩავარდება რეფერალის ბრალით. ──
-    const REF_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    const referralCodeClean = (typeof referral_code === 'string' && REF_UUID_RE.test(referral_code.trim()))
-      ? referral_code.trim()
+    // ── რეფერალის ვალიდაცია — მოკლე, ადამიანისთვის წასაკითხი
+    // `REF-XXXXXX` ფორმატი (ძველი UUID-ბმულის ნაცვლად, იხ.
+    // src/utils/referral.js). ფორმატის შემოწმება მხოლოდ REGEX-ითაა
+    // (ნორმალიზებული, ზედა რეგისტრში) — რეალურად არსებობს თუ არა
+    // ასეთი კოდი, მხოლოდ ახალი user-ის შექმნის შემდეგ მოწმდება ქვემოთ
+    // (referral.findUserByReferralCode). თუ ფორმატი არასწორია,
+    // უბრალოდ იგნორირდება (null), რეგისტრაცია/login არასდროს ჩავარდება
+    // რეფერალის ბრალით. ──
+    const referralCodeClean = (typeof referral_code === 'string' && referral.REFERRAL_CODE_RE.test(referral_code.trim()))
+      ? referral_code.trim().toUpperCase()
       : null;
 
     // IP-დონის რეით-ლიმიტი — brute-force სკრიპტის დაცვა
@@ -272,23 +277,31 @@ router.post('/verify-otp', async (req, res) => {
       `, [emailClean, uname, uname]);
       user = created[0];
 
+      // ── საკუთარი პრომო-კოდის გენერაცია — ყოველ ახალ ანგარიშს ჯერ
+      // ვანიჭებთ თავის `REF-XXXXXX` კოდს (username-ის საფუძველზე), რომ
+      // მან თავადაც შეძლოს სხვების მოწვევა. ──
+      try {
+        const newCode = await referral.ensureReferralCode(db, user.id, uname);
+        if (newCode) user.referral_code = newCode;
+      } catch (e) { console.error('referral code generation error:', e.message); }
+
       // ── რეფერალის მიბმა — მხოლოდ ᲐᲮᲐᲚᲘ ანგარიშისთვის, მხოლოდ ერთხელ.
-      // referral_code frontend-დან მოდის (localStorage-ში შენახული ?ref=
-      // URL პარამეტრიდან, იხ. gamer-market-ge.html captureReferralCode()).
-      // თვითრეფერალის თავიდან ასაცილებლად ვამოწმებთ, რომ კოდი არ ემთხვევა
-      // ახლადშექმნილი ანგარიშის საკუთარ id-ს, და რომ რეფერერი რეალურად
-      // არსებობს და არ არის დაბლოკილი — წინააღმდეგ შემთხვევაში კოდი
-      // უბრალოდ იგნორირდება (რეგისტრაცია ისედაც გრძელდება). ──
-      if (referralCodeClean && referralCodeClean !== user.id) {
+      // referral_code frontend-დან მოდის — ან localStorage-ში შენახული
+      // ?ref= URL პარამეტრიდან, ან რეგისტრაციის ფორმაში ხელით შეყვანილი
+      // "რეფერალური/პრომო კოდი" (იხ. gamer-market-ge.html
+      // captureReferralCode() და login მოდალის ახალი ველი). კოდით
+      // რეფერერის მოძებნა (findUserByReferralCode) თავადვე ამოწმებს
+      // ბანის სტატუსს; თვითრეფერალის თავიდან ასაცილებლად დამატებით
+      // ვამოწმებთ, რომ ნაპოვნი რეფერერი არ ემთხვევა ახლადშექმნილი
+      // ანგარიშის საკუთარ id-ს — წინააღმდეგ შემთხვევაში კოდი უბრალოდ
+      // იგნორირდება (რეგისტრაცია ისედაც გრძელდება). ──
+      if (referralCodeClean) {
         try {
-          const { rows: refRows } = await db.query(
-            "SELECT id FROM users WHERE id=$1 AND role != 'banned'",
-            [referralCodeClean]
-          );
-          if (refRows.length) {
+          const referrerId = await referral.findUserByReferralCode(db, referralCodeClean);
+          if (referrerId && referrerId !== user.id) {
             const { rows: updated } = await db.query(
               'UPDATE users SET referred_by=$1 WHERE id=$2 RETURNING *',
-              [referralCodeClean, user.id]
+              [referrerId, user.id]
             );
             if (updated.length) user = updated[0];
           }
@@ -307,6 +320,7 @@ router.post('/verify-otp', async (req, res) => {
         id: user.id, email: user.email, username: user.username,
         display_name: user.display_name, role: user.role,
         avatar_url: user.avatar_url, balance_gel: user.balance_gel,
+        referral_code: user.referral_code || null,
       },
     });
   } catch (err) {
@@ -333,11 +347,13 @@ router.get('/google', (req, res) => {
   // ── რეფერალური კოდის გატარება Google OAuth-ის `state` პარამეტრში ──
   // Google callback-ს ზუსტად იმავე მნიშვნელობით გვიბრუნებს (echo), რაც
   // საშუალებას გვაძლევს Google-ით ახლად დარეგისტრირებულ მომხმარებელსაც
-  // დავუფიქსიროთ referred_by. მკაცრი UUID ფორმატის შემოწმება აქაც —
+  // დავუფიქსიროთ referred_by. ფორმატის შემოწმება აქაც ხდება (ახლა
+  // მოკლე `REF-XXXXXX` კოდის RE, ძველი UUID RE-ის ნაცვლად) —
   // არასწორი/ეჭვის შემტანი მნიშვნელობა უბრალოდ არ გადაეცემა Google-ს.
-  const REF_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const refRaw   = typeof req.query.ref === 'string' ? req.query.ref.trim() : '';
-  const stateQS  = REF_UUID_RE.test(refRaw) ? `&state=${encodeURIComponent(refRaw)}` : '';
+  const stateQS  = referral.REFERRAL_CODE_RE.test(refRaw)
+    ? `&state=${encodeURIComponent(refRaw.toUpperCase())}`
+    : '';
 
   const url = `https://accounts.google.com/o/oauth2/v2/auth?` +
     `client_id=${clientId}&redirect_uri=${callbackUrl}&response_type=code` +
@@ -409,22 +425,26 @@ router.get('/google/callback', async (req, res) => {
       `, [profile.email, uname, profile.name || uname, profile.picture, profile.id]);
       user = created[0];
 
+      // ── საკუთარი პრომო-კოდის გენერაცია — იგივე, რაც email/OTP
+      // ნაკადში (იხ. POST /verify-otp ზემოთ). ──
+      try {
+        const newCode = await referral.ensureReferralCode(db, user.id, uname);
+        if (newCode) user.referral_code = newCode;
+      } catch (e) { console.error('referral code generation (google) error:', e.message); }
+
       // ── რეფერალის მიბმა — მხოლოდ ᲐᲮᲐᲚᲘ ანგარიშისთვის, `state`-ში
       // echo-ქმნილი კოდიდან (იხ. GET /google ზემოთ). იგივე წესები, რაც
-      // email/OTP ნაკადში: მკაცრი UUID ფორმატი, თვითრეფერალის აკრძალვა,
-      // რეფერერის არსებობის/არადაბლოკვის შემოწმება. ──
-      const REF_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      // email/OTP ნაკადში: `REF-XXXXXX` ფორმატის შემოწმება, თვითრეფერალის
+      // აკრძალვა, რეფერერის არსებობის/არადაბლოკვის შემოწმება (ეს
+      // ბოლო ორი findUserByReferralCode-ის შიგნით/შემდეგ ხდება). ──
       const refRaw = typeof req.query.state === 'string' ? req.query.state.trim() : '';
-      if (REF_UUID_RE.test(refRaw) && refRaw !== user.id) {
+      if (referral.REFERRAL_CODE_RE.test(refRaw)) {
         try {
-          const { rows: refRows } = await db.query(
-            "SELECT id FROM users WHERE id=$1 AND role != 'banned'",
-            [refRaw]
-          );
-          if (refRows.length) {
+          const referrerId = await referral.findUserByReferralCode(db, refRaw);
+          if (referrerId && referrerId !== user.id) {
             const { rows: updated } = await db.query(
               'UPDATE users SET referred_by=$1 WHERE id=$2 RETURNING *',
-              [refRaw, user.id]
+              [referrerId, user.id]
             );
             if (updated.length) user = updated[0];
           }
@@ -464,7 +484,7 @@ router.get('/me', requireAuth, async (req, res) => {
              (u.is_vip AND u.vip_expires_at IS NOT NULL AND u.vip_expires_at > NOW()) AS is_vip,
              u.vip_expires_at, u.total_sales_gel,
              -- ── რეფერალური პროგრამა — პროფილის სტატისტიკისთვის ──
-             u.referral_earnings_gel,
+             u.referral_code, u.referral_earnings_gel,
              (SELECT COUNT(*) FROM users ru WHERE ru.referred_by = u.id) AS referral_invited_count,
              COALESCE(ss.completed_orders, 0) AS completed_orders,
              COALESCE(ss.avg_rating, 0)       AS avg_rating,
@@ -473,7 +493,22 @@ router.get('/me', requireAuth, async (req, res) => {
       LEFT JOIN seller_stats ss ON ss.seller_id = u.id
       WHERE u.id=$1
     `, [req.user.id]);
-    res.json(rows[0]);
+    if (!rows.length) return res.status(404).json({ error: 'not_found' });
+
+    const me = rows[0];
+
+    // ── Lazy backfill — ძველი ანგარიშები, migration-მდე შექმნილი,
+    // ჯერ არ ფლობენ referral_code-ს. პირველივე /me ჩატვირთვაზე ვუწერთ
+    // (ensureReferralCode idempotent-ია — თუ უკვე აქვს, უბრალოდ
+    // დააბრუნებს არსებულს ხელახალი გენერაციის გარეშე). ──
+    if (!me.referral_code) {
+      try {
+        const code = await referral.ensureReferralCode(db, me.id, me.username);
+        if (code) me.referral_code = code;
+      } catch (e) { console.error('referral code backfill error:', e.message); }
+    }
+
+    res.json(me);
   } catch (err) {
     res.status(500).json({ error: 'server_error' });
   }
