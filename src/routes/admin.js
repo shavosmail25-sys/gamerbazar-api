@@ -8,6 +8,7 @@ const { requireAuth, requireAdmin } = require('../middleware/auth');
 const mailer  = require('../utils/mailer');
 const push    = require('../utils/push');
 const ledger  = require('../utils/ledger');
+const referral = require('../utils/referral');
 const chat    = require('./chat');
 const { checkAndSyncVerifiedSeller } = require('../utils/verifiedSeller');
 const router  = express.Router();
@@ -477,6 +478,13 @@ router.post('/deposits/:id/confirm', requireAuth, requireAdmin, async (req, res)
     // გაყიდვა (orders.js), გამოტანა (wallet.js), VIP (listings.js).
     const gross = Number(tx[0].amount_gel);
 
+    // ── REFERRAL: "პირველი დეპოზიტი" ჯილდოს ტრიგერი ზუსტად აქ ცხადდება —
+    // ეს არის ის ერთადერთი წერტილი, სადაც დეპოზიტის ფული რეალურად შედის
+    // მომხმარებლის ბალანსზე (ადმინის მიერ დადასტურებული ბანკის გადარიცხვა).
+    // wallet.js-ის POST /deposit მხოლოდ 'pending' მოთხოვნას ქმნის და
+    // არასდროს არ უნდა გაააქტიუროს ბონუსი. ──
+    let referralResult = { granted: false };
+
     await db.transaction(async (client) => {
       await client.query(
         `UPDATE transactions SET
@@ -489,6 +497,8 @@ router.post('/deposits/:id/confirm', requireAuth, requireAdmin, async (req, res)
         'UPDATE users SET balance_gel=balance_gel+$1 WHERE id=$2',
         [gross, tx[0].user_id]
       );
+
+      referralResult = await referral.triggerReferralReward(client, tx[0].user_id, 'deposit');
     });
 
     // push notification მომხმარებელს
@@ -499,6 +509,16 @@ router.post('/deposits/:id/confirm', requireAuth, requireAdmin, async (req, res)
       url: '/?page=wallet',
       tag: `deposit-${req.params.id}`,
     });
+
+    // რეფერერს — ბონუსის შეტყობინება (თუ ჯილდო რეალურად გაიცა)
+    if (referralResult.granted) {
+      push.sendToUser(referralResult.referrerId, {
+        title: '🎉 რეფერალური ბონუსი',
+        body: `მოწვეულმა მეგობარმა პირველი დეპოზიტი შეავსო — ₾${referral.REWARD_AMOUNT_GEL.toFixed(2)} დაგერიცხა`,
+        url: '/?page=profile',
+        tag: `referral-deposit-${tx[0].user_id}`,
+      }).catch(e => console.error('referral push (deposit) error:', e.message));
+    }
 
     res.json({ ok: true });
   } catch (err) {

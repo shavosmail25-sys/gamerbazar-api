@@ -6,6 +6,7 @@ const db      = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const mailer  = require('../utils/mailer');
 const ledger  = require('../utils/ledger');
+const referral = require('../utils/referral');
 
 const ADMIN_EMAIL = process.env.EMAIL_USER || process.env.SMTP_USER || 'shavosmail25@gmail.com';
 const router  = express.Router();
@@ -88,6 +89,15 @@ router.get('/transactions', requireAuth, async (req, res) => {
 // ══════════════════════════════════════════════════════════════
 // ══════════════════════════════════════════════════════════════
 // POST /api/wallet/deposit  — შეტანის მოთხოვნა (Manual BOG)
+//
+// ⚠️ REFERRAL ANTI-FRAUD შენიშვნა: ეს route მხოლოდ 'pending' ტრანზაქციას
+// ქმნის — რეალური ფული ჯერ არ შესულა (ადმინს ჯერ არ დაუდასტურებია ბანკის
+// გადარიცხვა). ამიტომ "პირველი დეპოზიტის" რეფერალური ბონუსი აქ ᲐᲠ
+// ᲘᲬᲧᲔᲑᲐ — წინააღმდეგ შემთხვევაში ნებისმიერს შეეძლო უსასრულოდ შექმნას
+// "დეპოზიტის მოთხოვნები" (არასდროს გადაუხდელი) და გამოეწვია ბონუსი
+// ყოველგვარი რეალური ფულის გარეშე. ჯილდოს ტრიგერი მდებარეობს
+// admin.js-ში, POST /deposits/:id/confirm-ში (და დეველოპერული ტესტისთვის
+// — ქვემოთ, GET /deposit/simulate-ში), სადაც ბალანსი რეალურად იზრდება.
 // ══════════════════════════════════════════════════════════════
 router.post('/deposit', requireAuth, async (req, res) => {
   try {
@@ -135,6 +145,7 @@ router.get('/deposit/simulate', requireAuth, async (req, res) => {
 
   try {
     const { ref, amount } = req.query;
+    let referralResult = { granted: false };
     await db.transaction(async (client) => {
       await client.query(
         "UPDATE transactions SET status='completed' WHERE external_ref=$1", [ref]
@@ -143,8 +154,15 @@ router.get('/deposit/simulate', requireAuth, async (req, res) => {
         'UPDATE users SET balance_gel=balance_gel+$1 WHERE id=$2',
         [Number(amount), req.user.id]
       );
+      // dev-only სიმულაცია მაინც რეალურად ზრდის ბალანსს, ამიტომ იგივე
+      // ატომური ჯილდოს ტრიგერი გამოიყენება, რაც production admin-confirm-ში.
+      referralResult = await referral.triggerReferralReward(client, req.user.id, 'deposit');
     });
-    res.json({ ok: true, message: `₾${amount} ბალანსზე დაემატა (სიმულ.)` });
+    res.json({
+      ok: true,
+      message: `₾${amount} ბალანსზე დაემატა (სიმულ.)`,
+      referral_bonus_granted: referralResult.granted,
+    });
   } catch (err) {
     res.status(500).json({ error: 'server_error' });
   }

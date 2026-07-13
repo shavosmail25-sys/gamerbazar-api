@@ -343,6 +343,25 @@ async function setupDatabase() {
       `ALTER TABLE listings ADD COLUMN IF NOT EXISTS account_security  VARCHAR(40)`,
       `CREATE INDEX IF NOT EXISTS idx_listings_platform ON listings(platform)`,
       `CREATE INDEX IF NOT EXISTS idx_listings_region   ON listings(region)`,
+      // ── REFERRAL / AFFILIATE სისტემა — ანტი-ფროდ state tracking ──────────
+      // referred_by: ვინ მოიწვია ეს მომხმარებელი. იწერება მხოლოდ ერთხელ,
+      // ანგარიშის შექმნის მომენტში (auth.js verify-otp / google callback) —
+      // შემდეგ არასდროს იცვლება, ამიტომ ხელახალი login ვერ "გადააწერს"
+      // ან ვერ დაამატებს რეფერალს უკვე არსებულ ანგარიშზე.
+      // has_triggered_first_deposit_reward / has_triggered_first_purchase_reward:
+      // ორივე default FALSE — ერთხელადი "one-shot" დროშები, გამოიყენება
+      // ატომური UPDATE...WHERE flag=FALSE RETURNING პატერნით
+      // (იხ. src/utils/referral.js) — race condition-ისა და double-spending-ის
+      // საწინააღმდეგოდ.
+      // referral_earnings_gel: რეფერერის მიერ სულ გამომუშავებული ბონუსი
+      // (frontend-ის პროფილის სტატისტიკისთვის — "გამომუშავებული ბონუსი").
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by UUID REFERENCES users(id)`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS has_triggered_first_deposit_reward  BOOLEAN NOT NULL DEFAULT FALSE`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS has_triggered_first_purchase_reward BOOLEAN NOT NULL DEFAULT FALSE`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_earnings_gel NUMERIC(12,2) NOT NULL DEFAULT 0.00`,
+      // ინდექსი — "ვინ მოიწვია ვინ" საპირისპირო ძებნისთვის (COUNT(*) WHERE
+      // referred_by=$1 — გამოიყენება პროფილში "მოწვეული მეგობრები" სტატისტიკაზე).
+      `CREATE INDEX IF NOT EXISTS idx_users_referred_by ON users(referred_by)`,
     ];
     for (const sql of migrations) {
       try { await client.query(sql); } catch (e) { /* უკვე არსებობს */ }

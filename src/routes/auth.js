@@ -181,12 +181,20 @@ router.post('/request-otp', async (req, res) => {
 // ══════════════════════════════════════════════════════════════
 router.post('/verify-otp', async (req, res) => {
   try {
-    const { email, code } = req.body;
+    const { email, code, referral_code } = req.body;
     if (!email || !code) {
       return res.status(400).json({ error: 'required_fields', message: 'email და code სავალდებულოა' });
     }
     const emailClean = email.toLowerCase().trim();
     const codeClean   = String(code).trim();
+
+    // ── რეფერალის ვალიდაცია — მკაცრი UUID ფორმატი, წინასწარ, request-ის
+    // დასაწყისში. თუ ფორმატი არასწორია, უბრალოდ იგნორირდება (null),
+    // რეგისტრაცია/login არასდროს ჩავარდება რეფერალის ბრალით. ──
+    const REF_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const referralCodeClean = (typeof referral_code === 'string' && REF_UUID_RE.test(referral_code.trim()))
+      ? referral_code.trim()
+      : null;
 
     // IP-დონის რეით-ლიმიტი — brute-force სკრიპტის დაცვა
     const ip = getClientIp(req);
@@ -263,6 +271,29 @@ router.post('/verify-otp', async (req, res) => {
         RETURNING *
       `, [emailClean, uname, uname]);
       user = created[0];
+
+      // ── რეფერალის მიბმა — მხოლოდ ᲐᲮᲐᲚᲘ ანგარიშისთვის, მხოლოდ ერთხელ.
+      // referral_code frontend-დან მოდის (localStorage-ში შენახული ?ref=
+      // URL პარამეტრიდან, იხ. gamer-market-ge.html captureReferralCode()).
+      // თვითრეფერალის თავიდან ასაცილებლად ვამოწმებთ, რომ კოდი არ ემთხვევა
+      // ახლადშექმნილი ანგარიშის საკუთარ id-ს, და რომ რეფერერი რეალურად
+      // არსებობს და არ არის დაბლოკილი — წინააღმდეგ შემთხვევაში კოდი
+      // უბრალოდ იგნორირდება (რეგისტრაცია ისედაც გრძელდება). ──
+      if (referralCodeClean && referralCodeClean !== user.id) {
+        try {
+          const { rows: refRows } = await db.query(
+            "SELECT id FROM users WHERE id=$1 AND role != 'banned'",
+            [referralCodeClean]
+          );
+          if (refRows.length) {
+            const { rows: updated } = await db.query(
+              'UPDATE users SET referred_by=$1 WHERE id=$2 RETURNING *',
+              [referralCodeClean, user.id]
+            );
+            if (updated.length) user = updated[0];
+          }
+        } catch (e) { console.error('referral attach error:', e.message); }
+      }
     }
 
     // ── Watch Tower წვდომა: SUPER_ADMIN_EMAIL-ს ავტ. ენიჭება 'admin' როლი ──
@@ -299,9 +330,18 @@ router.get('/google', (req, res) => {
     });
   }
 
+  // ── რეფერალური კოდის გატარება Google OAuth-ის `state` პარამეტრში ──
+  // Google callback-ს ზუსტად იმავე მნიშვნელობით გვიბრუნებს (echo), რაც
+  // საშუალებას გვაძლევს Google-ით ახლად დარეგისტრირებულ მომხმარებელსაც
+  // დავუფიქსიროთ referred_by. მკაცრი UUID ფორმატის შემოწმება აქაც —
+  // არასწორი/ეჭვის შემტანი მნიშვნელობა უბრალოდ არ გადაეცემა Google-ს.
+  const REF_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const refRaw   = typeof req.query.ref === 'string' ? req.query.ref.trim() : '';
+  const stateQS  = REF_UUID_RE.test(refRaw) ? `&state=${encodeURIComponent(refRaw)}` : '';
+
   const url = `https://accounts.google.com/o/oauth2/v2/auth?` +
     `client_id=${clientId}&redirect_uri=${callbackUrl}&response_type=code` +
-    `&scope=${scope}&access_type=offline&prompt=select_account`;
+    `&scope=${scope}&access_type=offline&prompt=select_account${stateQS}`;
 
   res.redirect(url);
 });
@@ -368,6 +408,28 @@ router.get('/google/callback', async (req, res) => {
         RETURNING *
       `, [profile.email, uname, profile.name || uname, profile.picture, profile.id]);
       user = created[0];
+
+      // ── რეფერალის მიბმა — მხოლოდ ᲐᲮᲐᲚᲘ ანგარიშისთვის, `state`-ში
+      // echo-ქმნილი კოდიდან (იხ. GET /google ზემოთ). იგივე წესები, რაც
+      // email/OTP ნაკადში: მკაცრი UUID ფორმატი, თვითრეფერალის აკრძალვა,
+      // რეფერერის არსებობის/არადაბლოკვის შემოწმება. ──
+      const REF_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const refRaw = typeof req.query.state === 'string' ? req.query.state.trim() : '';
+      if (REF_UUID_RE.test(refRaw) && refRaw !== user.id) {
+        try {
+          const { rows: refRows } = await db.query(
+            "SELECT id FROM users WHERE id=$1 AND role != 'banned'",
+            [refRaw]
+          );
+          if (refRows.length) {
+            const { rows: updated } = await db.query(
+              'UPDATE users SET referred_by=$1 WHERE id=$2 RETURNING *',
+              [refRaw, user.id]
+            );
+            if (updated.length) user = updated[0];
+          }
+        } catch (e) { console.error('referral attach (google) error:', e.message); }
+      }
     }
 
     if (user.role === 'banned') {
@@ -401,6 +463,9 @@ router.get('/me', requireAuth, async (req, res) => {
              u.email_verified, u.created_at, u.last_seen_at,
              (u.is_vip AND u.vip_expires_at IS NOT NULL AND u.vip_expires_at > NOW()) AS is_vip,
              u.vip_expires_at, u.total_sales_gel,
+             -- ── რეფერალური პროგრამა — პროფილის სტატისტიკისთვის ──
+             u.referral_earnings_gel,
+             (SELECT COUNT(*) FROM users ru WHERE ru.referred_by = u.id) AS referral_invited_count,
              COALESCE(ss.completed_orders, 0) AS completed_orders,
              COALESCE(ss.avg_rating, 0)       AS avg_rating,
              COALESCE(ss.review_count, 0)     AS review_count

@@ -1444,6 +1444,33 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
            აქვს თუ არა და რამდენი დღე რჩება ვადის ამოწურვამდე. -->
       <div id="prof-vip-card" style="margin:12px 0;border-radius:12px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"></div>
 
+      <!-- რეფერალური პროგრამა — Glassmorphism ბარათი, საიტის ესთეტიკის შესაბამისად -->
+      <div id="prof-referral-card" style="margin:0 0 12px;border-radius:12px;padding:18px 20px;background:var(--glass-bg);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--glass-border);position:relative;overflow:hidden">
+        <div style="position:absolute;top:-40px;right:-40px;width:140px;height:140px;border-radius:50%;background:radial-gradient(circle,var(--gd),transparent 70%);pointer-events:none"></div>
+        <div style="position:relative;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+          <div style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px">
+            <span style="font-size:18px">🎁</span> რეფერალური პროგრამა
+          </div>
+          <div style="display:flex;gap:18px">
+            <div style="text-align:center">
+              <div class="pstat-v" id="ref-invited-count" style="color:var(--accent)">0</div>
+              <div class="pstat-l">მოწვეული მეგობრები</div>
+            </div>
+            <div style="text-align:center">
+              <div class="pstat-v" id="ref-earned-bonus" style="color:var(--gold)">₾0.00</div>
+              <div class="pstat-l">გამომუშავებული ბონუსი</div>
+            </div>
+          </div>
+        </div>
+        <div style="position:relative;display:flex;gap:8px;margin-bottom:10px">
+          <input id="ref-link-input" class="form-i" readonly value="" style="flex:1;font-family:var(--mono);font-size:12px;background:var(--bg3);cursor:text">
+          <button class="btn btn-a btn-sm" style="white-space:nowrap" onclick="copyReferralLink()">📋 დაკოპირება</button>
+        </div>
+        <div style="position:relative;font-size:11.5px;color:var(--muted2);line-height:1.5">
+          მიიღე <b style="color:var(--gold)">1₾</b> მეგობრის პირველ დეპოზიტზე და დამატებით <b style="color:var(--gold)">1₾</b> მის პირველ შენაძენზე!
+        </div>
+      </div>
+
       <div class="prof-tabs">
         <div class="ptab on" onclick="ptab(this,'pl');loadMyListings('active')">ჩემი განცხადებები</div>
         <div class="ptab" onclick="ptab(this,'pl-sold');loadMyListings('sold')">გაყიდული</div>
@@ -2179,6 +2206,33 @@ const setToken  = t  => localStorage.setItem('gb_token', t);
 const clearToken= () => localStorage.removeItem('gb_token');
 
 // ══════════════════════════════════════════════════════════
+// REFERRAL CODE CAPTURE — ?ref=<user_id> URL პარამეტრიდან
+// ══════════════════════════════════════════════════════════
+const REF_STORAGE_KEY = 'gb_ref_code';
+const REF_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// "პირველი შეხების" (first-touch) ატრიბუცია — თუ უკვე გვაქვს შენახული
+// კოდი, ახალი ვიზიტი მას არ გადააწერს (ის მეგობარი ითვლება, ვინც
+// პირველად მოიწვია, არა ვინც უკანასკნელად გამოაგზავნა ბმული).
+function captureReferralCode() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const ref = (params.get('ref') || '').trim();
+    if (ref && REF_UUID_RE.test(ref) && !localStorage.getItem(REF_STORAGE_KEY)) {
+      localStorage.setItem(REF_STORAGE_KEY, ref);
+    }
+  } catch (e) { /* localStorage მიუწვდომელია — უვნებელია, უბრალოდ რეფერალის გარეშე გრძელდება */ }
+}
+
+function getReferralCode() {
+  try { return localStorage.getItem(REF_STORAGE_KEY) || null; } catch (e) { return null; }
+}
+
+function clearReferralCode() {
+  try { localStorage.removeItem(REF_STORAGE_KEY); } catch (e) {}
+}
+
+// ══════════════════════════════════════════════════════════
 // API HELPER
 // ══════════════════════════════════════════════════════════
 async function api(path, opts = {}) {
@@ -2488,7 +2542,10 @@ async function verifyLoginOtp() {
   const btn = document.getElementById('otp-verify-btn');
   if (btn) { btn.textContent = '⏳ მოწმდება...'; btn.disabled = true; }
   try {
-    const data = await api('/api/auth/verify-otp', { method: 'POST', body: JSON.stringify({ email, code }) });
+    const data = await api('/api/auth/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email, code, referral_code: getReferralCode() }),
+    });
     // Hard reset — ნებისმიერი წინა (ან სხვა) იუზერის ვიზუალური კვალი (ფოტო/ბალანსი)
     // მომენტალურად ვშლით, სანამ ახალი მონაცემები ჩაიწერება. ესეც აჩერებს ძველ
     // localStorage ტოკენს/currentUser-ს, სანამ ახალი არ დამტკიცდება.
@@ -2498,6 +2555,9 @@ async function verifyLoginOtp() {
     currentUser = data.user;
     closeM('loginModal');
     updateNavUser();
+    // რეფერალის კოდი ერთხელადია — წარმატებული login/register-ის შემდეგ
+    // (გამოყენებული იქნა თუ არა ბექენდზე) აღარ გვჭირდება.
+    clearReferralCode();
     showToast(data.is_new_user ? '✅ ანგარიში შეიქმნა — კეთილი იყოს შენი მობრძანება!' : '✅ წარმატებით შეხვედი!', 'ok');
   } catch (e) {
     showToast(e.message || 'არასწორი კოდი', 'err');
@@ -2508,7 +2568,9 @@ async function verifyLoginOtp() {
 
 // Google OAuth
 function googleAuth() {
-  window.location.href = API_URL + '/api/auth/google';
+  const ref = getReferralCode();
+  const url = API_URL + '/api/auth/google' + (ref ? ('?ref=' + encodeURIComponent(ref)) : '');
+  window.location.href = url;
 }
 
 // Google callback
@@ -2520,6 +2582,9 @@ function checkAuthCallback() {
     setToken(token);
     window.history.replaceState({}, '', window.location.pathname);
     loadCurrentUser();
+    // რეფერალის კოდი ერთხელადია — Google-ით წარმატებული login/register-ის
+    // შემდეგაც (გამოყენებული იქნა თუ არა ბექენდზე) აღარ გვჭირდება.
+    clearReferralCode();
     showToast('✅ Google-ით შეხვედი!', 'ok');
   } else if (status === 'error') {
     showToast('Google შესვლა ვერ მოხდა', 'err');
@@ -2770,9 +2835,34 @@ async function loadMyProfile() {
     }
   }
 
+  // რეფერალური პროგრამა — ბმული + სტატისტიკა (თუ /auth/me-ს უკვე
+  // ჩატვირთული აქვს ეს ველები; ახალი login-ის შემდეგ, სანამ სრული
+  // პროფილი არ განახლდება, უბრალოდ 0/ცარიელი დარჩება — უვნებელია).
+  const refLinkInput = document.getElementById('ref-link-input');
+  if (refLinkInput && currentUser.id) {
+    refLinkInput.value = `${window.location.origin}/?ref=${currentUser.id}`;
+  }
+  const refInvited = document.getElementById('ref-invited-count');
+  if (refInvited) refInvited.textContent = currentUser.referral_invited_count || 0;
+  const refEarned = document.getElementById('ref-earned-bonus');
+  if (refEarned) refEarned.textContent = '₾' + Number(currentUser.referral_earnings_gel || 0).toFixed(2);
+
   syncPushToggleState();
 
   loadMyListings('active');
+}
+
+// რეფერალური ბმულის კოპირება
+function copyReferralLink() {
+  const input = document.getElementById('ref-link-input');
+  const text  = input?.value;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('✅ ბმული დაკოპირდა!', 'ok');
+  }).catch(() => {
+    input.select();
+    showToast('ხელით დააკოპირე: ' + text, 'ok');
+  });
 }
 
 async function loadMyListings(filter) {
@@ -5677,6 +5767,10 @@ setTimeout(() => { authLoading = false; hideAuthBootScreen(); }, 8000);
 // Auth — hash-routing-ს ველოდებით სანამ loadCurrentUser არ დასრულდება,
 // რომ guarded გვერდებზე refresh-ისას login-მოდალი არ გაიელვოს ვალიდური სესიისთვის.
 (async function initAuthAndRouting() {
+  // ⚠️ ეს ᲐᲣᲪᲘᲚᲔᲑᲚᲐᲓ checkAuthCallback()-მდე უნდა გაეშვას — ეს უკანასკნელი
+  // Google-callback-ის დროს history.replaceState-ით შლის ყველა query
+  // param-ს (მათ შორის ?ref=-საც, თუ ის რატომღაც token-თან ერთად მოვიდოდა).
+  try { captureReferralCode(); } catch(e) { console.error('referral capture:', e); }
   try { checkAuthCallback(); } catch(e) { console.error('auth callback:', e); }
   try { await loadCurrentUser(); } catch(e) { console.error('load user:', e); authLoading = false; hideAuthBootScreen(); }
 

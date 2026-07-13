@@ -7,6 +7,7 @@ const { requireAuth } = require('../middleware/auth');
 const mailer  = require('../utils/mailer');
 const push    = require('../utils/push');
 const ledger  = require('../utils/ledger');
+const referral = require('../utils/referral');
 const chat    = require('./chat');
 const { checkAndSyncVerifiedSeller } = require('../utils/verifiedSeller');
 const router  = express.Router();
@@ -25,6 +26,14 @@ ledger.startHoldsScheduler();
 
 // ══════════════════════════════════════════════════════════════
 // POST /api/orders  — შეკვეთის შექმნა + Escrow Hold
+//
+// ⚠️ REFERRAL ANTI-FRAUD შენიშვნა: ამ ეტაპზე ფული მხოლოდ ბალანსიდან
+// Escrow-ში გადადის — მყიდველს ჯერ კიდევ შეუძლია /:id/cancel-ით სრული
+// refund-ის მიღება. ამიტომ "პირველი შენაძენის" რეფერალური ბონუსი აქ ᲐᲠ
+// ᲘᲬᲧᲔᲑᲐ (წინააღმდეგ შემთხვევაში create→cancel ციკლით ბონუსი უსასრულოდ
+// "გამოსაწური" იქნებოდა რეალური ყიდვის გარეშე). ჯილდოს ტრიგერი მდებარეობს
+// მხოლოდ ქვემოთ, POST /:id/confirm-ში — Escrow Release-ის მომენტში,
+// სადაც ყიდვა საბოლოოდ და შეუქცევადად სრულდება.
 // ══════════════════════════════════════════════════════════════
 router.post('/', requireAuth, async (req, res) => {
   try {
@@ -302,6 +311,11 @@ router.post('/:id/confirm', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'cannot_confirm', current: order.status });
 
     let holdUntil;
+    // ── REFERRAL: "პირველი შენაძენი" ჯილდოს ტრიგერი ამ ტრანზაქციაშია —
+    // ეს არის ის ერთადერთი, შეუქცევადი მომენტი, როცა ყიდვა საბოლოოდ
+    // სრულდება (escrow_status → 'released', status → 'completed') და
+    // ფული ბოლომდე მოძრაობს სისტემაში. ──
+    let referralResult = { granted: false };
     await db.transaction(async (client) => {
       await client.query(
         'UPDATE users SET escrow_hold_gel=escrow_hold_gel-$1 WHERE id=$2',
@@ -345,6 +359,9 @@ router.post('/:id/confirm', requireAuth, async (req, res) => {
       // ── ვერიფიც. გამყიდველის ავტ. სტატუსის სინქრონიზაცია — ეს
       // შეკვეთა completed_orders რიცხვს ზრდის, შესაძლოა ზღვარს გადააჭარბოს ──
       await checkAndSyncVerifiedSeller(client, order.seller_id);
+
+      // ── რეფერალური ბონუსი — მყიდველის (order.buyer_id) რეფერერს ──
+      referralResult = await referral.triggerReferralReward(client, order.buyer_id, 'purchase');
     });
 
     res.json({ ok: true, show_review: true, hold_until: holdUntil });
@@ -380,6 +397,16 @@ router.post('/:id/confirm', requireAuth, async (req, res) => {
           chat.broadcastEventToRoom(roomId, {
             event: 'confirmed', status: 'sold',
             order_id: order.id, listing_id: order.listing_id,
+          });
+        }
+
+        // რეფერერს — ბონუსის შეტყობინება (თუ ჯილდო რეალურად გაიცა)
+        if (referralResult.granted) {
+          await push.sendToUser(referralResult.referrerId, {
+            title: '🎉 რეფერალური ბონუსი',
+            body: `მოწვეულმა მეგობარმა პირველი შენაძენი გააკეთა — ₾${referral.REWARD_AMOUNT_GEL.toFixed(2)} დაგერიცხა`,
+            url: '/?page=profile',
+            tag: `referral-purchase-${order.buyer_id}`,
           });
         }
       } catch (e) { console.error('confirm notify error:', e.message); }
