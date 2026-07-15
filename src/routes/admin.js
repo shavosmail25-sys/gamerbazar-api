@@ -465,8 +465,12 @@ router.get('/deposits', requireAuth, requireAdmin, async (req, res) => {
 // POST /api/admin/deposits/:id/confirm  — deposit დადასტ.
 router.post('/deposits/:id/confirm', requireAuth, requireAdmin, async (req, res) => {
   try {
+    // Join users, რომ email/username ერთი მოთხოვნით მოგვქონდეს —
+    // საჭიროა დადასტურების დეტალური წერილისთვის (mailer.sendDepositApprovedEmail).
     const { rows: tx } = await db.query(
-      "SELECT * FROM transactions WHERE id=$1 AND type='deposit' AND status='pending'",
+      `SELECT t.*, u.email, u.username, u.notif_email
+       FROM transactions t JOIN users u ON u.id = t.user_id
+       WHERE t.id=$1 AND t.type='deposit' AND t.status='pending'`,
       [req.params.id]
     );
     if (!tx.length) return res.status(404).json({ error: 'not_found' });
@@ -520,6 +524,12 @@ router.post('/deposits/:id/confirm', requireAuth, requireAdmin, async (req, res)
       }).catch(e => console.error('referral push (deposit) error:', e.message));
     }
 
+    // დეტალური დადასტურების წერილი — UI-ში (საფულის ტრანზაქციების
+    // ისტორია) მხოლოდ სუფთა "დამტკიცებულია" ბეჯი ჩანს (იხ. frontend
+    // loadTransactions()), დეტალები კი პირდაპირ ელ-ფოსტაზე იგზავნება.
+    mailer.sendDepositApprovedEmail(tx[0], gross, tx[0].external_ref)
+      .catch(e => console.error('deposit approved email:', e.message));
+
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: 'server_error' });
@@ -530,15 +540,25 @@ router.post('/deposits/:id/confirm', requireAuth, requireAdmin, async (req, res)
 router.post('/deposits/:id/reject', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { reason = '' } = req.body;
+    // Join users — email/username ერთი მოთხოვნით, უარყოფის დეტალური
+    // წერილისთვის (mailer.sendDepositRejectedEmail).
     const { rows: tx } = await db.query(
-      "SELECT * FROM transactions WHERE id=$1 AND type='deposit' AND status='pending'",
+      `SELECT t.*, u.email, u.username, u.notif_email
+       FROM transactions t JOIN users u ON u.id = t.user_id
+       WHERE t.id=$1 AND t.type='deposit' AND t.status='pending'`,
       [req.params.id]
     );
     if (!tx.length) return res.status(404).json({ error: 'not_found' });
 
+    // ⚠️ UI FIX: ადმინის დეტალური მიზეზი აღარ ერწყმის description-ს —
+    // ეს ველი პირდაპირ ჩანდა საფულის ტრანზაქციების ისტორიაში
+    // (არაპროფესიონალურად/დამაბნევლად გამოიყურებოდა). description
+    // უცვლელი რჩება (მხოლოდ ტიპის სუფთა ლეიბლი), დეტალური მიზეზი
+    // ცალკე admin_note სვეტში ინახება (შიდა/support არქივისთვის) და
+    // სრულად ეგზავნება მომხმარებელს ელ-ფოსტით ქვემოთ.
     await db.query(
-      "UPDATE transactions SET status='failed', description=description||$1 WHERE id=$2",
-      [reason ? ` — უარყოფა: ${reason}` : ' — უარყოფილია', req.params.id]
+      "UPDATE transactions SET status='failed', admin_note=$1 WHERE id=$2",
+      [reason || null, req.params.id]
     );
 
     const push = require('../utils/push');
@@ -548,6 +568,10 @@ router.post('/deposits/:id/reject', requireAuth, requireAdmin, async (req, res) 
       url: '/?page=wallet',
       tag: `deposit-reject-${req.params.id}`,
     });
+
+    // დეტალური უარყოფის მიზეზი — მხოლოდ ელ-ფოსტით (არა UI-ში)
+    mailer.sendDepositRejectedEmail(tx[0], tx[0].amount_gel, reason, tx[0].external_ref)
+      .catch(e => console.error('deposit rejected email:', e.message));
 
     res.json({ ok: true });
   } catch (err) {
@@ -577,7 +601,9 @@ router.get('/withdrawals', requireAuth, requireAdmin, async (req, res) => {
 router.post('/withdrawals/:id/confirm', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { rows: tx } = await db.query(
-      "SELECT * FROM transactions WHERE id=$1 AND type='withdrawal' AND status='pending'",
+      `SELECT t.*, u.email, u.username, u.notif_email
+       FROM transactions t JOIN users u ON u.id = t.user_id
+       WHERE t.id=$1 AND t.type='withdrawal' AND t.status='pending'`,
       [req.params.id]
     );
     if (!tx.length) return res.status(404).json({ error: 'not_found' });
@@ -605,6 +631,9 @@ router.post('/withdrawals/:id/confirm', requireAuth, requireAdmin, async (req, r
       tag: `withdrawal-${req.params.id}`,
     });
 
+    mailer.sendWithdrawApprovedEmail(tx[0], net)
+      .catch(e => console.error('withdrawal approved email:', e.message));
+
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: 'server_error' });
@@ -616,7 +645,9 @@ router.post('/withdrawals/:id/reject', requireAuth, requireAdmin, async (req, re
   try {
     const { reason = '' } = req.body;
     const { rows: tx } = await db.query(
-      "SELECT * FROM transactions WHERE id=$1 AND type='withdrawal' AND status='pending'",
+      `SELECT t.*, u.email, u.username, u.notif_email
+       FROM transactions t JOIN users u ON u.id = t.user_id
+       WHERE t.id=$1 AND t.type='withdrawal' AND t.status='pending'`,
       [req.params.id]
     );
     if (!tx.length) return res.status(404).json({ error: 'not_found' });
@@ -625,7 +656,8 @@ router.post('/withdrawals/:id/reject', requireAuth, requireAdmin, async (req, re
 
     await db.transaction(async (client) => {
       await client.query(
-        "UPDATE transactions SET status='failed' WHERE id=$1", [req.params.id]
+        "UPDATE transactions SET status='failed', admin_note=$1 WHERE id=$2",
+        [reason || null, req.params.id]
       );
       // თანხა დაბრუნება
       await client.query(
@@ -646,6 +678,10 @@ router.post('/withdrawals/:id/reject', requireAuth, requireAdmin, async (req, re
       url: '/?page=wallet',
       tag: `withdrawal-reject-${req.params.id}`,
     });
+
+    // დეტალური უარყოფის მიზეზი — მხოლოდ ელ-ფოსტით (არა UI-ში)
+    mailer.sendWithdrawRejectedEmail(tx[0], refundAmount, reason)
+      .catch(e => console.error('withdrawal rejected email:', e.message));
 
     res.json({ ok: true });
   } catch (err) {

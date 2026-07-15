@@ -373,6 +373,13 @@ async function setupDatabase() {
       // არა-NULL მნიშვნელობას შორის კოლიზიას კრძალავს.
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_code VARCHAR(30) UNIQUE`,
       `CREATE INDEX IF NOT EXISTS idx_users_referral_code ON users(referral_code)`,
+      // ── WALLET UX FIX — ადმინის დეტალური შენიშვნა (დეპოზიტის/გამოტანის
+      // დამტკიცება ან უარყოფა) აღარ ერწყმის transactions.description-ს
+      // (ეს ველი პირდაპირ ჩანდა საფულის ტრანზაქციების ისტორიაში და
+      // არაპროფესიონალურად გამოიყურებოდა). ახლა შენახულია ცალკე
+      // admin_note სვეტში — შიდა/support არქივისთვის; UI-ში აღარ ჩანს,
+      // მომხმარებელს კი სრულად ეგზავნება ელ-ფოსტით (იხ. admin.js + mailer.js).
+      `ALTER TABLE transactions ADD COLUMN IF NOT EXISTS admin_note TEXT`,
     ];
     for (const sql of migrations) {
       try { await client.query(sql); } catch (e) { /* უკვე არსებობს */ }

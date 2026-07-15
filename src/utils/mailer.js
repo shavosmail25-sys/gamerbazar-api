@@ -293,6 +293,75 @@ async function sendWithdrawRequestEmail(adminEmail, user, amount, iban) {
   });
 }
 
+// ══════════════════════════════════════════════════════════════
+// WALLET DECISION EMAILS — ადმინის დამტკიცება/უარყოფა → მომხმარებელს
+//
+// UX FIX: საფულის ტრანზაქციების ისტორია (frontend) ახლა მხოლოდ
+// სუფთა "დამტკიცებულია / უარყოფილია" ბეჯს აჩვენებს — ადმინის
+// დეტალური შენიშვნა (მიზეზი) იქ აღარასდროს ჩანს. სრული დეტალი
+// ამ ოთხი ფუნქციით პირდაპირ მომხმარებლის ელ-ფოსტაზე იგზავნება.
+// ══════════════════════════════════════════════════════════════
+async function sendDepositApprovedEmail(user, amount, ref) {
+  if (!user.notif_email || !user.email) return;
+  return sendMail({
+    to: user.email,
+    subject: `✅ ბალანსი შეივსო — ₾${Number(amount).toFixed(2)}`,
+    html: wrap(
+      'ბალანსის შეტანა დადასტურდა',
+      `თქვენი ბალანსის შევსების მოთხოვნა (REF: <b style="font-family:monospace;color:#7c5cff">${ref || '—'}</b>) წარმატებით დადასტურდა.<br><br>
+       <div style="font-size:24px;font-weight:800;color:#4ade80;text-align:center;background:#0d0f17;border-radius:10px;padding:14px 0;margin:10px 0">
+         +₾${Number(amount).toFixed(2)}
+       </div>
+       დაემატა თქვენს ბალანსზე და უკვე ხელმისაწვდომია გამოსაყენებლად. მადლობა რომ სარგებლობთ GamerBazar.ge-ით!`,
+      'საფულის ნახვა', `${FRONTEND}/?page=wallet`
+    ),
+  });
+}
+
+async function sendDepositRejectedEmail(user, amount, reason, ref) {
+  if (!user.notif_email || !user.email) return;
+  return sendMail({
+    to: user.email,
+    subject: `❌ ბალანსის შეტანა ვერ დადასტურდა — REF ${ref || ''}`,
+    html: wrap(
+      'ბალანსის შეტანა ვერ დადასტურდა',
+      `თქვენი ბალანსის შევსების მოთხოვნა (REF: <b style="font-family:monospace;color:#7c5cff">${ref || '—'}</b>) ₾${Number(amount).toFixed(2)}-ის ოდენობით ვერ დამუშავდა.<br><br>
+       ${reason ? `<b>მიზეზი:</b> ${reason}` : 'ადმინისტრაციამ დაზუსტებული მიზეზი არ მიუთითა — სავარაუდოდ გადარიცხვა ვერ მოიძებნა ან თანხა არ ემთხვევა.'}<br><br>
+       საკითხის გადასაჭრელად დაგვიკავშირდით: <b style="color:#7c5cff">support@gamerbazar.ge</b>`,
+      'საფულის ნახვა', `${FRONTEND}/?page=wallet`
+    ),
+  });
+}
+
+async function sendWithdrawApprovedEmail(user, netAmount) {
+  if (!user.notif_email || !user.email) return;
+  return sendMail({
+    to: user.email,
+    subject: `✅ გამოტანა დადასტურდა — ₾${Number(netAmount).toFixed(2)}`,
+    html: wrap(
+      'თანხის გამოტანა დადასტურდა',
+      `თქვენი გამოტანის მოთხოვნა დამუშავდა და <b style="color:#4ade80">₾${Number(netAmount).toFixed(2)}</b> გადაირიცხა თქვენს საბანკო ანგარიშზე.<br><br>
+       გადარიცხვის ასახვას თქვენს ბანკში შესაძლოა 1-2 სამუშაო დღე დასჭირდეს.`,
+      'საფულის ნახვა', `${FRONTEND}/?page=wallet`
+    ),
+  });
+}
+
+async function sendWithdrawRejectedEmail(user, refundAmount, reason) {
+  if (!user.notif_email || !user.email) return;
+  return sendMail({
+    to: user.email,
+    subject: `↩️ გამოტანა უარყოფილია — თანხა დაბრუნდა`,
+    html: wrap(
+      'თანხის გამოტანა უარყოფილია',
+      `თქვენი გამოტანის მოთხოვნა ვერ დამუშავდა და <b style="color:#4ade80">₾${Number(refundAmount).toFixed(2)}</b> უკან დაბრუნდა თქვენს GamerBazar ბალანსზე.<br><br>
+       ${reason ? `<b>მიზეზი:</b> ${reason}` : 'ადმინისტრაციამ დაზუსტებული მიზეზი არ მიუთითა.'}<br><br>
+       საკითხის გადასაჭრელად დაგვიკავშირდით: <b style="color:#7c5cff">support@gamerbazar.ge</b>`,
+      'საფულის ნახვა', `${FRONTEND}/?page=wallet`
+    ),
+  });
+}
+
 module.exports = {
   sendMail,
   sendOtpEmail,
@@ -308,4 +377,8 @@ module.exports = {
   sendListingRejectedEmail,
   sendDepositRequestEmail,
   sendWithdrawRequestEmail,
+  sendDepositApprovedEmail,
+  sendDepositRejectedEmail,
+  sendWithdrawApprovedEmail,
+  sendWithdrawRejectedEmail,
 };

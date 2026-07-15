@@ -694,6 +694,57 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
 .btn-google{width:100%;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:8px;border-radius:7px;font-size:12px;cursor:pointer;transition:border-color .15s;display:flex;align-items:center;justify-content:center;gap:7px;font-family:var(--font)}
 .btn-google:hover{border-color:var(--border3)}
+
+/* ── AUTH MODAL — შესვლა / რეგისტრაცია ტაბები ─────────────────
+   Login-ს და Registration-ს ახლა ცალკე მდგომარეობა აქვს ერთსა და
+   იმავე მოდალში (setAuthMode() ცვლის ორივეს) — რეფერალის ველი
+   მხოლოდ "რეგისტრაცია" ტაბზეა ხილული. */
+.auth-tabs{display:flex;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:3px;margin-bottom:16px;gap:3px}
+.auth-tab{flex:1;text-align:center;padding:8px 0;border:none;background:none;color:var(--muted2);font-size:12.5px;font-weight:600;border-radius:7px;cursor:pointer;transition:all .15s;font-family:var(--font)}
+.auth-tab.on{background:var(--grad-accent);color:#06120d}
+.auth-tab:not(.on):hover{color:var(--text)}
+
+/* ── DEPOSIT / TOP-UP — ნდობის-ორიენტირებული დიზაინი ──────────
+   მიზანი: გამოიყურებოდეს ისე, როგორც ნამდვილი საბანკო/გადახდის
+   სისტემა — მკაფიო ვიზუალური იერარქია, "ვერიფიცირებული მიმღების"
+   ბეჯი, ნაბიჯების ინდიკატორი — არა როგორც საეჭვო/სქემისებური ფორმა. */
+.dep-trust-line{font-size:10.5px;color:var(--accent);font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:5px}
+.dep-step-pill{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted2);background:var(--bg3);border:1px solid var(--border2);border-radius:20px;padding:3px 10px;margin-bottom:10px}
+.dep-quick-row{display:flex;gap:7px;margin-bottom:14px}
+.dep-quick-chip{flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:8px 0;font-size:12px;font-weight:700;color:var(--muted2);cursor:pointer;transition:all .15s;font-family:var(--mono)}
+.dep-quick-chip:hover,.dep-quick-chip.on{color:var(--accent);border-color:var(--ad2);background:var(--ad)}
+.dep-amount-input{position:relative}
+.dep-amount-prefix{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--accent);font-weight:700;font-size:13px;font-family:var(--mono);pointer-events:none}
+.dep-amount-input .form-i{padding-left:27px}
+.dep-trust-badges{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:10px;color:var(--muted);margin:2px 0 4px}
+
+.dep-receipt{background:linear-gradient(135deg,var(--ad),transparent);border:1px solid var(--ad2);border-radius:12px;padding:16px;text-align:center;margin-bottom:16px}
+.dep-receipt-label{font-size:10.5px;color:var(--muted2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em}
+.dep-receipt-amount{font-family:var(--mono);font-size:32px;font-weight:800;color:var(--accent);letter-spacing:-.5px}
+
+.bank-card{background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:14px;margin-bottom:12px}
+.bank-card-muted{opacity:.55}
+.bank-card-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.bank-card-head.no-rows{margin-bottom:0;padding-bottom:0;border-bottom:none}
+.bank-badge{width:38px;height:38px;border-radius:9px;background:var(--grad-accent);color:#06120d;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;letter-spacing:.02em;flex-shrink:0}
+.bank-badge-muted{background:var(--bg4);color:var(--muted)}
+.bank-card-head-txt{flex:1;min-width:0}
+.bank-name{font-size:13px;font-weight:700;color:var(--text)}
+.bank-verified{font-size:10px;color:var(--accent);font-weight:600;margin-top:1px;display:flex;align-items:center;gap:3px}
+.bank-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0;font-size:11.5px}
+.bank-row-l{color:var(--muted);flex-shrink:0}
+.bank-row-v{color:var(--text);font-weight:600;text-align:right}
+.bank-row-v.mono{font-family:var(--mono);letter-spacing:.4px;font-size:12px}
+.dep-copy-btn{width:100%;margin-top:8px;background:var(--bg4);border:1px solid var(--border3);color:var(--accent);font-size:11.5px;font-weight:600;padding:8px 0;border-radius:8px;cursor:pointer;transition:all .15s}
+.dep-copy-btn:hover{background:var(--ad);border-color:var(--ad2)}
+
+.dep-instructions{background:#0d2a1a;border:1px solid #1a5c3220;border-radius:10px;padding:13px 14px;margin-bottom:14px}
+.dep-instructions-h{font-size:11px;font-weight:700;color:#4ade80;margin-bottom:7px}
+.dep-instructions ol{margin:0;padding-left:18px;color:#86efac;font-size:11px;line-height:1.7}
+.dep-instructions li{margin-bottom:2px}
+
+.dep-support-line{font-size:11px;color:var(--muted);margin-bottom:14px;text-align:center}
+.dep-support-line span{color:var(--accent)}
 .star-pick{display:flex;gap:5px;justify-content:center;margin:12px 0}
 .star-b{font-size:26px;cursor:pointer;opacity:.2;transition:all .1s;background:none;border:none;color:var(--gold)}
 .star-b.on{opacity:1}
@@ -1059,7 +1110,7 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
         <p class="hero-sub">საქართველოს პირველი დაცული მარკეტფლეისი — Escrow, ვერიფიცირებული გამყიდველები, GEL/USD ბილინგი.</p>
         <div class="hero-cta">
           <button class="btn btn-a" style="padding:9px 20px;font-size:13px" onclick="pg('listings');act(document.querySelectorAll('.nl')[1])">განცხადებები →</button>
-          <button class="btn btn-g" id="hero-cta-guest" style="padding:9px 16px;font-size:13px" onclick="openM('loginModal')">უფასო რეგისტრაცია</button>
+          <button class="btn btn-g" id="hero-cta-guest" style="padding:9px 16px;font-size:13px" onclick="openM('loginModal','register')">უფასო რეგისტრაცია</button>
           <button class="btn btn-g" id="hero-cta-user" style="padding:9px 16px;font-size:13px;display:none" onclick="if(currentUser){pg('create-listing')}else{openM('loginModal')}">➕ განცხადების დამატება</button>
         </div>
         <div class="hero-stats">
@@ -1839,12 +1890,21 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 <div class="modal-bg" id="loginModal" onclick="if(event.target===this)closeM('loginModal')">
   <div class="modal">
     <div class="modal-title" id="login-modal-title">შესვლა</div>
+    <!-- შესვლა / რეგისტრაცია ტაბები — მხოლოდ ამის მიხედვით ჩნდება/იმალება
+         რეფერალის ველი ქვემოთ (იხ. setAuthMode() JS-ში) -->
+    <div class="auth-tabs" id="auth-tabs">
+      <button type="button" class="auth-tab on" id="auth-tab-login" onclick="setAuthMode('login')">შესვლა</button>
+      <button type="button" class="auth-tab" id="auth-tab-register" onclick="setAuthMode('register')">რეგისტრაცია</button>
+    </div>
     <button class="btn-google" onclick="googleAuth()"><svg width="15" height="15" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>Google/Gmail-ით შესვლა</button>
     <div class="divider">ან ელ-ფოსტით</div>
     <!-- ნაბიჯი 1: ელ-ფოსტის შეყვანა -->
     <div id="otp-step-email">
       <div class="form-g"><label class="form-l">ელ-ფოსტა</label><input class="form-i" id="otp-email" type="email" placeholder="your@email.com" autocomplete="email"></div>
-      <div class="form-g">
+      <!-- რეფერალური კოდი — ხილულია მხოლოდ "რეგისტრაცია" ტაბზე. Login-ის
+           დროს აზრი არ აქვს (არსებულ ანგარიშს რეფერალი ვეღარ მიეკუთვნება),
+           ამიტომ დეფოლტად დამალულია. -->
+      <div class="form-g" id="reg-referral-group" style="display:none">
         <label class="form-l">რეფერალური / პრომო კოდი (არასავალდებულო)</label>
         <input class="form-i" id="otp-referral-code" type="text" placeholder="REF-XXXXXX" autocomplete="off"
                style="font-family:var(--mono);text-transform:uppercase"
@@ -1880,53 +1940,89 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 </div>
 <div class="modal-bg" id="depositModal" onclick="if(event.target===this)closeM('depositModal')">
   <div class="modal" style="max-width:420px">
-    <div class="modal-title">💰 ბალანსის შეტანა</div>
+    <div class="modal-title" style="margin-bottom:2px">💳 ბალანსის შეტანა</div>
+    <div class="dep-trust-line">🔒 დაცული, ხელით გადამოწმებული ტრანზაქცია</div>
 
     <!-- ნაბიჯი 1: თანხა -->
     <div id="dep-step1">
-      <div style="font-size:12px;color:var(--muted);margin-bottom:14px">შეიყვანე რამდენის შეტანა გინდა</div>
+      <div class="dep-step-pill">ნაბიჯი 1 / 2 — თანხა</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px">შეიყვანე რამდენის შეტანა გინდა, ან აირჩიე მზა ვარიანტი</div>
+
+      <div class="dep-quick-row">
+        <button type="button" class="dep-quick-chip" onclick="depSetQuick(20,this)">₾20</button>
+        <button type="button" class="dep-quick-chip" onclick="depSetQuick(50,this)">₾50</button>
+        <button type="button" class="dep-quick-chip" onclick="depSetQuick(100,this)">₾100</button>
+        <button type="button" class="dep-quick-chip" onclick="depSetQuick(200,this)">₾200</button>
+      </div>
+
       <div class="form-g">
         <label class="form-l">თანხა (₾)</label>
-        <input class="form-i" type="number" id="dep-amount" placeholder="20" min="1" max="5000">
-      </div>
-      <div class="m-acts">
-        <button class="btn btn-g" onclick="closeM('depositModal')">გაუქმება</button>
-        <button class="btn btn-a" onclick="depStep2()">შემდეგი →</button>
-      </div>
-    </div>
-
-    <!-- ნაბიჯი 2: ინსტრუქცია -->
-    <div id="dep-step2" style="display:none">
-      <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:14px;margin-bottom:14px">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">გადარიცხე ზუსტად</div>
-        <div style="font-size:28px;font-weight:800;color:var(--accent)" id="dep-show-amount">₾0</div>
-      </div>
-
-      <div style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--fg)">🏦 საქართველოს ბანკი (BOG)</div>
-      <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:12px;margin-bottom:12px">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">IBAN</div>
-        <div style="font-size:13px;font-weight:700;letter-spacing:1px;font-family:monospace" id="dep-iban-bog">GE62BG0000000562150681</div>
-        <button onclick="copyIban('dep-iban-bog')" style="background:none;border:none;color:var(--accent);font-size:11px;cursor:pointer;margin-top:4px;padding:0">📋 კოპირება</button>
-      </div>
-
-      <div style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--fg)">🏦 TBC ბანკი</div>
-      <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:12px;margin-bottom:14px">
-        <div style="font-size:11px;color:var(--muted);font-style:italic">მალე დაემატება</div>
-      </div>
-
-      <div style="background:#0d2a1a;border:1px solid #1a5c3220;border-radius:8px;padding:12px;margin-bottom:14px">
-        <div style="font-size:11px;font-weight:700;color:#4ade80;margin-bottom:6px">📌 მნიშვნელოვანი ინსტრუქცია</div>
-        <div style="font-size:11px;color:#86efac;line-height:1.6">
-          1. გადარიცხვისას დანიშნულებაში მიუთითე შენი <b>username: <span id="dep-username">—</span></b><br>
-          2. გადარიცხვა მხოლოდ <b>BOG/TBC-დან</b> მიიღება<br>
-          3. გადარიცხვის შემდეგ <b>1-24 საათში</b> ბალანსი განახლდება<br>
-          4. დასტურის შემდეგ ავტომატურად მიიღებ შეტყობინებას
+        <div class="dep-amount-input">
+          <span class="dep-amount-prefix">₾</span>
+          <input class="form-i" type="number" id="dep-amount" placeholder="20" min="1" max="5000">
         </div>
       </div>
 
-      <div style="font-size:11px;color:var(--muted);margin-bottom:14px;text-align:center">
-        კითხვის შემთხვევაში დაგვიკავშირდი:<br>
-        <span style="color:var(--accent)">support@gamerbazar.ge</span>
+      <div class="dep-trust-badges">
+        <span>🔒 SSL დაცული</span><span>🛡️ Escrow გარანტია</span><span>🇬🇪 ქართული პლატფორმა</span>
+      </div>
+
+      <div class="m-acts">
+        <button class="btn btn-g" onclick="closeM('depositModal')">გაუქმება</button>
+        <button class="btn btn-a" onclick="depStep2()">გაგრძელება →</button>
+      </div>
+    </div>
+
+    <!-- ნაბიჯი 2: საბანკო დეტალები -->
+    <div id="dep-step2" style="display:none">
+      <div class="dep-step-pill">ნაბიჯი 2 / 2 — გადარიცხვა</div>
+
+      <div class="dep-receipt">
+        <div class="dep-receipt-label">გადასარიცხი ზუსტი თანხა</div>
+        <div class="dep-receipt-amount" id="dep-show-amount">₾0</div>
+      </div>
+
+      <div class="bank-card">
+        <div class="bank-card-head">
+          <div class="bank-badge">BOG</div>
+          <div class="bank-card-head-txt">
+            <div class="bank-name">საქართველოს ბანკი</div>
+            <div class="bank-verified">✅ ვერიფიცირებული მიმღები</div>
+          </div>
+        </div>
+        <div class="bank-row">
+          <span class="bank-row-l">მიმღები</span>
+          <span class="bank-row-v" id="dep-recipient">Jumber Shavadze</span>
+        </div>
+        <div class="bank-row">
+          <span class="bank-row-l">IBAN</span>
+          <span class="bank-row-v mono" id="dep-iban-bog">GE62BG0000000562150681</span>
+        </div>
+        <button class="dep-copy-btn" onclick="copyIban('dep-iban-bog')">📋 IBAN-ის კოპირება</button>
+      </div>
+
+      <div class="bank-card bank-card-muted">
+        <div class="bank-card-head no-rows">
+          <div class="bank-badge bank-badge-muted">TBC</div>
+          <div class="bank-card-head-txt">
+            <div class="bank-name">TBC ბანკი</div>
+            <div class="bank-verified" style="color:var(--muted)">მალე დაემატება</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dep-instructions">
+        <div class="dep-instructions-h">📌 მნიშვნელოვანი ინსტრუქცია</div>
+        <ol>
+          <li>დანიშნულებაში მიუთითე შენი username: <b id="dep-username">—</b></li>
+          <li>გადარიცხვა მხოლოდ <b>BOG/TBC</b>-დან მიიღება</li>
+          <li>ბალანსი განახლდება გადარიცხვიდან <b>1–24 საათში</b></li>
+          <li>დასტურის შემდეგ ავტომატურად მიიღებ შეტყობინებას</li>
+        </ol>
+      </div>
+
+      <div class="dep-support-line">
+        კითხვის შემთხვევაში დაგვიკავშირდი: <span>support@gamerbazar.ge</span>
       </div>
 
       <div class="m-acts">
@@ -2486,10 +2582,18 @@ function closeDrawer() {
 // ══════════════════════════════════════════════════════════
 // MODAL
 // ══════════════════════════════════════════════════════════
-function openM(id) {
+// "mode" — 'login' | 'register'. loginModal-ისთვის თუ აშკარად არ მიეთითა,
+// ავტომატურად ვირჩევთ 'register'-ს იმ შემთხვევაში თუ უკვე გვაქვს
+// დაჭერილი რეფერალის კოდი (?ref= ბმულით მოსული ახალი სტუმარი — რეფერალი
+// მხოლოდ ახალ ანგარიშს ეხება), სხვა შემთხვევაში დეფოლტად 'login'.
+function openM(id, mode) {
   const el = document.getElementById(id);
   if (el) el.classList.add('open');
-  if (id === 'loginModal') showEmailStep();
+  if (id === 'loginModal') {
+    const inferredMode = mode || (typeof getReferralCode === 'function' && getReferralCode() ? 'register' : 'login');
+    setAuthMode(inferredMode);
+    showEmailStep();
+  }
 }
 function closeM(id) {
   const el = document.getElementById(id);
@@ -2503,17 +2607,46 @@ function setStars(n) {
 // ══════════════════════════════════════════════════════════
 // LOGIN / REGISTER — Email + OTP (პაროლების გარეშე)
 // ══════════════════════════════════════════════════════════
+// ერთი და იგივე OTP-ფლოუ ემსახურება ორივეს (backend თავად წყვეტს
+// is_new_user-ს), მაგრამ UI დონეზე "შესვლა" და "რეგისტრაცია" ცალკე
+// მდგომარეობებია — mode წყვეტს მხოლოდ იმას, ჩანს თუ არა რეფერალის
+// ველი და რა წერია სათაურში/ღილაკზე. ორივე რეჟიმში მოთხოვნა
+// იდენტურ /api/auth/request-otp endpoint-ს მიდის.
+let authModalMode = 'login';
+function setAuthMode(mode) {
+  authModalMode = (mode === 'register') ? 'register' : 'login';
+  const tabLogin    = document.getElementById('auth-tab-login');
+  const tabRegister = document.getElementById('auth-tab-register');
+  if (tabLogin)    tabLogin.classList.toggle('on', authModalMode === 'login');
+  if (tabRegister) tabRegister.classList.toggle('on', authModalMode === 'register');
+
+  const refGroup = document.getElementById('reg-referral-group');
+  if (refGroup) refGroup.style.display = authModalMode === 'register' ? 'block' : 'none';
+
+  const title = document.getElementById('login-modal-title');
+  if (title) title.textContent = authModalMode === 'register' ? 'ახალი ანგარიშის შექმნა' : 'შესვლა ანგარიშზე';
+
+  const sendBtn = document.getElementById('otp-send-btn');
+  if (sendBtn && !sendBtn.disabled) sendBtn.textContent = authModalMode === 'register' ? 'რეგისტრაცია →' : 'კოდის გაგზავნა →';
+
+  // login რეჟიმში რეფერალის ველი დამალულია — თუ მასში მაინც ეწერა რამე
+  // (მაგ. მომხმარებელმა ჯერ register-ზე ჩაწერა, მერე login-ზე გადავიდა),
+  // ვასუფთავებთ, რომ დამალული ველიდან ძველი მნიშვნელობა არ გაიგზავნოს.
+  if (authModalMode === 'login') {
+    const refInput = document.getElementById('otp-referral-code');
+    if (refInput) refInput.value = '';
+  } else {
+    const refInput = document.getElementById('otp-referral-code');
+    if (refInput && !refInput.value) refInput.value = (typeof getReferralCode === 'function' && getReferralCode()) || '';
+  }
+}
+
 function showEmailStep() {
   stopOtpTimer();
   const stepEmail = document.getElementById('otp-step-email');
   const stepCode  = document.getElementById('otp-step-code');
   if (stepCode)  stepCode.style.display  = 'none';
   if (stepEmail) stepEmail.style.display = 'block';
-  // თუ ?ref= URL-პარამეტრიდან უკვე გვაქვს ავტ. დაჭერილი კოდი, ველში
-  // წინასწარ ვავსებთ — მომხმარებელი ხედავს, რომ კოდი გამოყენებულია
-  // (ხელით შეცვლა/წაშლა კვლავ შესაძლებელია).
-  const refInput = document.getElementById('otp-referral-code');
-  if (refInput && !refInput.value) refInput.value = getReferralCode() || '';
 }
 
 let otpCountdownInterval = null;
@@ -3234,17 +3367,35 @@ async function loadTransactions() {
       wrap.innerHTML = '<div class="tx-h">ტრანზაქციები</div><div class="empty" style="padding:32px"><div class="empty-ico">📋</div><div class="empty-t">ტრანზაქციები ჯერ არ არის</div></div>';
       return;
     }
-    const icons = { deposit:'🏦', withdrawal:'📤', purchase:'🛒', sale_income:'💰', escrow_hold:'🔒', escrow_release:'✅', escrow_refund:'↩️', vip_purchase:'⭐', platform_fee:'💸' };
-    const cls   = { deposit:'in', sale_income:'in', escrow_refund:'in', withdrawal:'out', purchase:'out', platform_fee:'out', escrow_hold:'hold' };
+    const icons = { deposit:'🏦', withdrawal:'📤', purchase:'🛒', sale_income:'💰', escrow_hold:'🔒', escrow_release:'✅', escrow_refund:'↩️', vip_purchase:'⭐', platform_fee:'💸', refund:'↩️' };
+    const cls   = { deposit:'in', sale_income:'in', escrow_refund:'in', refund:'in', withdrawal:'out', purchase:'out', platform_fee:'out', escrow_hold:'hold' };
     const lbl   = { in:'შემოსული', out:'გამოხარჯული', hold:'მიმდინარე' };
+    // ── deposit/withdrawal — ადმინის დამტკიცება/უარყოფა გადის ──
+    // ამ ორ ტიპზე ვაჩვენებთ სუფთა, ერთგვაროვან სტატუსის ბეჯს
+    // (status ველიდან) ნაცვლად ნედლი description-ისა — ადმინის
+    // დეტალური შენიშვნა UI-ში აღარასდროს გამოჩნდება, მხოლოდ
+    // ელ-ფოსტაზე იგზავნება (იხ. mailer.js / admin.js). ასე
+    // ისტორია ყოველთვის სუფთა და პროფესიონალურად გამოიყურება.
+    const APPROVAL_TYPES = ['deposit', 'withdrawal'];
+    const cleanTitle = { deposit: 'ბალანსის შეტანა — BOG გადარიცხვა', withdrawal: 'თანხის გამოტანა' };
     const html  = rows.slice(0, 20).map(t => {
       const c = cls[t.type] || 'hold';
       const sign = Number(t.amount_gel) > 0 ? '+' : '';
       const d = fmtDate(t.created_at);
+      const isApproval = APPROVAL_TYPES.includes(t.type);
+      const title = isApproval ? (cleanTitle[t.type] || t.type) : (t.description || t.type);
+      let statusBadge;
+      if (isApproval) {
+        if (t.status === 'completed')      statusBadge = `<span class="tx-s sd">✓ დამტკიცებულია</span>`;
+        else if (t.status === 'failed')    statusBadge = `<span class="tx-s sf">✕ უარყოფილია</span>`;
+        else                                statusBadge = `<span class="tx-s sp">⏳ განხილვაშია</span>`;
+      } else {
+        statusBadge = `<span class="tx-s ${c==='in'?'sd':c==='out'?'sf':'sp'}">${lbl[c]}</span>`;
+      }
       return `<div class="tx-row">
         <div class="tx-ico ${c}">${icons[t.type] || '💳'}</div>
-        <div class="tx-info"><div class="tx-t">${t.description || t.type}</div><div class="tx-d">${d}</div>
-        <span class="tx-s ${c==='in'?'sd':c==='out'?'sf':'sp'}">${lbl[c]}</span></div>
+        <div class="tx-info"><div class="tx-t">${title}</div><div class="tx-d">${d}</div>
+        ${statusBadge}</div>
         <div><div class="tx-amt ${c}">${sign}₾${Math.abs(Number(t.amount_gel)).toFixed(2)}</div></div>
       </div>`;
     }).join('');
@@ -5749,6 +5900,15 @@ renderChats();
 // Auth
 
 // ── Deposit Step Functions ────────────────────────────────────
+// სწრაფი თანხის ჩიპები (₾20/50/100/200) — ავსებს ველს და გამოკვეთს
+// არჩეულ ჩიპს ვიზუალურად, ნდობის-ინტერფეისის ნაწილი.
+function depSetQuick(amount, chipEl) {
+  const el = document.getElementById('dep-amount');
+  if (el) el.value = amount;
+  document.querySelectorAll('.dep-quick-chip').forEach(c => c.classList.remove('on'));
+  if (chipEl) chipEl.classList.add('on');
+}
+
 async function depStep2() {
   const amount = parseFloat(document.getElementById('dep-amount')?.value);
   if (!amount || amount < 1) { showToast('შეიყვანე თანხა', 'err'); return; }
@@ -5763,6 +5923,13 @@ async function depStep2() {
     const data = await api('/api/wallet/deposit', { method: 'POST', body: JSON.stringify({ amount }) });
     document.getElementById('dep-show-amount').textContent = '₾' + Number(data.amount).toFixed(2);
     document.getElementById('dep-username').textContent = currentUser?.username || '—';
+    // მიმღების სახელი/IBAN პირდაპირ სერვერის პასუხიდან ვსვამთ (არა
+    // ჰარდქოდირებული) — თუ backend-ზე ოდესმე შეიცვლება ანგარიში, აქ
+    // ხელით არაფერი საჭირო აღარ იქნება.
+    const recipientEl = document.getElementById('dep-recipient');
+    if (recipientEl) recipientEl.textContent = data.recipient || 'Jumber Shavadze';
+    const ibanEl = document.getElementById('dep-iban-bog');
+    if (ibanEl) ibanEl.textContent = data.iban || 'GE62BG0000000562150681';
     document.getElementById('dep-step1').style.display = 'none';
     document.getElementById('dep-step2').style.display = 'block';
   } catch (e) {
@@ -5771,7 +5938,7 @@ async function depStep2() {
               : (e?.message || 'შეცდომა — სცადე ხელახლა');
     showToast(msg, 'err');
   } finally {
-    if (btn) { btn.textContent = 'შემდეგი →'; btn.disabled = false; }
+    if (btn) { btn.textContent = 'გაგრძელება →'; btn.disabled = false; }
   }
 }
 
@@ -5791,14 +5958,17 @@ function copyIban(elId) {
 }
 
 // deposit modal გახსნისას step1 ვაჩვენოთ
+// (mode პარამეტრი გადაცემულია — წინააღმდეგ შემთხვევაში openM('loginModal','register')
+// ამ wrapper-ის გავლისას mode იკარგებოდა და ყოველთვის login რეჟიმზე ვარდებოდა)
 const _origOpenM = window.openM;
-window.openM = function(id) {
+window.openM = function(id, mode) {
   if (id === 'depositModal') {
     document.getElementById('dep-step1').style.display = 'block';
     document.getElementById('dep-step2').style.display = 'none';
     if (document.getElementById('dep-amount')) document.getElementById('dep-amount').value = '';
+    document.querySelectorAll('.dep-quick-chip').forEach(c => c.classList.remove('on'));
   }
-  if (_origOpenM) _origOpenM(id);
+  if (_origOpenM) _origOpenM(id, mode);
 };
 
 async function doWithdraw() {
