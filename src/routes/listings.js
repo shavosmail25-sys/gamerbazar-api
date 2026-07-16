@@ -37,6 +37,14 @@ const VALID_SECURITY  = [
   'apple_linked', 'phone_linked', 'no_link',
 ];
 
+// ── ფასის დასაშვები დიაპაზონი — მინ. ₾5 (Escrow-ის ბოროტად გამოყენების
+// თავიდან ასაცილებლად: ზოგი მომხმარებელი განზრახ დებდა "1 ₾" სიმბოლურ
+// ფასს, "მოვილაპარაკოთო", მაგრამ Escrow-ის გამო მყიდველს შეეძლო
+// მყისვე ეყიდა სწორედ ამ 1-ლარიან ფასად — დავები/სისტ. შეცდომები).
+// იგივე whitelist გამოიყენება POST /-შიც და PUT /:id-შიც. ──
+const MIN_LISTING_PRICE_GEL = 5;
+const MAX_LISTING_PRICE_GEL = 50000;
+
 // ── სურათების ატვირთვის middleware — გამოიყენება ორივეგან: POST / (შექმნისას,
 // სავალდებულო) და POST /:id/images (მოგვიანებით დამატებისას). Render-ის
 // filesystem ephemeral-ია — დისკზე აღარ ვინახავთ, ფაილი მეხსიერებიდან
@@ -308,8 +316,12 @@ router.post('/', requireAuth, checkVipStatus, imgUpload.array('images', 5), asyn
     if (!category || !game || !listing_type || !title || !price_gel) {
       return res.status(400).json({ error: 'required_fields' });
     }
-    if (Number(price_gel) <= 0 || Number(price_gel) > 50000) {
-      return res.status(400).json({ error: 'invalid_price' });
+    if (Number(price_gel) < MIN_LISTING_PRICE_GEL || Number(price_gel) > MAX_LISTING_PRICE_GEL) {
+      return res.status(400).json({
+        error: 'invalid_price',
+        message: `ფასი უნდა იყოს ₾${MIN_LISTING_PRICE_GEL}-დან ₾${MAX_LISTING_PRICE_GEL}-მდე`,
+        min: MIN_LISTING_PRICE_GEL, max: MAX_LISTING_PRICE_GEL,
+      });
     }
 
     const VALID_CATEGORIES = ['mobile', 'pc', 'social', 'boosting', 'currency', 'apps'];
@@ -427,6 +439,18 @@ router.put('/:id', requireAuth, async (req, res) => {
     }
     if (account_security && !VALID_SECURITY.includes(account_security)) {
       return res.status(400).json({ error: 'invalid_account_security', allowed: VALID_SECURITY });
+    }
+    // ── ფასის ვალიდაცია — მანამდე ეს endpoint საერთოდ არ ამოწმებდა
+    // price_gel-ს, ანუ რედაქტირებისას Escrow-ის "1 ₾" ხარვეზის გვერდის
+    // ავლა შესაძლებელი იყო POST /-ის ვალიდაციის მიუხედავადაც ──
+    if (price_gel !== undefined && price_gel !== null && price_gel !== '') {
+      if (Number(price_gel) < MIN_LISTING_PRICE_GEL || Number(price_gel) > MAX_LISTING_PRICE_GEL) {
+        return res.status(400).json({
+          error: 'invalid_price',
+          message: `ფასი უნდა იყოს ₾${MIN_LISTING_PRICE_GEL}-დან ₾${MAX_LISTING_PRICE_GEL}-მდე`,
+          min: MIN_LISTING_PRICE_GEL, max: MAX_LISTING_PRICE_GEL,
+        });
+      }
     }
 
     // ── tags ნორმალიზაცია (იხ. POST /-ის იგივე კომენტარი) — undefined

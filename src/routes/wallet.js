@@ -11,6 +11,14 @@ const referral = require('../utils/referral');
 const ADMIN_EMAIL = process.env.EMAIL_USER || process.env.SMTP_USER || 'shavosmail25@gmail.com';
 const router  = express.Router();
 
+// ── გამოტანის ლიმიტები — abuse-ის თავიდან ასაცილებლად ──────────────
+// Amount: მინ. ₾20 / მაქს. ₾200 თითო მოთხოვნაზე.
+// Frequency: მაქს. 1 მოთხოვნა 24 საათში (frontend-ის იგივე ლიმიტი
+// gamer-market-ge.html-ში, doWithdraw()-ში, უნდა ემთხვეოდეს ამას).
+const WITHDRAW_MIN_GEL          = 20;
+const WITHDRAW_MAX_GEL          = 200;
+const WITHDRAW_COOLDOWN_HOURS   = 24;
+
 // ── NO-CACHE — ბალანსი/ტრანზაქციები ხშირად იცვლება; ვუკრძალავთ
 // ბრაუზერს/პროქსის ამ პასუხების დაკეშვას.
 router.use((req, res, next) => {
@@ -176,8 +184,41 @@ router.post('/withdraw', requireAuth, async (req, res) => {
     const { amount, iban } = req.body;
     if (!amount || !iban)
       return res.status(400).json({ error: 'amount and iban required' });
-    if (Number(amount) < 5)
-      return res.status(400).json({ error: 'min_5_gel' });
+
+    const amt = Number(amount);
+
+    // ── ᲗᲐᲜᲮᲘᲡ ᲚᲘᲛᲘᲢᲔᲑᲘ — მინ. ₾20 / მაქს. ₾200 თითო მოთხოვნაზე ──
+    if (!amt || amt < WITHDRAW_MIN_GEL || amt > WITHDRAW_MAX_GEL) {
+      return res.status(400).json({
+        error: 'invalid_withdraw_amount',
+        message: `თანხა უნდა იყოს ₾${WITHDRAW_MIN_GEL}-დან ₾${WITHDRAW_MAX_GEL}-მდე`,
+        min: WITHDRAW_MIN_GEL, max: WITHDRAW_MAX_GEL,
+      });
+    }
+
+    // ── ᲡᲘᲮᲨᲘᲠᲘᲡ ᲚᲘᲛᲘᲢᲘ — მაქს. 1 მოთხოვნა 24 საათში. ვამოწმებთ ბოლო
+    // withdrawal ტიპის ტრანზაქციის დროს, სტატუსის მიუხედავად (pending/
+    // completed/failed) — ეს ისეთივე rate-limit-ია, როგორც ნებისმ.
+    // request-level abuse-დაცვა: მოთხოვნის თვითონ გაკეთება იზღუდება,
+    // არა მისი საბოლოო შედეგი (წინააღმდეგ შემთხვევაში სწრაფად
+    // უარყოფილი მოთხოვნებით შეიძლებოდა ლიმიტის უსასრულოდ გვერდის ავლა). ──
+    const { rows: recentWithdrawals } = await db.query(
+      `SELECT created_at FROM transactions
+       WHERE user_id=$1 AND type='withdrawal'
+         AND created_at > NOW() - ($2 * INTERVAL '1 hour')
+       ORDER BY created_at DESC LIMIT 1`,
+      [req.user.id, WITHDRAW_COOLDOWN_HOURS]
+    );
+    if (recentWithdrawals.length) {
+      const nextAllowedAt = new Date(
+        new Date(recentWithdrawals[0].created_at).getTime() + WITHDRAW_COOLDOWN_HOURS * 3600000
+      );
+      return res.status(429).json({
+        error: 'withdraw_rate_limit',
+        message: 'თქვენ უკვე გააკეთეთ გამოტანის მოთხოვნა დღეს. სცადეთ 24 საათის შემდეგ.',
+        next_allowed_at: nextAllowedAt,
+      });
+    }
 
     const { rows } = await db.query(
       'SELECT balance_gel, hold_balance_gel FROM users WHERE id=$1', [req.user.id]
@@ -192,7 +233,7 @@ router.post('/withdraw', requireAuth, async (req, res) => {
     // მოთხოვნილი თანხა (gross), ხოლო ადმინმა ხელზე უნდა გასცეს მხოლოდ
     // net (95%) — fee ჩაითვლება პლატფორმის შემოსავალში მხოლოდ მას შემდეგ,
     // რაც ადმინი მოთხოვნას რეალურად დაადასტურებს (admin.js /confirm).
-    const { gross, fee, net } = ledger.splitCommission(amount);
+    const { gross, fee, net } = ledger.splitCommission(amt);
 
     if (Number(b.balance_gel) < gross)
       return res.status(402).json({ error: 'insufficient_balance', available: b.balance_gel });
