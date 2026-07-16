@@ -321,37 +321,65 @@ function broadcastEventToRoom(roomId, event) {
 // თითო გამყიდველთან ერთი მუდმივი "ადმინისტრაციის" ოთახი იქმნება
 // (participant_a=გამყიდველი, participant_b=SUPER_ADMIN_EMAIL-ის
 // მომხმარებელი) — ყველა შემდგომი admin-notice იმავე ოთახში ჩნდება.
+//
+// ⚠️ RACE-CONDITION FIX: წინა ვერსია SELECT-ს აკეთებდა, შემდეგ
+// ცალკე INSERT-ს — ორ მოვლენას შორის ("check" და "create") window
+// არსებობდა. თუ ერთსა და იმავე გამყიდველზე ორი ავტ. სისტ. შეტყობინება
+// თითქმის ერთდროულად გაიშვებოდა (მაგ. listing reject + admin delete
+// წამებში ერთმანეთის მიყოლებით, ან ორი პარალელური request), ორივეს
+// SELECT არაფერს პოულობდა და ორივე თავის ოთახს ქმნიდა — სწორედ ეს
+// წარმოქმნიდა sidebar-ში დუბლირებულ "Admin/Support" ოთახებს.
+//
+// გამოსწორება: მთელი "შემოწმება+შექმნა" ერთ ტრანზაქციაშია გახვეული და
+// დაცულია Postgres advisory lock-ით (pg_advisory_xact_lock), რომელიც
+// კონკრეტულ sellerId-ზეა keyed — ამიტომ ერთსა და იმავე
+// მომხმარებელზე პარალელური მოთხოვნები ერთმანეთს ელოდებიან და მეორე
+// ყოველთვის უკვე არსებულ ოთახს ხედავს, დუბლიკატს კი ვეღარ ქმნის.
 // ══════════════════════════════════════════════════════════════
 async function getOrCreateAdminRoom(sellerId) {
-  const { rows: existing } = await db.query(
-    `SELECT id, participant_a, participant_b FROM chat_rooms
-     WHERE order_id IS NULL AND (participant_a=$1 OR participant_b=$1)
-     LIMIT 1`,
-    [sellerId]
-  );
-  if (existing.length) return existing[0];
+  return db.transaction(async (client) => {
+    // ── Advisory lock ამ sellerId-ზე — ტრანზაქციის დასრულებამდე
+    // ავტ. თავისუფლდება. ნებისმ. სხვა პარალელური მოთხოვნა იმავე
+    // sellerId-სთვის აქ დაელოდება, სანამ პირველი არ დაასრულებს
+    // ოთახის ძებნას/შექმნას — ეს გამორიცხავს check-then-insert race-ს. ──
+    await client.query('SELECT pg_advisory_xact_lock(hashtext($1)::bigint)', [sellerId]);
 
-  const superAdminEmail = (process.env.SUPER_ADMIN_EMAIL || '').toLowerCase().trim();
-  if (!superAdminEmail) throw new Error('SUPER_ADMIN_EMAIL_not_configured');
+    const { rows: existing } = await client.query(
+      `SELECT id, participant_a, participant_b FROM chat_rooms
+       WHERE order_id IS NULL AND (participant_a=$1 OR participant_b=$1)
+       LIMIT 1`,
+      [sellerId]
+    );
+    if (existing.length) return existing[0];
 
-  const { rows: adminRows } = await db.query(
-    'SELECT id FROM users WHERE LOWER(email)=$1', [superAdminEmail]
-  );
-  if (!adminRows.length) throw new Error('super_admin_user_not_found');
-  const adminId = adminRows[0].id;
+    const superAdminEmail = (process.env.SUPER_ADMIN_EMAIL || '').toLowerCase().trim();
+    if (!superAdminEmail) throw new Error('SUPER_ADMIN_EMAIL_not_configured');
 
-  const { rows: created } = await db.query(
-    `INSERT INTO chat_rooms(order_id, participant_a, participant_b, status)
-     VALUES (NULL, $1, $2, 'open')
-     RETURNING id, participant_a, participant_b`,
-    [sellerId, adminId]
-  );
-  return created[0];
+    const { rows: adminRows } = await client.query(
+      'SELECT id FROM users WHERE LOWER(email)=$1', [superAdminEmail]
+    );
+    if (!adminRows.length) throw new Error('super_admin_user_not_found');
+    const adminId = adminRows[0].id;
+
+    const { rows: created } = await client.query(
+      `INSERT INTO chat_rooms(order_id, participant_a, participant_b, status)
+       VALUES (NULL, $1, $2, 'open')
+       RETURNING id, participant_a, participant_b`,
+      [sellerId, adminId]
+    );
+    return created[0];
+  });
 }
 
 // გამყიდველისთვის ადმინისტრაციის სისტ. შეტყობინების გაგზავნა ჩატში —
-// ავტ. პოულობს/ქმნის ოთახს და აგზავნის 'system' ტიპის მესიჯს (რეალურ
-// დროშიც, თუ გამყიდველს ჩატი აქვს ღია — broadcastMessageToRoom-ის გავლით)
+// ავტ. პოულობს/ქმნის ოთახს (იხ. getOrCreateAdminRoom-ის race-safe
+// ლოგიკა ზემოთ) და აგზავნის 'system' ტიპის მესიჯს (რეალურ დროშიც, თუ
+// გამყიდველს ჩატი აქვს ღია — broadcastMessageToRoom-ის გავლით).
+// ⚠️ ეს ფუნქცია ექსკლუზიურად სისტემურ/ადმინის ავტ. შეტყობინებებზეა
+// განკუთვნილი (listing rejection/removal, warning-ები და მისთ.) —
+// ჩვეულებრივი user-to-user ან order-ზე დაფუძნებული ჩატი (orders.js,
+// disputes.js) ცალკე, order_id-ზე მიბმულ chat_room-ებს იყენებს და ამ
+// ფუნქციას საერთოდ არ ეხება.
 async function sendAdminNotice(sellerId, content) {
   const room = await getOrCreateAdminRoom(sellerId);
   const senderId = room.participant_a === sellerId ? room.participant_b : room.participant_a;
