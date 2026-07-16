@@ -68,6 +68,7 @@ router.get('/', async (req, res) => {
         social:   catMap.social   || 0,
         boosting: catMap.boosting || 0,
         currency: catMap.currency || 0,
+        apps:     catMap.apps     || 0,
       },
       cached_at: new Date().toISOString(),
     };

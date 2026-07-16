@@ -175,6 +175,35 @@ input,select,textarea{font-family:var(--sans)}
 .page-btn.on{background:var(--raised);border-color:var(--line2);color:var(--text)}
 .page-btn:disabled{opacity:.35;cursor:not-allowed}
 
+/* ════════════════════════ SUPPORT INBOX ════════════════════════ */
+.sup-layout{display:flex;gap:16px;height:calc(100vh - 160px);min-height:420px}
+.sup-list{width:280px;flex-shrink:0;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding-right:4px}
+.sup-row{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:11px 13px;cursor:pointer;transition:border-color .15s,background .15s}
+.sup-row:hover{border-color:var(--line2)}
+.sup-row.on{border-color:var(--signal-line);background:var(--signal-dim)}
+.sup-row-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}
+.sup-row-name{font-size:12.5px;font-weight:700}
+.sup-row-time{font-size:9.5px;color:var(--dim2);font-family:var(--mono);flex-shrink:0}
+.sup-row-msg{font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sup-row-badge{background:var(--signal);color:#fff;font-size:9.5px;font-weight:700;min-width:16px;height:16px;border-radius:8px;text-align:center;line-height:16px;padding:0 4px;flex-shrink:0}
+.sup-thread{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);display:flex;flex-direction:column;overflow:hidden}
+.sup-thread-head{padding:14px 18px;border-bottom:1px solid var(--line);font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.sup-thread-head span{font-size:10.5px;color:var(--dim2);font-weight:500;font-family:var(--mono)}
+.sup-msgs{flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.sup-msg{max-width:72%;padding:9px 13px;border-radius:11px;font-size:12.5px;line-height:1.5;word-break:break-word}
+.sup-msg.them{background:var(--raised);align-self:flex-start;border-bottom-left-radius:3px}
+.sup-msg.me{background:var(--signal-dim);color:var(--text);align-self:flex-end;border-bottom-right-radius:3px;border:1px solid var(--signal-line)}
+.sup-msg-t{font-size:9px;color:var(--dim2);margin-top:4px;font-family:var(--mono)}
+.sup-input{padding:12px 14px;border-top:1px solid var(--line);display:flex;gap:9px;flex-shrink:0}
+.sup-input textarea{flex:1;background:var(--ink);border:1px solid var(--line);border-radius:8px;padding:9px 11px;color:var(--text);font-size:12.5px;resize:none;font-family:var(--sans);max-height:100px}
+.sup-input textarea:focus{outline:none;border-color:var(--line2)}
+.sup-empty{margin:auto;text-align:center;color:var(--dim);padding:30px}
+@media(max-width:800px){
+  .sup-layout{flex-direction:column;height:auto}
+  .sup-list{width:100%;max-height:220px}
+  .sup-thread{min-height:400px}
+}
+
 /* ════════════════════════ MODAL ════════════════════════ */
 .modal-bg{position:fixed;inset:0;background:#00000088;backdrop-filter:blur(3px);z-index:500;display:none;align-items:center;justify-content:center;padding:20px}
 .modal-bg.show{display:flex}
@@ -322,6 +351,10 @@ input,select,textarea{font-family:var(--sans)}
         <span class="sb-item-ico">⚠</span>დავები
         <span class="sb-item-count" id="nav-disputes-count">0</span>
       </div>
+      <div class="sb-item" data-view="support" onclick="switchView('support')">
+        <span class="sb-item-ico">🎧</span>მხარდაჭერა
+        <span class="sb-item-count" id="nav-support-count">0</span>
+      </div>
 
       <div class="sb-section-label">Population</div>
       <div class="sb-item" data-view="users" onclick="switchView('users')">
@@ -387,6 +420,26 @@ input,select,textarea{font-family:var(--sans)}
           </div>
         </div>
         <div class="list" id="disputes-list"><div class="loading">სკანირება</div></div>
+      </div>
+
+      <!-- ═══════════ SUPPORT INBOX ═══════════
+           მომხმარებელთა პირდაპ. შეტყობინებები Admin-ისთვის — იმავე
+           chat_rooms/messages ინფრასტრუქტ. (order_id=NULL, room_type=
+           'admin_notice'), რასაც listing-ის მოხსნის/უარყოფის შეტყ. იყენებს.
+           იხ. GET /api/chat/rooms + POST /api/chat/rooms/:id/messages -->
+      <div class="view" id="view-support">
+        <div class="view-head">
+          <div><div class="view-title">მხარდაჭერის შესვლადი</div><div class="view-sub">მომხმარებელთა პირდაპ. შეტყობინებები — პასუხი გაეგზავნება უშუალოდ ავტორს</div></div>
+        </div>
+        <div class="sup-layout">
+          <div class="sup-list" id="sup-room-list"><div class="loading">სკანირება</div></div>
+          <div class="sup-thread" id="sup-thread">
+            <div class="sup-empty">
+              <div class="empty-ico">🎧</div>
+              <div class="empty-t">აირჩიე საუბარი მარცხენა სიიდან</div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- ═══════════ USERS ═══════════ -->
@@ -677,6 +730,7 @@ function enterApp() {
   document.getElementById('sb-who-ava').textContent = name.slice(0,2).toUpperCase();
   loadOverview();
   loadDisputesPill();
+  loadSupportPill();
 }
 
 function adminLogout() {
@@ -714,6 +768,7 @@ function switchView(view) {
 
   if (view === 'overview') loadOverview();
   if (view === 'disputes') loadDisputes();
+  if (view === 'support')  loadSupportRooms();
   if (view === 'users')    loadUsers();
   if (view === 'listings') loadListings();
   if (view === 'wallet')   loadWalletRequests();
@@ -919,6 +974,131 @@ async function confirmResolve() {
     showToast(e.error === 'already_resolved' ? 'ეს დავა უკვე გადაწყვეტილია' : 'შეცდომა გადაწყვეტისას', 'err');
   } finally {
     btn.disabled = false; btn.textContent = 'დადასტურება';
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// SUPPORT INBOX — მომხმარებელთა პირდაპ. შეტყობინებები Admin-ისთვის
+//
+// იყენებს იმ ზუსტ chat_rooms ინფრასტრუქტ.-ს, რასაც listing-ის
+// მოხსნის/უარყოფის ავტ. შეტყ. იყენებს (chat.sendAdminNotice →
+// getOrCreateAdminRoom) — ერთი და იგივე ოთახი მომხმ.-ს და
+// ადმინს შორის ემსახურება ორივე მიმართულებას. Room-ები
+// GET /api/chat/rooms-ით მოდის, room_type === 'admin_notice'
+// ნიშნავს რომ ეს Support/admin-notice ტიპის ოთახია. ──
+// ══════════════════════════════════════════════════════════
+let supportRooms = [];
+let currentSupportRoomId = null;
+
+async function loadSupportPill() {
+  try {
+    const rooms = await api('/api/chat/rooms');
+    const support = (rooms || []).filter(r => r.room_type === 'admin_notice');
+    const unread = support.reduce((sum, r) => sum + (Number(r.unread_count) || 0), 0);
+    const el = document.getElementById('nav-support-count');
+    if (!el) return;
+    el.textContent = unread;
+    el.classList.toggle('alert', unread > 0);
+  } catch (e) { /* silent */ }
+}
+
+async function loadSupportRooms() {
+  const el = document.getElementById('sup-room-list');
+  el.innerHTML = '<div class="loading">სკანირება</div>';
+  try {
+    const rooms = await api('/api/chat/rooms');
+    supportRooms = (rooms || []).filter(r => r.room_type === 'admin_notice');
+
+    if (!supportRooms.length) {
+      el.innerHTML = `<div class="empty"><div class="empty-ico">🎧</div><div class="empty-t">ჯერ არცერთი მომხმარებელი<br>არ დაგიკავშირებია</div></div>`;
+      return;
+    }
+
+    el.innerHTML = supportRooms.map(r => {
+      const isA     = r.participant_a === currentAdmin.id;
+      const partner = isA ? (r.participant_b_name || 'მომხმარებელი') : (r.participant_a_name || 'მომხმარებელი');
+      const unread  = Number(r.unread_count) || 0;
+      const time    = r.last_message_at
+        ? new Date(r.last_message_at).toLocaleString('ka-GE', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})
+        : '';
+      const active  = r.id === currentSupportRoomId ? ' on' : '';
+      return `<div class="sup-row${active}" data-room="${r.id}" data-partner="${esc(partner)}" onclick="openSupportRoom('${r.id}')">
+        <div class="sup-row-top">
+          <span class="sup-row-name">${esc(partner)}</span>
+          <span class="sup-row-time">${time}</span>
+        </div>
+        <div class="sup-row-msg">${esc(r.last_message || 'შეტყობინება არ არის')}</div>
+        ${unread ? `<div style="text-align:right;margin-top:4px"><span class="sup-row-badge">${unread}</span></div>` : ''}
+      </div>`;
+    }).join('');
+  } catch (e) {
+    el.innerHTML = '<div class="loading">ჩატვირთვა ვერ მოხდა</div>';
+  }
+}
+
+async function openSupportRoom(roomId) {
+  currentSupportRoomId = roomId;
+  document.querySelectorAll('.sup-row').forEach(r => r.classList.remove('on'));
+  const rowEl = document.querySelector(`.sup-row[data-room="${roomId}"]`);
+  if (rowEl) rowEl.classList.add('on');
+  const partner = rowEl ? rowEl.dataset.partner : 'მომხმარებელი';
+
+  const thread = document.getElementById('sup-thread');
+  thread.innerHTML = `
+    <div class="sup-thread-head">🎧 ${esc(partner)} <span>Support Thread</span></div>
+    <div class="sup-msgs" id="sup-msgs"><div class="loading">სკანირება</div></div>
+    <div class="sup-input">
+      <textarea id="sup-reply-text" rows="1" placeholder="უპასუხე მომხმარებელს..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendSupportReply();}"></textarea>
+      <button class="btn btn-ok" onclick="sendSupportReply()">გაგზავნა</button>
+    </div>
+  `;
+
+  try {
+    const messages = await api(`/api/chat/rooms/${roomId}/messages`);
+    renderSupportMessages(messages || []);
+    loadSupportRooms();
+    loadSupportPill();
+  } catch (e) {
+    const msgsEl = document.getElementById('sup-msgs');
+    if (msgsEl) msgsEl.innerHTML = '<div class="loading">ჩატვირთვა ვერ მოხდა</div>';
+  }
+}
+
+function renderSupportMessages(messages) {
+  const el = document.getElementById('sup-msgs');
+  if (!el) return;
+  if (!messages.length) {
+    el.innerHTML = '<div class="sup-empty"><div class="empty-t">შეტყობინება ჯერ არ არის</div></div>';
+    return;
+  }
+  el.innerHTML = messages.map(m => {
+    const mine = m.sender_id === currentAdmin.id;
+    const time = m.created_at ? new Date(m.created_at).toLocaleString('ka-GE', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+    return `<div class="sup-msg ${mine ? 'me' : 'them'}">${esc(m.content || m.message || '')}<div class="sup-msg-t">${time}</div></div>`;
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+async function sendSupportReply() {
+  const ta = document.getElementById('sup-reply-text');
+  const content = ta.value.trim();
+  if (!content || !currentSupportRoomId) return;
+  ta.value = '';
+  ta.disabled = true;
+  try {
+    await api(`/api/chat/rooms/${currentSupportRoomId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    });
+    const messages = await api(`/api/chat/rooms/${currentSupportRoomId}/messages`);
+    renderSupportMessages(messages || []);
+    loadSupportRooms();
+  } catch (e) {
+    showToast('შეტყობინების გაგზავნა ვერ მოხერხდა', 'err');
+    ta.value = content;
+  } finally {
+    ta.disabled = false;
+    ta.focus();
   }
 }
 

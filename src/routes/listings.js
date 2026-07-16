@@ -121,7 +121,8 @@ router.get('/', optionalAuth, async (req, res) => {
       search, sort = 'newest',
       page = 1, limit = 20,
       seller_id,
-      include_sold
+      include_sold,
+      tag,
     } = req.query;
 
     // მთავარ გვერდზე მხოლოდ active, profile-ზე ყველა სტატუსი
@@ -147,6 +148,9 @@ router.get('/', optionalAuth, async (req, res) => {
     // სახელებს აგზავნის (იხ. gamer-market-ge.html → SUBCATEGORIES).
     if (subcategory)  { conditions.push(`LOWER(l.game) = LOWER($${p++})`); params.push(subcategory); }
     if (listing_type) { conditions.push(`l.listing_type = $${p++}`);    params.push(listing_type); }
+    // ── tag — SA-MP-ის სტილის sub-type ფილტრი (Accounts / In-game Cars /
+    // In-game Money), ინახება listings.tags TEXT[] სვეტში. ──
+    if (tag)          { conditions.push(`$${p++} = ANY(l.tags)`);       params.push(tag); }
     if (vip === 'true') {
       conditions.push(`l.is_vip = TRUE AND (l.vip_expires_at IS NULL OR l.vip_expires_at > NOW())`);
     }
@@ -308,7 +312,7 @@ router.post('/', requireAuth, checkVipStatus, imgUpload.array('images', 5), asyn
       return res.status(400).json({ error: 'invalid_price' });
     }
 
-    const VALID_CATEGORIES = ['mobile', 'pc', 'social', 'boosting', 'currency'];
+    const VALID_CATEGORIES = ['mobile', 'pc', 'social', 'boosting', 'currency', 'apps'];
     if (!VALID_CATEGORIES.includes(category)) {
       return res.status(400).json({ error: 'invalid_category' });
     }
@@ -335,6 +339,26 @@ router.post('/', requireAuth, checkVipStatus, imgUpload.array('images', 5), asyn
 
     if (!cloudinary.isConfigured())
       return res.status(503).json({ error: 'image_upload_not_configured' });
+
+    // ── SA-MP ტიპის ტეგი სავალდებულოა — Accounts / In-game Cars / In-game Money ──
+    // (frontend-ი ამას აქცევს required-ად მხოლოდ game==='SA-MP'-ის შემთხვევაში,
+    // მაგრამ დამატებით აქაც ვამოწმებთ, defense-in-depth API-ის პირდაპ. გამოძახებისთვის)
+    const VALID_SAMP_TAGS = ['Accounts', 'In-game Cars', 'In-game Money'];
+
+    // ── tags ნორმალიზაცია — multipart/form-data-ზე ერთადერთი მნიშვნელობა
+    // string-ად მოდის, არა array-დ (მხოლოდ თუ იგივე ველი რამდენჯერმეა
+    // გამეორებული, მაშინ მოვა array). ორივე ვარიანტს ვამუშავებთ, რომ
+    // TEXT[] სვეტში ყოველთვის სუფთა JS array ჩავწეროთ. ──
+    let tagsArr = [];
+    if (Array.isArray(tags)) tagsArr = tags.map(t => String(t).trim()).filter(Boolean);
+    else if (typeof tags === 'string' && tags.trim()) tagsArr = [tags.trim()];
+
+    if (String(game).trim().toUpperCase() === 'SA-MP') {
+      const sampTag = tagsArr[0];
+      if (!sampTag || !VALID_SAMP_TAGS.includes(sampTag)) {
+        return res.status(400).json({ error: 'invalid_samp_tag', allowed: VALID_SAMP_TAGS });
+      }
+    }
 
     // ── ავტ. VIP მემკვიდრეობა ექაუნთიდან — უფასოდ ──────────────
     const isVip        = !!req.isVip;
@@ -364,7 +388,7 @@ router.post('/', requireAuth, checkVipStatus, imgUpload.array('images', 5), asyn
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending',$10,$11,$12,$13,$14,$15)
       RETURNING *
     `, [listingId, req.user.id, category, game, normalizedType, title,
-        description || '', tags || [], Number(price_gel), isVip, vipExpiresAt,
+        description || '', tagsArr, Number(price_gel), isVip, vipExpiresAt,
         platform, region, account_security || null, imageUrls]);
 
     res.status(201).json(rows[0]);
@@ -405,6 +429,14 @@ router.put('/:id', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'invalid_account_security', allowed: VALID_SECURITY });
     }
 
+    // ── tags ნორმალიზაცია (იხ. POST /-ის იგივე კომენტარი) — undefined
+    // ვტოვებთ, თუ საერთოდ არ მოსულა (COALESCE-მა ძველი მნიშვნელობა
+    // შეინარჩუნოს), მაგრამ თუ მოსულა, ყოველთვის სუფთა array-დ ვაქცევთ ──
+    let tagsArr;
+    if (Array.isArray(tags)) tagsArr = tags.map(t => String(t).trim()).filter(Boolean);
+    else if (typeof tags === 'string' && tags.trim()) tagsArr = [tags.trim()];
+    else tagsArr = undefined;
+
     // ⚠️ უსაფრთხოების გასწორება: ჩვეულებრივ გამყიდველს (არა admin/moderator)
     // აქამდე შეეძლო ამ endpoint-ით ნებისმიერი status გაეგზავნა — მათ შორის
     // პირდაპირ 'active', რაც მთლიანად აუქმებდა მოდერაციის რიგს. ახლა
@@ -416,7 +448,7 @@ router.put('/:id', requireAuth, async (req, res) => {
       if (!allowedResubmit) status = undefined;
     }
 
-    const params = [title, description, tags, price_gel, status, platform, region, account_security, req.params.id];
+    const params = [title, description, tagsArr, price_gel, status, platform, region, account_security, req.params.id];
     const { rows } = await db.query(`
       UPDATE listings SET
         title       = COALESCE($1, title),

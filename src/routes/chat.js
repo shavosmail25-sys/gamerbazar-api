@@ -97,6 +97,43 @@ router.get('/rooms/:id/messages', requireAuth, async (req, res) => {
 });
 
 // ══════════════════════════════════════════════════════════════
+// GET /api/chat/support  — "მხარდაჭერა" — მუდმივი ჩატი ადმინთან
+//
+// ნებისმ. ავტორიზ. მომხმარებელს შეუძლია პირდაპ. მიწერა Admin-ს — იყენებს
+// იმავე getOrCreateAdminRoom() infrastructure-ს, რასაც listing-ის
+// წაშლის/უარყოფის სისტ. შეტყობინებები იყენებენ (იხ. sendAdminNotice
+// ქვემოთ) — ასე ორივე ტიპის შეტყობინება (ადმინის შეტყ. + user-ის
+// მხარდაჭ. კითხვა) ერთსა და იმავე მუდმ. ოთახში ხვდება. იდემპოტენტურია —
+// თუ ოთახი უკვე არსებობს, უბრალოდ მას აბრუნებს (არ ქმნის დუბლიკატს). ──
+// ══════════════════════════════════════════════════════════════
+router.get('/support', requireAuth, async (req, res) => {
+  try {
+    const room = await getOrCreateAdminRoom(req.user.id);
+    const adminId = room.participant_a === req.user.id ? room.participant_b : room.participant_a;
+
+    const { rows } = await db.query(
+      'SELECT username, display_name, avatar_url FROM users WHERE id=$1', [adminId]
+    );
+    const admin = rows[0] || {};
+
+    res.json({
+      id: room.id,
+      participant_a: room.participant_a,
+      participant_b: room.participant_b,
+      order_id: null,
+      admin_name:   admin.display_name || admin.username || 'ადმინისტრაცია',
+      admin_avatar: admin.avatar_url || null,
+    });
+  } catch (err) {
+    console.error('support room error:', err.message);
+    if (err.message === 'SUPER_ADMIN_EMAIL_not_configured' || err.message === 'super_admin_user_not_found') {
+      return res.status(503).json({ error: 'support_unavailable' });
+    }
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
 // POST /api/chat/rooms/:id/messages  — HTTP fallback (WS-ის გარდა)
 // ══════════════════════════════════════════════════════════════
 router.post('/rooms/:id/messages', requireAuth, async (req, res) => {

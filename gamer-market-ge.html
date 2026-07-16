@@ -414,11 +414,36 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 .ld-gallery{margin-bottom:18px}
 .ld-gallery-main{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);height:320px;display:flex;align-items:center;justify-content:center;font-size:72px;overflow:hidden;position:relative}
 .ld-gallery-main img{width:100%;height:100%;object-fit:cover}
+.ld-gallery-main.has-img{cursor:zoom-in}
 .ld-gallery-thumbs{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
 .ld-thumb{width:62px;height:62px;border-radius:8px;background:var(--bg2);border:2px solid var(--border);cursor:pointer;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;transition:border-color .15s}
 .ld-thumb img{width:100%;height:100%;object-fit:cover}
 .ld-thumb.on{border-color:var(--accent)}
 .ld-thumb:hover{border-color:var(--border3)}
+
+/* ══════════════════════ IMAGE LIGHTBOX / VIEWER ══════════════════════ */
+.lb-overlay{position:fixed;inset:0;background:rgba(4,6,10,.94);display:none;align-items:center;justify-content:center;z-index:9999;padding:44px}
+.lb-overlay.open{display:flex}
+.lb-img{max-width:90vw;max-height:85vh;object-fit:contain;border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.55);user-select:none}
+.lb-close{position:absolute;top:20px;right:22px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#fff;font-size:20px;width:40px;height:40px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.lb-close:hover{background:rgba(255,255,255,.18)}
+.lb-arrow{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#fff;font-size:26px;width:48px;height:48px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.lb-arrow:hover{background:rgba(255,255,255,.18)}
+.lb-prev{left:16px}
+.lb-next{right:16px}
+.lb-counter{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);color:#fff;font-size:12.5px;background:rgba(0,0,0,.45);padding:5px 13px;border-radius:20px;font-family:var(--mono,monospace)}
+@media (max-width:640px){
+  .lb-overlay{padding:16px}
+  .lb-arrow{width:38px;height:38px;font-size:20px}
+  .lb-prev{left:8px} .lb-next{right:8px}
+  .lb-close{width:34px;height:34px;font-size:17px;top:12px;right:12px}
+}
+
+/* ══════════════════════ FLOATING SUPPORT WIDGET ══════════════════════ */
+.support-fab{position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;background:var(--accent);color:#04140f;border:none;font-size:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:600;transition:transform .15s}
+.support-fab:hover{transform:scale(1.08)}
+.support-fab:active{transform:scale(.94)}
+@media (max-width:800px){.support-fab{bottom:78px;right:16px;width:50px;height:50px;font-size:20px}}
 
 .ld-section{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:18px 20px;margin-bottom:16px}
 .ld-section-title{font-size:13px;font-weight:700;margin-bottom:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.04em}
@@ -1131,6 +1156,7 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:9px;margin-bottom:24px">
       <div class="cat-card" onclick="goCategory('mobile')">📱<div>მობილური</div><div style="font-size:10px;color:var(--muted)" id="cnt-mobile">─</div></div>
       <div class="cat-card" onclick="goCategory('pc')">🖥️<div>PC / Console</div><div style="font-size:10px;color:var(--muted)" id="cnt-pc">─</div></div>
+      <div class="cat-card" onclick="goCategory('apps')">📦<div>აპები / პლატფ.</div><div style="font-size:10px;color:var(--muted)" id="cnt-apps">─</div></div>
       <div class="cat-card" onclick="goCategory('social')">📲<div>სოციალური</div><div style="font-size:10px;color:var(--muted)" id="cnt-social">─</div></div>
       <div class="cat-card" onclick="goCategory('boosting')">⚡<div>ბუსტინგი</div><div style="font-size:10px;color:var(--muted)" id="cnt-boosting">─</div></div>
       <div class="cat-card" onclick="goCategory('currency')">💎<div>ვალუტა</div><div style="font-size:10px;color:var(--muted)" id="cnt-currency">─</div></div>
@@ -1218,6 +1244,7 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
       <button class="fbtn on" onclick="filt(this,'ყველა')">ყველა</button>
       <button class="fbtn" onclick="filt(this,'mobile')">📱 მობ.</button>
       <button class="fbtn" onclick="filt(this,'pc')">🖥️ PC</button>
+      <button class="fbtn" onclick="filt(this,'apps')">📦 აპები</button>
       <button class="fbtn" onclick="filt(this,'social')">📲 სოც.</button>
       <button class="fbtn" onclick="filt(this,'boosting')">⚡ ბუსტი</button>
       <button class="fbtn" onclick="filt(this,'currency')">💎 ვალუტა</button>
@@ -1242,6 +1269,10 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
   </div>
   <div class="sbar-sub" id="l-subcats-outer">
     <div class="sbar-sub-inner" id="l-subcats"></div>
+  </div>
+  <!-- SA-MP-სპეციფიკური sub-type ფილტრი — ჩანს მხოლოდ SA-MP subcategory არჩევისას -->
+  <div class="sbar-sub" id="l-samp-tags-outer">
+    <div class="sbar-sub-inner" id="l-samp-tags"></div>
   </div>
   <div class="wrap">
     <div class="sec-head">
@@ -1691,6 +1722,20 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
         <div class="cl-cat-card" data-cv="mobile|Clash of Clans" onclick="clSelectCat('mobile','Clash of Clans',this)"><img src="photos/logos/clash-of-clans.jpg" alt="Clash of Clans"><span>Clash of Clans</span></div>
         <div class="cl-cat-card" data-cv="mobile|Genshin Impact" onclick="clSelectCat('mobile','Genshin Impact',this)"><img src="photos/logos/genshin-impact.jpg" alt="Genshin Impact"><span>Genshin Impact</span></div>
         <div class="cl-cat-card" data-cv="mobile|Roblox" onclick="clSelectCat('mobile','Roblox',this)"><img src="photos/logos/roblox.jpg" alt="Roblox"><span>Roblox</span></div>
+        <div class="cl-cat-card" data-cv="mobile|Standoff 2" onclick="clSelectCat('mobile','Standoff 2',this)"><img src="photos/logos/standoff-2.jpg" alt="Standoff 2"><span>Standoff 2</span></div>
+        <div class="cl-cat-card" data-cv="mobile|Car Parking Multiplayer" onclick="clSelectCat('mobile','Car Parking Multiplayer',this)"><img src="photos/logos/car-parking-multiplayer.jpg" alt="Car Parking Multiplayer"><span>Car Parking Multiplayer</span></div>
+        <div class="cl-cat-card" data-cv="pc|CoD Warzone" onclick="clSelectCat('pc','CoD Warzone',this)"><img src="photos/logos/cod-warzone.jpg" alt="CoD Warzone"><span>CoD Warzone</span></div>
+        <div class="cl-cat-card" data-cv="pc|GTA 5" onclick="clSelectCat('pc','GTA 5',this)"><img src="photos/logos/gta-5.jpg" alt="GTA 5"><span>GTA 5</span></div>
+        <div class="cl-cat-card" data-cv="pc|PUBG PC" onclick="clSelectCat('pc','PUBG PC',this)"><img src="photos/logos/pubg-pc.jpg" alt="PUBG PC"><span>PUBG PC</span></div>
+        <div class="cl-cat-card" data-cv="pc|SA-MP" onclick="clSelectCat('pc','SA-MP',this)"><img src="photos/logos/samp.jpg" alt="SA-MP"><span>SA-MP</span></div>
+      </div>
+
+      <div class="cl-sec-title">📦 აპები / პლატფორმები</div>
+      <div class="cl-grid">
+        <div class="cl-cat-card" data-cv="apps|Steam" onclick="clSelectCat('apps','Steam',this)"><img src="photos/logos/steam.jpg" alt="Steam"><span>Steam</span></div>
+        <div class="cl-cat-card" data-cv="apps|Epic Games" onclick="clSelectCat('apps','Epic Games',this)"><img src="photos/logos/epic-games.jpg" alt="Epic Games"><span>Epic Games</span></div>
+        <div class="cl-cat-card" data-cv="apps|Ubisoft" onclick="clSelectCat('apps','Ubisoft',this)"><img src="photos/logos/ubisoft.jpg" alt="Ubisoft"><span>Ubisoft</span></div>
+        <div class="cl-cat-card" data-cv="apps|Rockstar Games" onclick="clSelectCat('apps','Rockstar Games',this)"><img src="photos/logos/rockstar-games.jpg" alt="Rockstar Games"><span>Rockstar Games</span></div>
       </div>
 
       <div class="cl-sec-title">⚡ ბუსტინგი / სერვისი</div>
@@ -1765,6 +1810,18 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
           <option value="apple_linked">Apple Linked</option>
           <option value="phone_linked">Phone Linked</option>
           <option value="no_link">No Link / Unlinked</option>
+        </select>
+      </div>
+
+      <!-- SA-MP-სპეციფ. ველი — ჩანს მხოლოდ თუ Step 1-ზე SA-MP აირჩია
+           (იხ. clSelectCat) — მომხმარებელი აზუსტებს, ზუსტად რას ყიდის -->
+      <div class="form-g" id="post-samp-type-group" style="display:none">
+        <label class="form-l">🚗 SA-MP — რას ყიდი?</label>
+        <select class="form-i" id="post-samp-type">
+          <option value="">აირჩიე...</option>
+          <option value="Accounts">👤 ექაუნთი (Accounts)</option>
+          <option value="In-game Cars">🚗 მანქანა (In-game Cars)</option>
+          <option value="In-game Money">💰 თამაშის ფული (In-game Money)</option>
         </select>
       </div>
 
@@ -1850,6 +1907,7 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
         <a onclick="pg('listings');act(document.querySelectorAll('.nl')[1])">ყველა განცხადება</a>
         <a onclick="goCategory('mobile')">მობილური</a>
         <a onclick="goCategory('pc')">PC / Console</a>
+        <a onclick="goCategory('apps')">აპები / პლატფორმები</a>
         <a onclick="goCategory('boosting')">ბუსტინგი</a>
         <a onclick="openVipPicker()">VIP სტატუსი</a>
       </div>
@@ -2274,6 +2332,21 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 </div>
 
 <div class="toast" id="toast"><span id="t-txt"></span></div>
+
+<!-- ══════════════════════ IMAGE LIGHTBOX ══════════════════════
+     განცხადების დეტალების გვ-ზე ფოტოზე დაჭერისას სრულ ზომაზე გახსნა -->
+<div class="lb-overlay" id="lightboxModal" onclick="closeLightbox()">
+  <button class="lb-close" onclick="closeLightbox()" title="დახურვა">✕</button>
+  <button class="lb-arrow lb-prev" id="lb-prev" onclick="lbPrev(event)" title="წინა">‹</button>
+  <img class="lb-img" id="lb-img" src="" alt="" onclick="event.stopPropagation()">
+  <button class="lb-arrow lb-next" id="lb-next" onclick="lbNext(event)" title="შემდეგი">›</button>
+  <div class="lb-counter" id="lb-counter"></div>
+</div>
+
+<!-- ══════════════════════ FLOATING SUPPORT WIDGET ══════════════════════
+     ბოლო-მარჯვენა კუთხის ღილაკი — პირდაპ. ხსნის Chat გვერდზე
+     "🎧 მხარდაჭერა (Admin)" ოთახს, ნებისმ. გვერდიდან -->
+<button class="support-fab" onclick="openFloatingSupport()" title="მხარდაჭერა">🎧</button>
 
 <script>
 // ══════════════════════════════════════════════════════════
@@ -3554,13 +3627,22 @@ function renderListingDetail(l) {
   const images = (l.images && l.images.length) ? l.images : [];
   const mainEl = document.getElementById('ld-gallery-main');
   const thumbsEl = document.getElementById('ld-gallery-thumbs');
+  // ── LD_GALLERY_IMAGES — გლობალურად ვინახავთ მიმდ. განცხადების ყველა
+  // სურათის სრულ URL-ს, რომ ლაითბოქსს (იხ. openLightbox ქვემოთ) შეეძლოს
+  // წინ/უკან გადართვა ცალკე listing-ის fetch-ის გარეშე ──
+  LD_GALLERY_IMAGES = images.map(imgUrl);
   if (images.length) {
     mainEl.innerHTML = `<img src="${imgUrl(images[0])}" alt="${esc(l.title)}">`;
+    mainEl.classList.add('has-img');
+    mainEl.dataset.idx = '0';
+    mainEl.onclick = () => openLightbox(0);
     thumbsEl.innerHTML = images.map((img, i) =>
-      `<div class="ld-thumb${i === 0 ? ' on' : ''}" onclick="ldShowImage('${imgUrl(img)}', this)"><img src="${imgUrl(img)}"></div>`
+      `<div class="ld-thumb${i === 0 ? ' on' : ''}" onclick="ldShowImage('${imgUrl(img)}', this, ${i})"><img src="${imgUrl(img)}"></div>`
     ).join('');
   } else {
     mainEl.innerHTML = '🎮';
+    mainEl.classList.remove('has-img');
+    mainEl.onclick = null;
     thumbsEl.innerHTML = '';
   }
 
@@ -3619,11 +3701,64 @@ function renderListingDetail(l) {
   }
 }
 
-function ldShowImage(url, thumbEl) {
-  document.getElementById('ld-gallery-main').innerHTML = `<img src="${url}">`;
+function ldShowImage(url, thumbEl, idx) {
+  const mainEl = document.getElementById('ld-gallery-main');
+  mainEl.innerHTML = `<img src="${url}">`;
+  mainEl.classList.add('has-img');
+  mainEl.dataset.idx = String(idx);
+  mainEl.onclick = () => openLightbox(idx);
   document.querySelectorAll('.ld-thumb').forEach(t => t.classList.remove('on'));
   if (thumbEl) thumbEl.classList.add('on');
 }
+
+// ══════════════════════════════════════════════════════════
+// IMAGE LIGHTBOX — განცხადების ფოტოზე დაჭერისას სრულ ზომაზე გახსნა.
+// ადრე ფოტოზე დაჭერა საერთოდ არაფერს აკეთებდა (ldShowImage მხოლოდ
+// thumbnail-ს ცვლიდა მთავარ სურათად) — ეს ცალკე overlay/modal-ია
+// (#lightboxModal, იხ. HTML), რომელიც სრულ ეკრანზე აჩვენებს არჩეულ
+// სურათს + წინ/უკან ისრებით გადართვას იმავე განცხადების გალერეაში ──
+// ══════════════════════════════════════════════════════════
+let LD_GALLERY_IMAGES = [];
+let LB_INDEX = 0;
+
+function openLightbox(idx) {
+  if (!LD_GALLERY_IMAGES.length) return;
+  LB_INDEX = ((idx % LD_GALLERY_IMAGES.length) + LD_GALLERY_IMAGES.length) % LD_GALLERY_IMAGES.length;
+  renderLightbox();
+  const modal = document.getElementById('lightboxModal');
+  if (modal) modal.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeLightbox() {
+  const modal = document.getElementById('lightboxModal');
+  if (modal) modal.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function renderLightbox() {
+  const img     = document.getElementById('lb-img');
+  const counter = document.getElementById('lb-counter');
+  const prevBtn = document.getElementById('lb-prev');
+  const nextBtn = document.getElementById('lb-next');
+  if (img) img.src = LD_GALLERY_IMAGES[LB_INDEX] || '';
+  if (counter) counter.textContent = LD_GALLERY_IMAGES.length > 1 ? (LB_INDEX + 1) + ' / ' + LD_GALLERY_IMAGES.length : '';
+  const showNav = LD_GALLERY_IMAGES.length > 1;
+  if (prevBtn) prevBtn.style.display = showNav ? 'flex' : 'none';
+  if (nextBtn) nextBtn.style.display = showNav ? 'flex' : 'none';
+}
+
+function lbPrev(e) { if (e) e.stopPropagation(); LB_INDEX = (LB_INDEX - 1 + LD_GALLERY_IMAGES.length) % LD_GALLERY_IMAGES.length; renderLightbox(); }
+function lbNext(e) { if (e) e.stopPropagation(); LB_INDEX = (LB_INDEX + 1) % LD_GALLERY_IMAGES.length; renderLightbox(); }
+
+// კლავიატურა — Esc დახურავს, ისრები გადართავენ (მხოლოდ ღია მდგომარეობისას)
+document.addEventListener('keydown', (e) => {
+  const modal = document.getElementById('lightboxModal');
+  if (!modal || !modal.classList.contains('open')) return;
+  if (e.key === 'Escape')     closeLightbox();
+  if (e.key === 'ArrowLeft')  lbPrev();
+  if (e.key === 'ArrowRight') lbNext();
+});
 
 function fmtListingDate(d) {
   if (!d) return '—';
@@ -3826,6 +3961,8 @@ function filterL(q, page = 1) {
   // ფარგლებში (მაგ. category=social + subcategory=TikTok). SUBCAT
   // იბერდება filt()/selectSubcat()-ის მიერ — იხ. ქვემოთ ──
   if (SUBCAT) params.subcategory = SUBCAT;
+  // ── SA-MP sub-type ფილტრი (Accounts / In-game Cars / In-game Money) ──
+  if (SAMP_TAG) params.tag = SAMP_TAG;
   // ── Advanced Search — მრავალპარამეტრიანი ფილტრი: სათაური/კატეგორია
   // (search) + პლატფორმა + რეგიონი/სერვერი ერთდროულად, გვერდის
   // გადატვირთვის გარეშე (loadListingsFromAPI → renderGrid, fetch-ით) ──
@@ -3880,12 +4017,18 @@ const SUBCATEGORIES = {
     { name: 'Clash of Clans', logo: 'photos/logos/clash-of-clans.jpg' },
     { name: 'Genshin Impact', logo: 'photos/logos/genshin-impact.jpg' },
     { name: 'Roblox',         logo: 'photos/logos/roblox.jpg' },
+    { name: 'Standoff 2',                logo: 'photos/logos/standoff-2.jpg' },
+    { name: 'Car Parking Multiplayer',   logo: 'photos/logos/car-parking-multiplayer.jpg' },
   ],
   pc: [
     { name: 'CS2',                 logo: 'photos/logos/cs2.jpg' },
     { name: 'Valorant',            logo: 'photos/logos/valorant.jpg' },
     { name: 'Dota 2',              logo: 'photos/logos/dota-2.jpg' },
     { name: 'League of Legends',   logo: 'photos/logos/league-of-legends.jpg' },
+    { name: 'CoD Warzone',         logo: 'photos/logos/cod-warzone.jpg' },
+    { name: 'GTA 5',               logo: 'photos/logos/gta-5.jpg' },
+    { name: 'PUBG PC',             logo: 'photos/logos/pubg-pc.jpg' },
+    { name: 'SA-MP',               logo: 'photos/logos/samp.jpg' },
   ],
   social: [
     { name: 'Instagram', logo: 'photos/logos/instagram.jpg' },
@@ -3905,6 +4048,12 @@ const SUBCATEGORIES = {
     { name: 'Brawl Stars',   logo: 'photos/logos/brawl-stars.jpg' },
     { name: 'CS2',           logo: 'photos/logos/cs2.jpg' },
     { name: 'სხვა',          logo: '' },
+  ],
+  apps: [
+    { name: 'Steam',          logo: 'photos/logos/steam.jpg' },
+    { name: 'Epic Games',     logo: 'photos/logos/epic-games.jpg' },
+    { name: 'Ubisoft',        logo: 'photos/logos/ubisoft.jpg' },
+    { name: 'Rockstar Games', logo: 'photos/logos/rockstar-games.jpg' },
   ],
 };
 
@@ -3929,12 +4078,47 @@ function renderSubcats(cat) {
   outer.classList.add('show');
 }
 
+// ── SA-MP sub-type ფილტრი (Accounts / In-game Cars / In-game Money) —
+// ჩანს მხოლოდ მაშინ, როცა subcategory chip-ებში SA-MP-ია არჩეული.
+// listings.tags TEXT[] სვეტზე ფილტრავს (იხ. backend GET /api/listings?tag=) ──
+const SAMP_TAG_OPTIONS = [
+  { name: 'Accounts',      label: '👤 ექაუნთი' },
+  { name: 'In-game Cars',  label: '🚗 მანქანა' },
+  { name: 'In-game Money', label: '💰 ფული' },
+];
+let SAMP_TAG = '';
+
+function renderSampTagFilter(subcat) {
+  const outer = document.getElementById('l-samp-tags-outer');
+  const inner = document.getElementById('l-samp-tags');
+  if (!outer || !inner) return;
+  if ((subcat || '').toLowerCase() !== 'sa-mp') {
+    outer.classList.remove('show');
+    inner.innerHTML = '';
+    SAMP_TAG = '';
+    return;
+  }
+  inner.innerHTML = `<button class="subfbtn on" onclick="selectSampTag(this,'')">ყველა</button>` +
+    SAMP_TAG_OPTIONS.map(o =>
+      `<button class="subfbtn" onclick="selectSampTag(this,'${o.name}')">${o.label}</button>`
+    ).join('');
+  outer.classList.add('show');
+}
+
+function selectSampTag(btn, tag) {
+  document.querySelectorAll('#l-samp-tags .subfbtn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  SAMP_TAG = tag || '';
+  filterL(document.getElementById('s-input')?.value || '', 1);
+}
+
 // ── subcategory chip-ზე დაჭერა — active state + დაუყოვნებელი,
 // გვერდის გადატვირთვის გარეშე fetch (filterL → loadListingsFromAPI) ──
 function selectSubcat(btn, sub) {
   document.querySelectorAll('#l-subcats .subfbtn').forEach(b => b.classList.remove('on'));
   btn.classList.add('on');
   SUBCAT = sub || '';
+  renderSampTagFilter(SUBCAT);
   filterL(document.getElementById('s-input')?.value || '', 1);
 }
 
@@ -3945,8 +4129,10 @@ function filt(btn, cat) {
   // ახალი მთავარი კატეგორია ავტ. ასუფთავებს წინა subcategory არჩევანს
   SUBCAT = '';
   renderSubcats(cat === 'ყველა' || cat === 'VIP' ? null : cat);
+  renderSampTagFilter('');
   const catLabels = {
     'ყველა':'ყველა განცხადება', 'mobile':'📱 მობილური', 'pc':'🖥️ PC / Console',
+    'apps':'📦 აპები / პლატფორმები',
     'social':'📲 სოციალური', 'boosting':'⚡ ბუსტინგი', 'currency':'💎 ვალუტა', 'VIP':'⭐ VIP'
   };
   const title = document.getElementById('l-title');
@@ -4095,7 +4281,7 @@ function goCategory(cat) {
     'მობილური': 'mobile', 'PC': 'pc', 'სოც': 'social',
     'ბუსტინგი': 'boosting', 'ვალუტა': 'currency',
     // API value-ებიც პირდაპ. გაატარე
-    'mobile':'mobile','pc':'pc','social':'social','boosting':'boosting','currency':'currency'
+    'mobile':'mobile','pc':'pc','social':'social','boosting':'boosting','currency':'currency','apps':'apps'
   };
   const apiCat = catMap[cat] || cat;
   setTimeout(() => {
@@ -4207,6 +4393,13 @@ async function loadChatRooms() {
   el.innerHTML = '<div style="padding:12px;text-align:center;font-size:11px;color:var(--muted)">⏳ იტვირთება...</div>';
 
   try {
+    // ── "🎧 მხარდაჭერა" ოთახი ყოველთვის არსებობს/იქმნება სიის
+    // ჩატვირთვამდე, რომ ყოველ მომხმარებელს (თუნდაც პირველად შემოსულს)
+    // ჰქონდეს პირდაპ. არხი Admin-თან, ჯერ კიდევ პირველი შეტყობინების
+    // გაგზავნამდე. best-effort — თუ ჩავარდა (მაგ. SUPER_ADMIN_EMAIL არაა
+    // კონფიგურირებული), ჩვეულ ოთახებს მაინც ვტვირთავთ ქვემოთ. ──
+    await api('/api/chat/support').catch(() => null);
+
     const rooms = await api('/api/chat/rooms');
     if (!rooms || !rooms.length) {
       el.innerHTML = `<div class="empty" style="padding:24px;text-align:center">
@@ -4216,24 +4409,32 @@ async function loadChatRooms() {
       return;
     }
 
-    el.innerHTML = rooms.map(r => {
+    // Support ოთახი (admin_notice, order_id=NULL) ყოველთვის პირველი ჩანს
+    const sorted = rooms.slice().sort((a, b) => {
+      if (a.room_type === 'admin_notice') return -1;
+      if (b.room_type === 'admin_notice') return 1;
+      return 0; // დანარჩენი უკვე დალაგებულია სერვერიდან (last_message_at DESC)
+    });
+
+    el.innerHTML = sorted.map(r => {
+      const isSupport = r.room_type === 'admin_notice';
       const isA      = r.participant_a === currentUser.id;
-      const partner  = isA ? r.participant_b_name : r.participant_a_name;
-      const partnerVerified = !!(isA ? r.participant_b_verified : r.participant_a_verified);
-      const initials = (partner || '?').slice(0,2).toUpperCase();
-      const lastMsg  = r.last_message || 'შეტყობინება არ არის';
+      const partner  = isSupport ? 'მხარდაჭერა (Admin)' : (isA ? r.participant_b_name : r.participant_a_name);
+      const partnerVerified = !isSupport && !!(isA ? r.participant_b_verified : r.participant_a_verified);
+      const initials = isSupport ? '🎧' : (partner || '?').slice(0,2).toUpperCase();
+      const lastMsg  = r.last_message || (isSupport ? 'კითხვა ან პრობლემა? მოგვწერე პირდაპირ' : 'შეტყობინება არ არის');
       const unread   = Number(r.unread_count) || 0;
       const time     = r.last_message_at
         ? new Date(r.last_message_at).toLocaleTimeString('ka-GE', {hour:'2-digit',minute:'2-digit'})
         : '';
       const active   = r.id === currentRoomId ? ' on' : '';
 
-      return `<div class="ci${active}" data-room="${r.id}" data-order="${r.order_id}" data-amount="${r.amount_gel}" data-escrow="${r.escrow_status}" data-partner="${partner}" data-partner-verified="${partnerVerified ? 1 : 0}" onclick="openChatRoom(this)">
-        <div class="ci-av" style="color:var(--blue)">${initials}</div>
+      return `<div class="ci${active}${isSupport ? ' ci-support' : ''}" data-room="${r.id}" data-order="${r.order_id || ''}" data-amount="${r.amount_gel || 0}" data-escrow="${r.escrow_status || ''}" data-partner="${esc(partner)}" data-partner-verified="${partnerVerified ? 1 : 0}" onclick="openChatRoom(this)">
+        <div class="ci-av" style="${isSupport ? 'background:var(--ad);color:var(--accent);font-size:18px' : 'color:var(--blue)'}">${initials}</div>
         <div class="ci-inf">
-          <div class="ci-n">${esc(partner) || '?'}${verifiedBadge(partnerVerified)}</div>
-          <div class="ci-l">${r.listing_title || ''}</div>
-          <div class="ci-l" style="font-size:10px">${lastMsg}</div>
+          <div class="ci-n">${isSupport ? '🎧 მხარდაჭერა' : (esc(partner) || '?') + verifiedBadge(partnerVerified)}</div>
+          <div class="ci-l">${isSupport ? 'ადმინისტრაცია · 24/7' : (r.listing_title || '')}</div>
+          <div class="ci-l" style="font-size:10px">${esc(lastMsg)}</div>
         </div>
         <div class="ci-m">
           <span class="ci-t">${time}</span>
@@ -4245,6 +4446,23 @@ async function loadChatRooms() {
     console.error('chat rooms:', e);
     el.innerHTML = '<div style="padding:12px;text-align:center;font-size:11px;color:var(--muted)">ჩატვირთვა ვერ მოხდა</div>';
   }
+}
+
+// ── ბოლო-მარჯვენა კუთხის floating ღილაკიდან (ან ნებისმ. სხვა
+// ადგილიდან) პირდაპ. Support ოთახის გახსნა — თუ ავტორიზ. არაა,
+// login მოდალს აჩვენებს; სხვა შემთხვევაში Chat გვ-ზე გადადის და
+// "🎧 მხარდაჭერა" ჩანაწერს ავტ. აჭერს ──
+function openFloatingSupport() {
+  if (!currentUser) { openM('loginModal'); return; }
+  pg('chat'); act(document.querySelectorAll('.nl')[2]);
+  const tryOpen = () => {
+    const el = document.querySelector('.ci-support');
+    if (el) { openChatRoom(el); return true; }
+    return false;
+  };
+  setTimeout(() => {
+    if (!tryOpen()) loadChatRooms().then(() => setTimeout(tryOpen, 50));
+  }, 250);
 }
 
 // ── ოთახის გახსნა ─────────────────────────────────────────────
@@ -4259,6 +4477,7 @@ async function openChatRoom(el) {
   const escrow   = el.dataset.escrow;
   const partner  = el.dataset.partner;
   const partnerVerified = el.dataset.partnerVerified === '1';
+  const isSupportRoom = el.classList.contains('ci-support');
 
   currentRoomId  = roomId;
   currentOrderId = orderId;
@@ -4269,9 +4488,9 @@ async function openChatRoom(el) {
   const nameEl  = document.getElementById('chat-partner-name');
   const infoEl  = document.getElementById('chat-order-info');
   const avaEl   = document.getElementById('chat-partner-ava');
-  if (nameEl)  nameEl.innerHTML   = (esc(partner) + verifiedBadge(partnerVerified)) || '?';
-  if (infoEl)  infoEl.textContent  = `ორდ. · ₾${Number(amount).toFixed(2)}`;
-  if (avaEl)   avaEl.textContent   = (partner||'?').slice(0,2).toUpperCase();
+  if (nameEl)  nameEl.innerHTML   = isSupportRoom ? '🎧 მხარდაჭერა' : ((esc(partner) + verifiedBadge(partnerVerified)) || '?');
+  if (infoEl)  infoEl.textContent  = isSupportRoom ? 'ადმინისტრაცია · 24/7' : `ორდ. · ₾${Number(amount).toFixed(2)}`;
+  if (avaEl)   avaEl.textContent   = isSupportRoom ? '🎧' : (partner||'?').slice(0,2).toUpperCase();
 
   // escrow pill
   const pillEl     = document.getElementById('chat-escrow-pill');
@@ -4877,6 +5096,11 @@ const POST_TYPES = {
     { value:'currency', label:'💎 ვალუტა / Coins' },
     { value:'account',  label:'🎁 ნივთი / Bundle' },
   ],
+  apps: [
+    { value:'account',  label:'🎮 ექაუნთი' },
+    { value:'boosting', label:'🔧 სერვისი' },
+    { value:'currency', label:'💰 ვალუტა / ნივთი' },
+  ],
 };
 
 const POST_PLACEHOLDERS = {
@@ -4888,14 +5112,24 @@ const POST_PLACEHOLDERS = {
   'Clash of Clans':    'მაგ.: TH15 MAX · Champions League',
   'Genshin Impact':    'მაგ.: AR60 · C6 Neuvillette · Endgame',
   'Roblox':            'მაგ.: Dragon Fruit Lvl 2450 · Blox Fruits',
+  'Standoff 2':        'მაგ.: Rank Legend · Skins ინვენტარი · Level 50+',
+  'Car Parking Multiplayer': 'მაგ.: Pro Level · მანქანების კოლ. · Money/Coins',
   'CS2':               'მაგ.: Global Elite · 2800+ საათი · Prime',
   'Valorant':          'მაგ.: Radiant ექ. · Prime + Elderflame Skins',
   'Dota 2':            'მაგ.: Immortal · 6000 MMR · Rare Items',
   'League of Legends': 'მაგ.: Diamond II · EUW · 50+ Skins',
+  'CoD Warzone':       'მაგ.: Damascus Camo · Battle Pass Skins · K/D 2.0+',
+  'GTA 5':             'მაგ.: Level 500+ · $500M In-game · FiveM Ready',
+  'PUBG PC':           'მაგ.: Conqueror · Skins ინვენტარი · 3000+ საათი',
+  'SA-MP':             'მიუთითე სერვერი, დონე და გასაყიდი ნივთის დეტ.',
   'Instagram':         'მაგ.: 10K Followers · Lifestyle Niche · Active',
   'TikTok':            'მაგ.: 50K Followers · Entertainment · Monetized',
   'YouTube':           'მაგ.: 5K Subs · Gaming Channel · Monetized',
   'Facebook':          'მაგ.: 20K Followers · Business Page',
+  'Steam':             'მაგ.: 50+ თამაში ბიბლიოთეკაში · CS2 Prime · Level 20+',
+  'Epic Games':        'მაგ.: Fortnite Skins · Free Games Library · Full Access',
+  'Ubisoft':           'მაგ.: Far Cry / AC სერია · Uplay+ · Full Access',
+  'Rockstar Games':    'მაგ.: GTA V + RDR2 · Social Club ბმული · Full Access',
   // ბუსტინგი
   'PUBG Mobile Boost': 'მაგ.: Bronze → Conqueror · ან რაიოდნ. Push',
   'CS2 Boost':         'მაგ.: Silver → Global Elite · ან Win Boost',
@@ -4909,7 +5143,7 @@ const POST_PLACEHOLDERS = {
   'სხვა ვალუტა':       'მიუთითე ვალუტის სახეობა და რაოდენობა',
 };
 
-const CAT_LABELS = { mobile:'📱 მობილური', pc:'🖥️ PC/Console', social:'📲 სოციალური', boosting:'⚡ ბუსტინგი', currency:'💎 ვალუტა' };
+const CAT_LABELS = { mobile:'📱 მობილური', pc:'🖥️ PC/Console', social:'📲 სოციალური', boosting:'⚡ ბუსტინგი', currency:'💎 ვალუტა', apps:'📦 აპები/პლატფორმები' };
 
 let clStep = 1;
 
@@ -4935,6 +5169,15 @@ function clSelectCat(cat, game, el) {
 
   const titleEl = document.getElementById('post-title');
   if (titleEl && POST_PLACEHOLDERS[game]) titleEl.placeholder = POST_PLACEHOLDERS[game];
+
+  // ── SA-MP-სპეციფ. ველი (Accounts / In-game Cars / In-game Money) —
+  // ჩანს მხოლოდ SA-MP არჩევისას, სხვა თამაშზე გადასვლისას იმალება და
+  // მისი მნიშვნელობა ისუფთავება ──
+  const sampGroup = document.getElementById('post-samp-type-group');
+  const sampSel    = document.getElementById('post-samp-type');
+  const isSamp     = game === 'SA-MP';
+  if (sampGroup) sampGroup.style.display = isSamp ? 'block' : 'none';
+  if (sampSel && !isSamp) sampSel.value = '';
 
   clGoToStep(2);
 }
@@ -4979,14 +5222,18 @@ function clGoToStep(n) {
 function clNext() {
   if (clStep === 1) return; // STEP 1-დან გადასვლა მხოლოდ ბარათზე დაჭერით ხდება
   if (clStep === 2) {
+    const catVal   = document.getElementById('post-category')?.value || '';
+    const [, game] = catVal.split('|');
     const title = document.getElementById('post-title')?.value?.trim();
     const price = parseFloat(document.getElementById('post-price')?.value);
     const platform = document.getElementById('post-platform')?.value;
     const region   = document.getElementById('post-region')?.value;
+    const sampType = document.getElementById('post-samp-type')?.value || '';
     if (!title)               { showToast('სათაური სავალდებულოა', 'err'); return; }
     if (!price || price < 1)  { showToast('ფასი სავალდებულოა', 'err'); return; }
     if (!platform)             { showToast('აირჩიე პლატფორმა', 'err'); return; }
     if (!region)                { showToast('აირჩიე რეგიონი/სერვერი', 'err'); return; }
+    if (game === 'SA-MP' && !sampType) { showToast('აირჩიე SA-MP-ის კატეგორია: ექაუნთი / მანქანა / ფული', 'err'); return; }
     if (!postImgMinMet()) {
       showToast('განცხადების დასადებად საჭიროა მინიმუმ 2 ფოტოს ატვირთვა!', 'err');
       const zone = document.getElementById('post-img-area');
@@ -5012,7 +5259,8 @@ function clResetForm() {
   const label = document.getElementById('cl-selected-cat-label'); if (label) label.innerHTML = '';
   const toggle = document.getElementById('cl-type-toggle'); if (toggle) toggle.innerHTML = '';
   ['post-title','post-desc','post-price'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
-  ['post-platform','post-region','post-security'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
+  ['post-platform','post-region','post-security','post-samp-type'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
+  const sampGroup = document.getElementById('post-samp-type-group'); if (sampGroup) sampGroup.style.display = 'none';
   const imgErr = document.getElementById('post-img-err'); if (imgErr) imgErr.style.display = 'none';
   const imgZone = document.getElementById('post-img-area'); if (imgZone) imgZone.classList.remove('needs-photos');
   renderImgStrip();
@@ -5142,6 +5390,7 @@ async function postListing() {
   const platform = (document.getElementById('post-platform') || {}).value || '';
   const region   = (document.getElementById('post-region')   || {}).value || '';
   const account_security = (document.getElementById('post-security') || {}).value || '';
+  const sampType = (document.getElementById('post-samp-type') || {}).value || '';
   const isVip    = !!currentUser.is_vip;
 
   if (!category)        { showToast('აირჩიე კატეგორია', 'err'); clGoToStep(1); return; }
@@ -5149,6 +5398,7 @@ async function postListing() {
   if (!price_gel || price_gel < 1) { showToast('ფასი სავალდებულოა', 'err'); clGoToStep(2); return; }
   if (!platform)        { showToast('აირჩიე პლატფორმა', 'err'); clGoToStep(2); return; }
   if (!region)          { showToast('აირჩიე რეგიონი/სერვერი', 'err'); clGoToStep(2); return; }
+  if (game === 'SA-MP' && !sampType) { showToast('აირჩიე SA-MP-ის კატეგორია: ექაუნთი / მანქანა / ფული', 'err'); clGoToStep(2); return; }
   // ── საბოლოო დაცვა: მინიმუმ 2 ფოტო (defense-in-depth, clNext-ის
   // ვალიდაციის დამატებით — publish ღილაკამდე ვერანაირად ვერ მოხვდება
   // 0-1 ფოტოიანი განცხადება) ──
@@ -5184,6 +5434,7 @@ async function postListing() {
     fd.append('platform', platform);
     fd.append('region', region);
     if (account_security) fd.append('account_security', account_security);
+    if (game === 'SA-MP' && sampType) fd.append('tags', sampType);
     postImgFiles.forEach(f => fd.append('images', f));
 
     const resp = await fetch(API_URL + '/api/listings', {
@@ -5821,7 +6072,7 @@ async function loadHomeStats() {
     if (!stats) return;
 
     // კატ. card-ების განახლება
-    const cats = ['mobile','pc','social','boosting','currency'];
+    const cats = ['mobile','pc','social','boosting','currency','apps'];
     cats.forEach(c => {
       const el = document.getElementById('cnt-' + c);
       const n  = stats.categories?.[c] || 0;
