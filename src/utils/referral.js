@@ -10,14 +10,19 @@
 // `REF-XXXXXX` (username-ის საფუძველზე + შემთხვევითი სუფიქსი,
 // უნიკალურობის გარანტიით). იხ. `ensureReferralCode` / `findUserByReferralCode`.
 //
-// ── ᲯᲘᲚᲓᲝᲡ ᲒᲐᲪᲔᲛᲐ (ძველი ლოგიკა უცვლელია) ────────────────────────
-// ერთადერთი წესი: რეფერერს ჯილდო ერიცხება მხოლოდ მაშინ, როცა რეალური
-// ფული ფაქტობრივად შედის ან საბოლოოდ გადაადგილდება სისტემაში:
-//   1) "პირველი დეპოზიტი" — მხოლოდ მაშინ, როცა ადმინი რეალურად
-//      ადასტურებს ბანკის გადარიცხვას (admin.js /deposits/:id/confirm),
-//      *არა* დეპოზიტის მოთხოვნის შექმნაზე (wallet.js POST /deposit),
-//      რომელიც უბრალოდ 'pending' ჩანაწერს ქმნის და შეიძლება
-//      ვერასდროს დადასტურდეს რეალურად.
+// ── ᲯᲘᲚᲓᲝᲡ ᲒᲐᲪᲔᲛᲐ ────────────────────────────────────────────────
+// წესები: რეფერერს ჯილდო ერიცხება მხოლოდ მაშინ, როცა რეალური ფული
+// ფაქტობრივად შედის ან საბოლოოდ გადაადგილდება სისტემაში:
+//   1) "პირველი კვალიფიც. დეპოზიტი" — მხოლოდ მაშინ, როცა ადმინი
+//      რეალურად ადასტურებს ბანკის გადარიცხვას (admin.js
+//      /deposits/:id/confirm), *არა* დეპოზიტის მოთხოვნის შექმნაზე
+//      (wallet.js POST /deposit), რომელიც უბრალოდ 'pending' ჩანაწერს
+//      ქმნის და შეიძლება ვერასდროს დადასტურდეს რეალურად. — და ᲛᲮᲝᲚᲝᲓ
+//      თუ ერთ ტრანზაქციაში ₾10-ზე მეტია (DEPOSIT_REWARD_THRESHOLD_GEL) —
+//      მცირე ($1-ის ტოლი ან ნაკლები ეფექტური "cost") დეპოზიტებით
+//      ბონუსის თვითდაფინანსება/abuse რომ არ მოხდეს. ეს ტრიგერი
+//      მკაცრად მხოლოდ ბალანსის შევსებაზეა მიბმული — არასდროს
+//      ერევა შენაძენის/შეკვეთის/განცხადების route-ებში.
 //   2) "პირველი შენაძენი" — მხოლოდ მაშინ, როცა შეკვეთა რეალურად
 //      სრულდება (orders.js /:id/confirm — Escrow Release), *არა*
 //      შეკვეთის შექმნაზე (POST /api/orders), რომელიც შეიძლება
@@ -33,6 +38,13 @@
 const crypto = require('crypto');
 
 const REWARD_AMOUNT_GEL = 1.00;
+
+// ── ᲓᲔᲞᲝᲖᲘᲢᲘᲡ ᲖᲦᲣᲠᲘ (ანტი-ფროდ) — რეფერერს 1₾ ბონუსი ერიცხება
+// მხოლოდ მაშინ, თუ მოწვეულმა მეგობარმა ერთ ტრანზაქციაში ₾10-ზე მეტი
+// შეიტანა. წინააღმდეგ შემთხვევაში ვინმეს შეეძლო ₾1 შეეტანა და
+// მაშინვე ₾1 ბონუსი "მოეგო" რეფერერისთვის — ფაქტობრივად უფასო ფული,
+// ნამდვილი ეკონომიკური ღირებულების გარეშე.
+const DEPOSIT_REWARD_THRESHOLD_GEL = 10.00;
 
 // ── პრომო-კოდის ფორმატი — `REF-` + 4-24 ალფანუმერული სიმბოლო.
 // გამოიყენება როგორც generation-ში (ქვემოთ), ისე მომხმარებლის მიერ
@@ -169,14 +181,37 @@ async function findUserByReferralCode(db, code) {
  * მუდმივად "იხარჯება" ერთხელ, რომ ბანის მოხსნა/დაბრუნება მოგვიანებით
  * ვერასდროს გახდეს "დაგვიანებული" ბონუსის ხელოვნურად გამოწვევის საშუალება.
  *
+ * ── ᲓᲔᲞᲝᲖᲘᲢᲘᲡ ᲖᲦᲣᲠᲘ ──────────────────────────────────────────────
+ * `rewardType==='deposit'`-ის შემთხვევაში დამატებით მოწოდებული უნდა
+ * იყოს `amount` (ამ კონკრეტული დეპოზიტის ოდენობა ₾-ში) და ჯილდო
+ * მხოლოდ მაშინ ითვლება "qualifying"-ად, თუ ეს თანხა
+ * DEPOSIT_REWARD_THRESHOLD_GEL-ს (₾10) აღემატება. თუ თანხა ზღვარს არ
+ * აღწევს, ფუნქცია დაუყოვნებლივ აბრუნებს `{granted:false}` და საერთოდ
+ * არ ეხება one-shot დროშას — ანუ ეს კონკრეტული (არაკვალიფიც.)
+ * დეპოზიტი არ "წვავს" ერთჯერად შანსს, და მომხმარებლის მომდევნო,
+ * უკვე ₾10-ზე მეტი დეპოზიტი მაინც შეძლებს ჯილდოს გამოწვევას.
+ * `rewardType==='purchase'`-ზე `amount` საერთოდ არ მოწმდება (ძველი
+ * ლოგიკა უცვლელია — ნებისმ. დასრულებული პირველი შენაძენი კმარა).
+ *
  * @param {object} client   - db.transaction()-ის pg კლიენტი (აქტიური ტრანზაქციის შიგნით)
  * @param {string} userId   - მომხმარებელი, ვისმა მოქმედებამაც ("ტრიგერმა") შეიძლება ჯილდო გამოიწვიოს
  * @param {'deposit'|'purchase'} rewardType
+ * @param {number} [amount] - სავალდებულო rewardType==='deposit'-ზე: ამ დეპოზიტის ოდენობა ₾-ში
  * @returns {Promise<{granted: boolean, referrerId?: string}>}
  */
-async function triggerReferralReward(client, userId, rewardType) {
+async function triggerReferralReward(client, userId, rewardType, amount) {
   const flagCol = FLAG_COLUMN[rewardType];
   if (!flagCol) throw new Error(`[referral] უცნობი reward ტიპი: ${rewardType}`);
+
+  // ── STRICT DEPOSIT THRESHOLD — მხოლოდ 'deposit' ტიპზე მოქმედებს.
+  // 'purchase' ტიპი ამ შემოწმებას საერთოდ არ გადის (მისი ლოგიკა
+  // შენაძენის დასრულებაზეა დამოკიდებული, არა თანხის ოდენობაზე).
+  if (rewardType === 'deposit') {
+    const depositAmount = Number(amount);
+    if (!Number.isFinite(depositAmount) || depositAmount <= DEPOSIT_REWARD_THRESHOLD_GEL) {
+      return { granted: false, reason: 'below_threshold' };
+    }
+  }
 
   const { rows } = await client.query(
     `UPDATE users SET ${flagCol} = TRUE
@@ -216,6 +251,7 @@ async function triggerReferralReward(client, userId, rewardType) {
 module.exports = {
   triggerReferralReward,
   REWARD_AMOUNT_GEL,
+  DEPOSIT_REWARD_THRESHOLD_GEL,
   ensureReferralCode,
   findUserByReferralCode,
   REFERRAL_CODE_RE,

@@ -661,6 +661,10 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 .cl-cat-card span{font-size:11.5px;font-weight:600;color:var(--text);line-height:1.25}
 .cl-cat-card img{width:28px;height:28px;object-fit:contain;border-radius:6px}
 .cl-selected-cat{background:var(--ad);border:1px solid var(--ad2);border-radius:9px;padding:9px 12px;font-size:12.5px;font-weight:600;color:var(--accent);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.cl-guide-box{background:linear-gradient(135deg,#f5b94212,var(--bg2));border:1px solid #f5b94240;border-left:3px solid #f5b942;border-radius:var(--r2);padding:14px 16px;margin-bottom:18px}
+.cl-guide-title{font-size:13px;font-weight:700;color:#f5b942;margin-bottom:9px;display:flex;align-items:center;gap:6px}
+.cl-guide-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.cl-guide-list li{font-size:12px;line-height:1.55;color:var(--muted2);padding-left:0}
 .cl-type-toggle{display:grid;grid-template-columns:1fr;gap:8px}
 @media(min-width:520px){.cl-type-toggle{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}}
 .cl-type-btn{width:100%;background:var(--bg3);border:1.5px solid var(--border2);border-radius:9px;padding:11px;text-align:center;font-size:12.5px;font-weight:600;color:var(--muted2);cursor:pointer;transition:all .15s}
@@ -1823,6 +1827,15 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
           <option value="In-game Cars">🚗 მანქანა (In-game Cars)</option>
           <option value="In-game Money">💰 თამაშის ფული (In-game Money)</option>
         </select>
+      </div>
+
+      <div class="cl-guide-box">
+        <div class="cl-guide-title">📋 როგორ განვათავსოთ განცხადება სწორად?</div>
+        <ul class="cl-guide-list">
+          <li>🚫 სათაურში მიუთითეთ მხოლოდ ნივთის/ექაუნთის სახელი. არ ჩაწეროთ ფასი ან ფასდაკლების პირობები (მაგ: „იყიდება 10 ლარად", „დაკლებაც შეიძლება").</li>
+          <li>💰 ფასი მიუთითეთ მხოლოდ სპეციალურად გამოყოფილ ველში.</li>
+          <li>🔒 არ ჩაწეროთ საკონტაქტო ინფორმაცია (ტელეფონი, სოც. ქსელები) აღწერაში. ყველა ტრანზაქცია და მიმოწერა უსაფრთხოდ ხორციელდება საიტის შიდა ჩატისა და Escrow სისტემის მეშვეობით.</li>
+        </ul>
       </div>
 
       <div class="form-g"><label class="form-l">სათაური</label>

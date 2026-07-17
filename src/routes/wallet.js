@@ -164,7 +164,9 @@ router.get('/deposit/simulate', requireAuth, async (req, res) => {
       );
       // dev-only სიმულაცია მაინც რეალურად ზრდის ბალანსს, ამიტომ იგივე
       // ატომური ჯილდოს ტრიგერი გამოიყენება, რაც production admin-confirm-ში.
-      referralResult = await referral.triggerReferralReward(client, req.user.id, 'deposit');
+      // dev-only სიმულ.-შიც იგივე ₾10 ზღვარი უნდა მოქმედებდეს, რომ
+      // production-ის ქცევა ზუსტად აისახოს ტესტირებისას.
+      referralResult = await referral.triggerReferralReward(client, req.user.id, 'deposit', Number(amount));
     });
     res.json({
       ok: true,

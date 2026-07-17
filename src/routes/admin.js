@@ -502,7 +502,10 @@ router.post('/deposits/:id/confirm', requireAuth, requireAdmin, async (req, res)
         [gross, tx[0].user_id]
       );
 
-      referralResult = await referral.triggerReferralReward(client, tx[0].user_id, 'deposit');
+      // ── ₾10-ის ზღვარი (DEPOSIT_REWARD_THRESHOLD_GEL) მოწმდება
+      // referral.js-ის შიგნით — აქ უბრალოდ ვაწვდით რეალურ დადასტ.
+      // თანხას (gross), რომ ფუნქციამ თავად გადაწყვიტოს კვალიფიც. ──
+      referralResult = await referral.triggerReferralReward(client, tx[0].user_id, 'deposit', gross);
     });
 
     // push notification მომხმარებელს
