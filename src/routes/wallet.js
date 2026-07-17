@@ -1,15 +1,28 @@
 // src/routes/wallet.js
 'use strict';
 
-const express = require('express');
-const db      = require('../db');
+const express    = require('express');
+const multer     = require('multer');
+const db         = require('../db');
 const { requireAuth } = require('../middleware/auth');
-const mailer  = require('../utils/mailer');
-const ledger  = require('../utils/ledger');
-const referral = require('../utils/referral');
+const mailer     = require('../utils/mailer');
+const ledger     = require('../utils/ledger');
+const referral   = require('../utils/referral');
+const cloudinary = require('../utils/cloudinary');
 
 const ADMIN_EMAIL = process.env.EMAIL_USER || process.env.SMTP_USER || 'shavosmail25@gmail.com';
 const router  = express.Router();
+
+// ── Deposit Screenshot Upload — multer memoryStorage, Cloudinary-ში
+// ასატვირთად (იგივე პატერნი, რაც disputes.js-ში evidence ფაილებზე) ──
+const depositUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: (Number(process.env.MAX_FILE_SIZE_MB) || 5) * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ok = /image\/(jpeg|png|webp|gif)/.test(file.mimetype);
+    cb(ok ? null : new Error('only_images'), ok);
+  },
+});
 
 // ── გამოტანის ლიმიტები — abuse-ის თავიდან ასაცილებლად ──────────────
 // Amount: მინ. ₾20 / მაქს. ₾200 თითო მოთხოვნაზე.
@@ -107,6 +120,27 @@ router.get('/transactions', requireAuth, async (req, res) => {
 // admin.js-ში, POST /deposits/:id/confirm-ში (და დეველოპერული ტესტისთვის
 // — ქვემოთ, GET /deposit/simulate-ში), სადაც ბალანსი რეალურად იზრდება.
 // ══════════════════════════════════════════════════════════════
+// ── მოკლე, ადვილად-გადასაწერი უნიკ. კოდის გენერაცია (მაგ. GB-8472) —
+// მომხმარებელი ამას წერს ბანკის აპის "დანიშნულების" ველში, რომ ადმინმა
+// გადარიცხვა ცალსახად დაუკავშიროს ამ კონკრეტულ მოთხოვნას. 4-ნიშნა
+// კოდი საკმარისად მოკლეა მობილურ საბანკო აპში ხელით ჩასაწერად, მაგრამ
+// collision-ის რისკის გამო DB-ში უნიკალურობას ვამოწმებთ და კონფლიქტზე
+// ხელახლა ვცდილობთ (მაქს. 5-ჯერ, შემდეგ გრძელდება 6-ნიშნაზე).
+async function generateShortDepositRef() {
+  for (let len = 4; len <= 6; len++) {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const code = String(Math.floor(Math.random() * Math.pow(10, len))).padStart(len, '0');
+      const ref  = `GB-${code}`;
+      const { rows } = await db.query(
+        'SELECT 1 FROM transactions WHERE external_ref=$1 LIMIT 1', [ref]
+      );
+      if (!rows.length) return ref;
+    }
+  }
+  // უკიდურესად ნაკლებსავარაუდო fallback — დროის შტამპზე დაფუძნებული, მაინც უნიკ.
+  return `GB-${Date.now().toString(36).toUpperCase()}`;
+}
+
 router.post('/deposit', requireAuth, async (req, res) => {
   try {
     const { amount } = req.body;
@@ -115,15 +149,17 @@ router.post('/deposit', requireAuth, async (req, res) => {
     if (Number(amount) > 10000)
       return res.status(400).json({ error: 'max_10000_gel' });
 
-    const ref = `GB-${Date.now().toString(36).toUpperCase()}-${req.user.id.slice(0,6).toUpperCase()}`;
+    const ref = await generateShortDepositRef();
 
-    await db.query(
+    const { rows } = await db.query(
       `INSERT INTO transactions(user_id,type,amount_gel,status,payment_method,external_ref,description)
-       VALUES($1,'deposit',$2,'pending','BOG',$3,'ბალანსის შეტანა — BOG გადარიცხვა')`,
+       VALUES($1,'deposit',$2,'pending','BOG',$3,'ბალანსის შეტანა — BOG გადარიცხვა')
+       RETURNING id`,
       [req.user.id, Number(amount), ref]
     );
 
     res.json({
+      id:          rows[0].id,
       ref,
       amount: Number(amount),
       iban:        'GE62BG0000000562150681',
@@ -140,6 +176,52 @@ router.post('/deposit', requireAuth, async (req, res) => {
       } catch(e) { console.error('deposit email:', e.message); }
     })();
   } catch (err) {
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// POST /api/wallet/deposit/:id/screenshot  — ბანკის გადარიცხვის
+// დამადასტურებელი სქრინშოტის ატვირთვა უკვე შექმნილ 'pending' deposit
+// მოთხოვნაზე (multipart/form-data, ველი: screenshot).
+//
+// ეს ცალკე endpoint-ია POST /deposit-სგან, რადგან depStep2() ჯერ
+// ქმნის მოთხოვნას და აჩვენებს საბანკო დეტალებს (რომ მომხმარებელმა
+// ჯერ გადარიცხვა გააკეთოს), ხოლო სქრინშოტს მხოლოდ ამის შემდეგ,
+// "მოთხოვნის გაგზავნა" ღილაკზე დაჭერით ტვირთავს — ეს ზუსტად იმეორებს
+// admin.js-ის მოლოდინს (screenshot_url ხილული უნდა იყოს Approve-მდე).
+// ══════════════════════════════════════════════════════════════
+router.post('/deposit/:id/screenshot', requireAuth, depositUpload.single('screenshot'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'screenshot_required' });
+    if (!cloudinary.isConfigured())
+      return res.status(503).json({ error: 'image_upload_not_configured' });
+
+    const { rows: tx } = await db.query(
+      `SELECT id, user_id, status FROM transactions
+       WHERE id=$1 AND type='deposit'`,
+      [req.params.id]
+    );
+    if (!tx.length) return res.status(404).json({ error: 'not_found' });
+    if (tx[0].user_id !== req.user.id) return res.status(403).json({ error: 'forbidden' });
+    if (tx[0].status !== 'pending') return res.status(400).json({ error: 'not_pending' });
+
+    const result = await cloudinary.uploadBuffer(req.file.buffer, {
+      folder:    'gamerbazar/deposits',
+      public_id: `deposit_${req.params.id}_${Date.now()}`,
+      resource_type: 'image',
+    });
+
+    await db.query(
+      'UPDATE transactions SET screenshot_url=$1 WHERE id=$2',
+      [result.secure_url, req.params.id]
+    );
+
+    res.json({ ok: true, screenshot_url: result.secure_url });
+  } catch (err) {
+    if (err.message === 'only_images')
+      return res.status(400).json({ error: 'only_images_allowed' });
+    console.error('deposit screenshot upload:', err.message);
     res.status(500).json({ error: 'server_error' });
   }
 });

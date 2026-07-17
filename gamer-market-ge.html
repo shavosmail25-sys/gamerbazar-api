@@ -1695,6 +1695,17 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
     <div id="mod-queue-list">
       <div class="empty"><div class="empty-ico">🛡️</div><div class="empty-t">იტვირთება...</div></div>
     </div>
+
+    <!-- ── დეპოზიტის მოთხოვნები — მხოლოდ role==='admin' (backend GET
+         /api/admin/deposits requireAdmin-ს მოითხოვს, არა მოდერატორს).
+         ვაჩვენებთ ხელით შევსების ვორქფლოუს: მომხმ., თანხა, კოდი, სქრინშოტი. ── -->
+    <div id="admin-deposits-wrap" style="display:none;margin-top:26px">
+      <div class="oh-h-title" style="font-size:15px;margin-bottom:6px">🏦 დეპოზიტის მოთხოვნები</div>
+      <div id="admin-deposits-count" style="font-size:12px;color:var(--muted);margin-bottom:12px"></div>
+      <div id="admin-deposits-list">
+        <div class="empty"><div class="empty-ico">🏦</div><div class="empty-t">იტვირთება...</div></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -2086,11 +2097,25 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
       <div class="dep-instructions">
         <div class="dep-instructions-h">📌 მნიშვნელოვანი ინსტრუქცია</div>
         <ol>
-          <li>დანიშნულებაში მიუთითე შენი username: <b id="dep-username">—</b></li>
+          <li>დანიშნულების (Purpose of Transfer) ველში აუცილებლად ჩაწერე ეს კოდი: <b id="dep-txn-code" class="mono" style="color:var(--gold)">—</b></li>
           <li>გადარიცხვა მხოლოდ <b>BOG/TBC</b>-დან მიიღება</li>
-          <li>ბალანსი განახლდება გადარიცხვიდან <b>1–24 საათში</b></li>
-          <li>დასტურის შემდეგ ავტომატურად მიიღებ შეტყობინებას</li>
+          <li>გადარიცხვის შემდეგ ატვირთე ჩეკის/გადარიცხვის სქრინშოტი ქვემოთ</li>
+          <li>ადმინის დადასტურების შემდეგ ბალანსი <b>1–24 საათში</b> განახლდება</li>
         </ol>
+      </div>
+
+      <div class="form-g" style="margin-top:10px">
+        <label class="form-l">📸 გადარიცხვის სქრინშოტი <span style="color:#ef4444;font-weight:700">(სავალდებულო)</span></label>
+        <div id="dep-shot-area" class="cl-dropzone" style="min-height:80px"
+             onclick="document.getElementById('dep-shot-input').click()">
+          <input type="file" id="dep-shot-input" accept="image/jpeg,image/png,image/webp"
+                 style="display:none" onchange="previewDepositShot(this)">
+          <div id="dep-shot-preview" style="display:none"></div>
+          <div id="dep-shot-placeholder" style="text-align:center">
+            <div style="font-size:20px;margin-bottom:4px">📎</div>
+            <div style="font-size:12px;font-weight:600">დააჭირე სქრინშოტის ასატვირთად</div>
+          </div>
+        </div>
       </div>
 
       <div class="dep-support-line">
@@ -2099,7 +2124,7 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 
       <div class="m-acts">
         <button class="btn btn-g" onclick="depBack()">← უკან</button>
-        <button class="btn btn-a" onclick="closeM('depositModal');showToast('✅ გადარიცხვის შემდეგ 1-24სთ-ში ბალანსი განახლდება!','ok');loadWallet();">გავიგე ✓</button>
+        <button class="btn btn-a" id="dep-submit-btn" onclick="submitDepositRequest()">✅ მოთხოვნის გაგზავნა</button>
       </div>
     </div>
   </div>
@@ -2125,6 +2150,34 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
       <button class="btn btn-g" onclick="closeM('withdrawModal')">გაუქმება</button>
       <button class="btn btn-a" onclick="doWithdraw()">მოთხოვნის გაგზავნა</button>
     </div>
+  </div>
+</div>
+
+<!-- ── PROMO REFERRAL MODAL — მარკეტინგული pop-up, ჩნდება ლოგინირებულ
+     მომხმარებელს დღეში/სესიაში ერთხელ (იხ. maybeShowReferralPromo() JS-ში).
+     დიზაინი გამორჩეულია სხვა მოდალებისგან — მუქი gaming თემა, ოქროსფერი
+     აქცენტები, ცენტრირებული — რომ მარკეტინგულ ბანერად იკითხებოდეს. ── -->
+<div class="modal-bg" id="promoReferralModal" onclick="if(event.target===this)closeM('promoReferralModal')">
+  <div class="modal promo-ref-modal" style="max-width:420px;text-align:center;position:relative;overflow:hidden;border:1px solid var(--gd2);background:linear-gradient(160deg,var(--card-solid) 0%,#151b2e 60%,#1a1030 100%)">
+    <button onclick="closeM('promoReferralModal')" aria-label="დახურვა"
+            style="position:absolute;top:12px;right:12px;background:var(--glass-bg);border:1px solid var(--border2);color:var(--muted2);width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:13px;line-height:1;z-index:2">✕</button>
+
+    <div style="font-size:44px;margin:6px 0 10px;filter:drop-shadow(0 0 14px var(--gd2))">🎁</div>
+    <div class="modal-title" style="font-size:19px;background:linear-gradient(90deg,var(--gold),var(--accent));-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:10px">
+      მოიწვიე მეგობარი და მიიღე ბონუსი!
+    </div>
+    <div style="font-size:13px;color:var(--muted2);line-height:1.7;margin-bottom:18px;padding:0 4px">
+      გაუზიარე შენი უნიკალური ბმული მეგობრებს. როგორც კი შენი მოწვეული მეგობარი შეავსებს ბალანსს მინიმუმ 10 ლარით, შენ ავტომატურად დაგერიცხება 1 ლარი საჩუქრად! ფულის გამომუშავება ასეთი მარტივი ჯერ არ ყოფილა.
+    </div>
+
+    <div style="display:flex;gap:8px;background:var(--bg3);border:1px solid var(--gd2);border-radius:10px;padding:6px 6px 6px 14px;align-items:center;margin-bottom:16px">
+      <input id="promo-ref-link" class="mono" readonly
+             style="flex:1;min-width:0;background:transparent;border:none;color:var(--gold);font-size:12.5px;text-overflow:ellipsis"
+             value="">
+      <button id="promo-ref-copy-btn" class="btn btn-a btn-sm" style="white-space:nowrap;flex-shrink:0" onclick="copyPromoReferralLink()">📋 კოპირება</button>
+    </div>
+
+    <button class="btn btn-g" style="width:100%" onclick="closeM('promoReferralModal')">მოგვიანებით</button>
   </div>
 </div>
 
@@ -2644,7 +2697,7 @@ function pg(id) {
   if (id === 'chat')    { loadChatRooms(); showChatSidebar(); }
   if (id === 'edit')    { loadMyProfile(); }
   if (id === 'order-history') { loadOrderHistory(); }
-  if (id === 'moderation') { loadModerationQueue(); }
+  if (id === 'moderation') { loadModerationQueue(); loadAdminDeposits(); }
 }
 function act(el) {
   document.querySelectorAll('.nl').forEach(n => n.classList.remove('on'));
@@ -2919,6 +2972,9 @@ async function loadCurrentUser() {
     const user = await api('/api/auth/me');
     if (getToken() !== tokenAtStart) return; // მოძველებული პასუხი — იგნორი
     currentUser = user;
+    // მოწვევის მარკეტინგული pop-up — მხოლოდ წარმატებული, დადასტურებული
+    // სესიის შემდეგ (არა ყოველ loadCurrentUser გამოძახებაზე ცალკე).
+    try { maybeShowReferralPromo(); } catch (e) { console.error('promo referral modal:', e); }
   } catch (e) {
     if (getToken() !== tokenAtStart) return; // მოძველებული შეცდომაც — იგნორი
     // ტოკენს მხოლოდ მაშინ ვშლით, თუ სერვერმა დარწმუნებით თქვა რომ არავალიდურია
@@ -3168,6 +3224,49 @@ function copyReferralLink() {
     input.select();
     showToast('ხელით დააკოპირე: ' + text, 'ok');
   });
+}
+
+// ── პრომო-მოდალის ბმულის კოპირება — ღილაკის ტექსტი მოკლედ იცვლება
+// "დაკოპირებულია!"-ზე, შემდეგ თავის ადგილს უბრუნდება (მარკეტინგული
+// UX-პატერნი — ვიზუალური დადასტურება ცალკე toast-ის გარეშეც). ──
+function copyPromoReferralLink() {
+  const input = document.getElementById('promo-ref-link');
+  const btn   = document.getElementById('promo-ref-copy-btn');
+  const text  = input?.value;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    if (btn) {
+      const original = btn.textContent;
+      btn.textContent = 'დაკოპირებულია!';
+      setTimeout(() => { btn.textContent = original; }, 2000);
+    }
+  }).catch(() => {
+    input.select();
+    showToast('ხელით დააკოპირე: ' + text, 'ok');
+  });
+}
+
+// ── პრომო-მოდალის ჩვენება — მხოლოდ ლოგინირებულ მომხმარებელს, დღეში
+// ერთხელ (localStorage-ში ინახება დღევანდელი თარიღი). თუ localStorage
+// მიუწვდომელია (private mode და ა.შ.) უბრალოდ არ ვაჩვენებთ — უვნებელია. ──
+const PROMO_REF_STORAGE_KEY = 'promoRefModalShownDate';
+function maybeShowReferralPromo() {
+  if (!currentUser || !currentUser.referral_code) return;
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    if (localStorage.getItem(PROMO_REF_STORAGE_KEY) === today) return;
+    localStorage.setItem(PROMO_REF_STORAGE_KEY, today);
+  } catch (e) { return; /* localStorage მიუწვდომელია — არ ვაჩვენებთ */ }
+
+  const linkInput = document.getElementById('promo-ref-link');
+  if (linkInput) linkInput.value = `${window.location.origin}/?ref=${currentUser.referral_code}`;
+
+  // მცირე დაყოვნება — არ დაემთხვეს გვერდის საწყის ჩატვირთვის ეკრანს/
+  // auth boot screen-ს, რომ pop-up-ი მოულოდნელად არ "გამოხტეს" ჯერ
+  // კიდევ თეთრ/ცარიელ ეკრანზე.
+  setTimeout(() => {
+    if (document.getElementById('promoReferralModal')) openM('promoReferralModal');
+  }, 1500);
 }
 
 async function loadMyListings(filter) {
@@ -5714,6 +5813,80 @@ async function modReject(id) {
   }
 }
 
+// ══════════════════════════════════════════════════════════
+// ADMIN — დეპოზიტის მოთხოვნების განხილვა (GET /api/admin/deposits,
+// POST /:id/confirm, POST /:id/reject). ხილულია მხოლოდ role==='admin'-ზე,
+// loadModerationQueue()-ს გვერდით გამოძახებული pg('moderation')-ზე.
+// ══════════════════════════════════════════════════════════
+async function loadAdminDeposits() {
+  const wrap  = document.getElementById('admin-deposits-wrap');
+  const list  = document.getElementById('admin-deposits-list');
+  const count = document.getElementById('admin-deposits-count');
+  if (!wrap || currentUser?.role !== 'admin') { if (wrap) wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  try {
+    const rows = await api('/api/admin/deposits');
+    if (count) count.textContent = rows.length ? `${rows.length} მოთხოვნა ელოდება განხილვას` : '';
+    renderAdminDeposits(rows);
+  } catch (e) {
+    if (list) list.innerHTML = '<div class="empty"><div class="empty-ico">⚠️</div><div class="empty-t">ჩატვირთვის შეცდომა</div></div>';
+  }
+}
+
+function renderAdminDeposits(rows) {
+  const list = document.getElementById('admin-deposits-list');
+  if (!list) return;
+  if (!rows.length) {
+    list.innerHTML = '<div class="empty"><div class="empty-ico">✅</div><div class="empty-t">მოლოდინში მყოფი დეპოზიტი არ არის</div></div>';
+    return;
+  }
+  list.innerHTML = rows.map(t => {
+    const user = esc(t.display_name || t.username || t.email || '—');
+    const when = t.created_at ? fmtDate(t.created_at) : '—';
+    const shot = t.screenshot_url ? imgUrl(t.screenshot_url) : '';
+    return `
+      <div class="mod-card" style="display:flex;gap:12px;padding:14px;border:1px solid var(--border);border-radius:12px;margin-bottom:10px;background:var(--bg2)">
+        <div style="width:80px;height:80px;flex-shrink:0;border-radius:8px;overflow:hidden;background:var(--bg3);display:flex;align-items:center;justify-content:center;cursor:${shot ? 'pointer' : 'default'}"
+             ${shot ? `onclick="window.open('${shot}','_blank')"` : ''}>
+          ${shot ? `<img src="${shot}" style="width:100%;height:100%;object-fit:cover">` : '<span style="font-size:24px">🏦</span>'}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:14px;margin-bottom:2px">${user}</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:4px">₾${Number(t.amount_gel).toFixed(2)} · კოდი: <b class="mono" style="color:var(--gold)">${esc(t.external_ref || '—')}</b></div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">მოთხოვნილია: ${when}${!shot ? ' · <span style="color:var(--red)">⚠️ სქრინშოტი არ არის ატვირთული</span>' : ''}</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+            <button class="btn btn-a btn-sm" onclick="adminApproveDeposit('${t.id}')">✅ დადასტ.</button>
+            <input type="text" id="dep-reason-${t.id}" placeholder="უარყოფის მიზეზი..." style="flex:1;min-width:140px;font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--text)">
+            <button class="btn btn-g btn-sm" onclick="adminRejectDeposit('${t.id}')">❌ უარყოფა</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function adminApproveDeposit(id) {
+  try {
+    await api('/api/admin/deposits/' + id + '/confirm', { method: 'POST' });
+    showToast('✅ დეპოზიტი დადასტურდა', 'ok');
+    loadAdminDeposits();
+  } catch (e) {
+    showToast(e?.error || 'შეცდომა', 'err');
+  }
+}
+
+async function adminRejectDeposit(id) {
+  const input  = document.getElementById('dep-reason-' + id);
+  const reason = input?.value?.trim();
+  try {
+    await api('/api/admin/deposits/' + id + '/reject', { method: 'POST', body: JSON.stringify({ reason }) });
+    showToast('❌ დეპოზიტი უარყოფილია', 'ok');
+    loadAdminDeposits();
+  } catch (e) {
+    showToast(e?.error || 'შეცდომა', 'err');
+  }
+}
+
 async function loadOrderHistory() {
   if (!currentUser) return;
   const el = document.getElementById('oh-list');
@@ -6183,6 +6356,13 @@ function depSetQuick(amount, chipEl) {
   if (chipEl) chipEl.classList.add('on');
 }
 
+// depTxnId/depTxnRef — მიმდინარე 'pending' დეპოზიტის ტრანზაქციის id და
+// მოკლე კოდი (მაგ. GB-8472), depStep2()-ში ინახება და submitDepositRequest()-ს
+// სჭირდება, რომ სქრინშოტი ზუსტად ამ მოთხოვნას მიაბას.
+let depTxnId = null;
+let depTxnRef = null;
+let depShotFile = null;
+
 async function depStep2() {
   const amount = parseFloat(document.getElementById('dep-amount')?.value);
   if (!amount || amount < 1) { showToast('შეიყვანე თანხა', 'err'); return; }
@@ -6195,8 +6375,13 @@ async function depStep2() {
     // გამოჩნდებოდა Watch Tower-ში, მიუხედავად იმისა რომ იუზერს
     // ეჩვენებოდა წარმატების ეკრანი.
     const data = await api('/api/wallet/deposit', { method: 'POST', body: JSON.stringify({ amount }) });
+    depTxnId  = data.id || null;
+    depTxnRef = data.ref || null;
     document.getElementById('dep-show-amount').textContent = '₾' + Number(data.amount).toFixed(2);
-    document.getElementById('dep-username').textContent = currentUser?.username || '—';
+    // მომხმარებელი აღარ წერს username-ს დანიშნულებაში — ცალსახად ერთი
+    // მოთხოვნის უნიკ. მოკლე კოდია (GB-XXXX), რომ ადმინმა ზუსტად შეძლოს
+    // ბანკის გადარიცხვის ამ კონკრეტულ მოთხოვნასთან დაკავშირება.
+    document.getElementById('dep-txn-code').textContent = depTxnRef || '—';
     // მიმღების სახელი/IBAN პირდაპირ სერვერის პასუხიდან ვსვამთ (არა
     // ჰარდქოდირებული) — თუ backend-ზე ოდესმე შეიცვლება ანგარიში, აქ
     // ხელით არაფერი საჭირო აღარ იქნება.
@@ -6221,6 +6406,54 @@ function depBack() {
   document.getElementById('dep-step2').style.display = 'none';
 }
 
+// ── დეპოზიტის სქრინშოტის შერჩევა/გადახედვა — ფაილი დაუყოვნებლივ არ
+// იტვირთება, მხოლოდ "მოთხოვნის გაგზავნა" ღილაკზე დაჭერისას (FormData) ──
+function previewDepositShot(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  depShotFile = file;
+  const r = new FileReader();
+  r.onload = (e) => {
+    const prev = document.getElementById('dep-shot-preview');
+    const ph   = document.getElementById('dep-shot-placeholder');
+    if (prev) {
+      prev.style.display = 'block';
+      prev.innerHTML = `<img src="${e.target.result}" style="max-width:100%;max-height:140px;border-radius:8px;display:block;margin:0 auto">`;
+    }
+    if (ph) ph.style.display = 'none';
+  };
+  r.readAsDataURL(file);
+}
+
+// ── "მოთხოვნის გაგზავნა" — სქრინშოტს ტვირთავს pending დეპოზიტზე
+// (POST /api/wallet/deposit/:id/screenshot, multipart) და ამის შემდეგ
+// მოთხოვნა ჩნდება ადმინის Approve/Reject რიგში. ──
+async function submitDepositRequest() {
+  if (!depTxnId) { showToast('შეცდომა — თავიდან სცადე', 'err'); return; }
+  if (!depShotFile) { showToast('ატვირთე გადარიცხვის სქრინშოტი', 'err'); return; }
+  const btn = document.getElementById('dep-submit-btn');
+  if (btn) { btn.textContent = '⏳ იტვირთება...'; btn.disabled = true; }
+  try {
+    const fd = new FormData();
+    fd.append('screenshot', depShotFile);
+    const res = await fetch(API_URL + '/api/wallet/deposit/' + depTxnId + '/screenshot', {
+      method: 'POST', headers: { Authorization: 'Bearer ' + getToken() }, body: fd
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw data;
+    closeM('depositModal');
+    showToast('✅ მოთხოვნა გაიგზავნა! ადმინის დადასტურების შემდეგ ბალანსი 1-24სთ-ში განახლდება', 'ok');
+    loadWallet();
+  } catch (e) {
+    const msg = e?.error === 'only_images_allowed' ? 'მხოლოდ სურათის ატვირთვაა შესაძლებელი'
+              : e?.error === 'not_pending'          ? 'მოთხოვნა უკვე დამუშავებულია'
+              : (e?.message || 'ატვირთვა ვერ მოხერხდა — სცადე ხელახლა');
+    showToast(msg, 'err');
+  } finally {
+    if (btn) { btn.textContent = '✅ მოთხოვნის გაგზავნა'; btn.disabled = false; }
+  }
+}
+
 function copyIban(elId) {
   const text = document.getElementById(elId)?.textContent;
   if (!text) return;
@@ -6241,6 +6474,14 @@ window.openM = function(id, mode) {
     document.getElementById('dep-step2').style.display = 'none';
     if (document.getElementById('dep-amount')) document.getElementById('dep-amount').value = '';
     document.querySelectorAll('.dep-quick-chip').forEach(c => c.classList.remove('on'));
+    // ახალი მოთხოვნის მდგომარეობა — წინა (შესაძლოა გაუგზავნელი) სქრინშოტი/id არ გადმოვიდეს ახალში
+    depTxnId = null; depTxnRef = null; depShotFile = null;
+    const shotInput = document.getElementById('dep-shot-input');
+    if (shotInput) shotInput.value = '';
+    const shotPrev = document.getElementById('dep-shot-preview');
+    if (shotPrev) { shotPrev.style.display = 'none'; shotPrev.innerHTML = ''; }
+    const shotPh = document.getElementById('dep-shot-placeholder');
+    if (shotPh) shotPh.style.display = 'block';
   }
   if (_origOpenM) _origOpenM(id, mode);
 };

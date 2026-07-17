@@ -380,6 +380,12 @@ async function setupDatabase() {
       // admin_note სვეტში — შიდა/support არქივისთვის; UI-ში აღარ ჩანს,
       // მომხმარებელს კი სრულად ეგზავნება ელ-ფოსტით (იხ. admin.js + mailer.js).
       `ALTER TABLE transactions ADD COLUMN IF NOT EXISTS admin_note TEXT`,
+      // ── SEMI-AUTOMATED DEPOSIT — მომხმარებელი ბანკის გადარიცხვის
+      // დამადასტურებელ სქრინშოტს ტვირთავს POST /api/wallet/deposit/:id/
+      // screenshot-ზე (wallet.js). ადმინი ამ სურათს ხედავს დეპოზიტების
+      // მოთხოვნების სიაში (admin.js GET /deposits, t.* აბრუნებს ამ
+      // სვეტსაც) და მხოლოდ ამის შემდეგ იღებს Approve/Reject გადაწყვეტილებას.
+      `ALTER TABLE transactions ADD COLUMN IF NOT EXISTS screenshot_url TEXT`,
     ];
     for (const sql of migrations) {
       try { await client.query(sql); } catch (e) { /* უკვე არსებობს */ }
