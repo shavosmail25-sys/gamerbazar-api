@@ -1081,6 +1081,11 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
   </div>
 </nav>
 
+<!-- ── GLOBAL ANNOUNCEMENT BANNER (Watchtower → ანონსები) ──────────
+     ცარიელია/დამალულია default-ად, JS ავსებს loadAnnouncementsBanner()-ით.
+     position:fixed, ნავზე დაბლა — არ არღვევს არსებულ გვერდების layout-ს. -->
+<div id="announcement-banner" style="position:fixed;top:60px;left:0;right:0;z-index:190;display:none"></div>
+
 <!-- ── SIDE DRAWER (მობილურის ☰ მენიუ) ──────────────────────────── -->
 <div class="drawer-bg" id="drawerBg" onclick="if(event.target===this)closeDrawer()">
   <div class="drawer-panel" id="drawerPanel">
@@ -1157,7 +1162,11 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 
   <div class="wrap">
     <div class="sec-head"><div class="sec-title">კატეგორიები</div></div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:9px;margin-bottom:24px">
+    <!-- ── დინამიური კატეგორიების ბადრაგი — JS-ით ივსება (renderHomeCategoryTiles),
+         GET /api/listings/categories-დან. ახალი Watchtower-დან დამატებული
+         კატეგორია აქ ავტ. გამოჩნდება, ცალკე დეპლოის გარეშე. "+" (განცხ. დამატება)
+         ფურცელი ყოველთვის ბოლოშია, JS-ითვე ემატება. -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:9px;margin-bottom:24px" id="home-cat-grid">
       <div class="cat-card" onclick="goCategory('mobile')">📱<div>მობილური</div><div style="font-size:10px;color:var(--muted)" id="cnt-mobile">─</div></div>
       <div class="cat-card" onclick="goCategory('pc')">🖥️<div>PC / Console</div><div style="font-size:10px;color:var(--muted)" id="cnt-pc">─</div></div>
       <div class="cat-card" onclick="goCategory('apps')">📦<div>აპები / პლატფ.</div><div style="font-size:10px;color:var(--muted)" id="cnt-apps">─</div></div>
@@ -1246,12 +1255,14 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
     <div class="sbar-inner">
       <div class="sbox"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input type="text" placeholder="მოძებნე..." oninput="handleSearchInput(this.value)" onfocus="if(this.value.length>=2)showSearchSuggest()" id="s-input" autocomplete="off"><div class="search-suggest" id="search-suggest"></div></div>
       <button class="fbtn on" onclick="filt(this,'ყველა')">ყველა</button>
-      <button class="fbtn" onclick="filt(this,'mobile')">📱 მობ.</button>
-      <button class="fbtn" onclick="filt(this,'pc')">🖥️ PC</button>
-      <button class="fbtn" onclick="filt(this,'apps')">📦 აპები</button>
-      <button class="fbtn" onclick="filt(this,'social')">📲 სოც.</button>
-      <button class="fbtn" onclick="filt(this,'boosting')">⚡ ბუსტი</button>
-      <button class="fbtn" onclick="filt(this,'currency')">💎 ვალუტა</button>
+      <span id="cat-filter-buttons">
+        <button class="fbtn" onclick="filt(this,'mobile')">📱 მობ.</button>
+        <button class="fbtn" onclick="filt(this,'pc')">🖥️ PC</button>
+        <button class="fbtn" onclick="filt(this,'apps')">📦 აპები</button>
+        <button class="fbtn" onclick="filt(this,'social')">📲 სოც.</button>
+        <button class="fbtn" onclick="filt(this,'boosting')">⚡ ბუსტი</button>
+        <button class="fbtn" onclick="filt(this,'currency')">💎 ვალუტა</button>
+      </span>
       <button class="fbtn" onclick="filt(this,'VIP')">⭐ VIP</button>
       <select class="sort-sel" id="s-platform" onchange="handleAdvFilterChange()" style="margin-left:4px">
         <option value="">🖥️ ყველა პლატფორმა</option>
@@ -4257,11 +4268,7 @@ function filt(btn, cat) {
   SUBCAT = '';
   renderSubcats(cat === 'ყველა' || cat === 'VIP' ? null : cat);
   renderSampTagFilter('');
-  const catLabels = {
-    'ყველა':'ყველა განცხადება', 'mobile':'📱 მობილური', 'pc':'🖥️ PC / Console',
-    'apps':'📦 აპები / პლატფორმები',
-    'social':'📲 სოციალური', 'boosting':'⚡ ბუსტინგი', 'currency':'💎 ვალუტა', 'VIP':'⭐ VIP'
-  };
+  const catLabels = { 'ყველა':'ყველა განცხადება', 'VIP':'⭐ VIP', ...CAT_LABELS };
   const title = document.getElementById('l-title');
   if (title) title.textContent = catLabels[cat] || cat;
   filterL(document.getElementById('s-input')?.value || '', 1);
@@ -5270,7 +5277,7 @@ const POST_PLACEHOLDERS = {
   'სხვა ვალუტა':       'მიუთითე ვალუტის სახეობა და რაოდენობა',
 };
 
-const CAT_LABELS = { mobile:'📱 მობილური', pc:'🖥️ PC/Console', social:'📲 სოციალური', boosting:'⚡ ბუსტინგი', currency:'💎 ვალუტა', apps:'📦 აპები/პლატფორმები' };
+let CAT_LABELS = { mobile:'📱 მობილური', pc:'🖥️ PC/Console', social:'📲 სოციალური', boosting:'⚡ ბუსტინგი', currency:'💎 ვალუტა', apps:'📦 აპები/პლატფორმები' };
 
 let clStep = 1;
 
@@ -6265,6 +6272,91 @@ async function sendMsg() {
 }
 
 // ══════════════════════════════════════════════════════════
+// DYNAMIC CATEGORIES — Watchtower-ის კატეგორიების მართვიდან
+// (GET /api/listings/categories). ჰომფეიჯის ბადრაგი + ლისტინგების
+// გვერდის ფილტრის ღილაკები + CAT_LABELS ამის მიხედვით ახლდება,
+// რომ ახალი/რედაქტირებული კატეგორია ცალკე დეპლოის გარეშე გამოჩნდეს.
+// ⚠️ სუბკატეგორიები (კონკრეტული თამაშების სია POST_TYPES/SUBCATEGORIES-ში)
+// კვლავ ხელით კურირებული კონტენტია — ახალი კატეგორიისთვის ეს ცალკე
+// უნდა დაემატოს კოდში, თუ გინდა რომ განცხადების შექმნის ვიზარდშიც
+// სრულად გამოჩნდეს კონკრეტული თამაშებით.
+// ══════════════════════════════════════════════════════════
+let CATEGORIES_LIVE = [];
+
+async function loadCategoriesMeta() {
+  try {
+    const cats = await api('/api/listings/categories').catch(() => null);
+    if (!cats || !cats.length) return; // fetch ჩავარდა — სტატიკური fallback-ები რჩება ეკრანზე
+    CATEGORIES_LIVE = cats;
+
+    // CAT_LABELS-ის overlay — ძველი hardcoded default-ები base-ად რჩება,
+    // ცოცხალი მონაცემები აწერს თავზე (slug-ები ემთხვევა)
+    cats.forEach(c => { CAT_LABELS[c.slug] = `${c.icon || ''} ${c.name_ka}`.trim(); });
+
+    renderHomeCategoryTiles();
+    renderCategoryFilterButtons();
+  } catch (e) { /* silent — სტატიკური fallback ეკრანზე რჩება */ }
+}
+
+function renderHomeCategoryTiles() {
+  const grid = document.getElementById('home-cat-grid');
+  if (!grid || !CATEGORIES_LIVE.length) return;
+  const tiles = CATEGORIES_LIVE.map(c => `
+    <div class="cat-card" onclick="goCategory('${c.slug}')">${c.icon || '🎮'}<div>${esc(c.name_ka)}</div><div style="font-size:10px;color:var(--muted)" id="cnt-${c.slug}">─</div></div>
+  `).join('');
+  const postTile = `<div class="cat-card" onclick="if(currentUser){pg('create-listing')}else{openM('loginModal')}" style="border-color:var(--ad2);background:var(--ad)" id="cat-card-post">➕<div style="color:var(--accent)" id="cat-card-post-label">განცხ. დამატება</div><div style="font-size:10px;color:var(--muted)" id="cat-card-post-sub">გამოქვეყნება</div></div>`;
+  grid.innerHTML = tiles + postTile;
+  loadHomeStats(); // ახალი cnt-* ელემენტების შევსება
+}
+
+function renderCategoryFilterButtons() {
+  const wrap = document.getElementById('cat-filter-buttons');
+  if (!wrap || !CATEGORIES_LIVE.length) return;
+  wrap.innerHTML = CATEGORIES_LIVE.map(c =>
+    `<button class="fbtn" onclick="filt(this,'${c.slug}')">${c.icon || ''} ${esc(c.name_ka)}</button>`
+  ).join('');
+}
+
+// ══════════════════════════════════════════════════════════
+// GLOBAL ANNOUNCEMENT BANNER — Watchtower-ის ანონსებიდან
+// (GET /api/stats/announcements, საჯარო). სესიის ფარგლებში
+// დახურული ანონსი აღარ უბრუნდება (sessionStorage) — ახალ tab-ში/
+// შემდეგ ვიზიტზე კი ისევ გამოჩნდება, სანამ ვადა არ გაუვა/არ გამოირთვება.
+// ══════════════════════════════════════════════════════════
+async function loadAnnouncementsBanner() {
+  try {
+    const anns = await api('/api/stats/announcements').catch(() => []);
+    const dismissed = JSON.parse(sessionStorage.getItem('gb_dismissed_announcements') || '[]');
+    const active = (anns || []).filter(a => !dismissed.includes(a.id));
+    const el = document.getElementById('announcement-banner');
+    if (!el) return;
+    if (!active.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
+
+    const meta = {
+      info:     { color: '#22d3ee', icon: '📢' },
+      warning:  { color: '#f59e0b', icon: '⚠️' },
+      critical: { color: '#ef4444', icon: '🚨' },
+    };
+    el.innerHTML = active.map(a => {
+      const m = meta[a.level] || meta.info;
+      return `<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:#0c1220ee;backdrop-filter:blur(10px);border-bottom:1px solid ${m.color}55">
+        <span style="font-size:15px;flex-shrink:0">${m.icon}</span>
+        <span style="flex:1;font-size:12.5px;line-height:1.4"><b>${esc(a.title)}</b> — ${esc(a.body)}</span>
+        <button onclick="dismissAnnouncement('${a.id}')" aria-label="დახურვა" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:0 4px;line-height:1;flex-shrink:0">✕</button>
+      </div>`;
+    }).join('');
+    el.style.display = 'block';
+  } catch (e) { /* silent */ }
+}
+
+function dismissAnnouncement(id) {
+  const dismissed = JSON.parse(sessionStorage.getItem('gb_dismissed_announcements') || '[]');
+  if (!dismissed.includes(id)) dismissed.push(id);
+  sessionStorage.setItem('gb_dismissed_announcements', JSON.stringify(dismissed));
+  loadAnnouncementsBanner();
+}
+
+// ══════════════════════════════════════════════════════════
 // HOME STATS — API-დან რეალური მონაც.
 // ══════════════════════════════════════════════════════════
 async function loadHomeStats() {
@@ -6272,8 +6364,9 @@ async function loadHomeStats() {
     const stats = await api('/api/stats').catch(() => null);
     if (!stats) return;
 
-    // კატ. card-ების განახლება
-    const cats = ['mobile','pc','social','boosting','currency','apps'];
+    // კატ. card-ების განახლება — ცოცხალი კატეგორიების სია, ან თუ ჯერ არ
+    // ჩატვირთულა, ძველი hardcoded 6-ის fallback
+    const cats = CATEGORIES_LIVE.length ? CATEGORIES_LIVE.map(c => c.slug) : ['mobile','pc','social','boosting','currency','apps'];
     cats.forEach(c => {
       const el = document.getElementById('cnt-' + c);
       const n  = stats.categories?.[c] || 0;
@@ -6347,6 +6440,9 @@ renderChats();
   loadListingsFromAPI('l-grid');
   // კატ. რაოდ. + hero stats — API-დან
   loadHomeStats();
+  // დინამიური კატეგორიები + საიტის ანონსების ბანერი (Watchtower)
+  loadCategoriesMeta();
+  loadAnnouncementsBanner();
 })();
 
 // Auth
