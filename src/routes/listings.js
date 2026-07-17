@@ -87,6 +87,26 @@ router.get('/moderation/pending', requireAuth, requireModerator, async (req, res
 });
 
 // ══════════════════════════════════════════════════════════════
+// GET /api/listings/categories  — საჯარო, აქტ. კატეგორიების სია
+// (auth არ სჭირდება — გამოიყენება მთავარი საიტის ფილტრებში/
+// განცხადების შექმნის ფორმაში, ასევე admin.js-ის კატეგორიების
+// მართვის გვერდზეც). ⚠️ /:id-ზე ადრე უნდა იყოს განსაზღვრული,
+// წინააღმდეგ შემთხვევაში Express "categories" სტრინგს listing
+// id-დ ჩათვლიდა.
+// ══════════════════════════════════════════════════════════════
+router.get('/categories', async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      'SELECT slug, name_ka, icon FROM categories WHERE is_active=TRUE ORDER BY sort_order ASC, name_ka ASC'
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('categories list error:', err.message);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
 // GET /api/listings/suggest  — search autocomplete (game/title)
 // ══════════════════════════════════════════════════════════════
 router.get('/suggest', async (req, res) => {
@@ -324,8 +344,14 @@ router.post('/', requireAuth, checkVipStatus, imgUpload.array('images', 5), asyn
       });
     }
 
-    const VALID_CATEGORIES = ['mobile', 'pc', 'social', 'boosting', 'currency', 'apps'];
-    if (!VALID_CATEGORIES.includes(category)) {
+    // ── დინამიური კატეგორია — ძველი hardcoded VALID_CATEGORIES მასივის
+    // ნაცვლად, ახლა categories ცხრილიდან მოწმდება (იხ. setup.js მიგრაცია
+    // + admin.js /categories მართვა). მხოლოდ is_active=TRUE კატეგორიაზეა
+    // შესაძლებელი ახალი განცხადების შექმნა. ──
+    const { rows: catRows } = await db.query(
+      'SELECT 1 FROM categories WHERE slug=$1 AND is_active=TRUE', [category]
+    );
+    if (!catRows.length) {
       return res.status(400).json({ error: 'invalid_category' });
     }
 

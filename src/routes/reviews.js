@@ -3,7 +3,7 @@
 
 const express = require('express');
 const db      = require('../db');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requireAdmin } = require('../middleware/auth');
 const push    = require('../utils/push');
 const chat    = require('./chat');
 const { checkAndSyncVerifiedSeller } = require('../utils/verifiedSeller');
@@ -87,6 +87,57 @@ router.post('/', requireAuth, async (req, res) => {
     })();
   } catch (err) {
     console.error('review create:', err.message);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// GET /api/reviews  — ადმინის მიმოხილვების მოდერაციის სია
+// (ყველა შეფასება, ყველაზე ახალი წინ) — ბოროტად გამოყ./ყალბი
+// შეფასების პოვნისა და წაშლისთვის (Watchtower → Reviews).
+// ══════════════════════════════════════════════════════════════
+router.get('/', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { page = 1, limit = 30 } = req.query;
+    const offset = (Number(page) - 1) * Number(limit);
+    const { rows } = await db.query(`
+      SELECT r.*,
+        ru.username AS reviewer_username,
+        su.username AS seller_username
+      FROM reviews r
+      JOIN users ru ON ru.id = r.reviewer_id
+      JOIN users su ON su.id = r.seller_id
+      ORDER BY r.created_at DESC
+      LIMIT $1 OFFSET $2
+    `, [Number(limit), offset]);
+
+    const { rows: cnt } = await db.query('SELECT COUNT(*) FROM reviews');
+    res.json({ reviews: rows, total: Number(cnt[0].count), page: Number(page), pages: Math.ceil(Number(cnt[0].count) / Number(limit)) });
+  } catch (err) {
+    console.error('admin reviews list error:', err.message);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// DELETE /api/reviews/:id  — ადმინის მიერ ყალბი/შეურაცხმყოფელი
+// შეფასების წაშლა. ⚠️ წაშლის შემდეგ სავალდებულოა verified-seller
+// სტატუსის ხელახლა სინქრონიზაცია — წაშლილმა დაბალმა/მაღალმა
+// შეფასებამ შეიძლება საშ. რეიტინგი 4.80-ის ზღვარს იქით/აქეთ
+// გადაიტანოს, ისევე როგორც ახალი შეფასების დამატებისას (ზემოთ POST /).
+// ══════════════════════════════════════════════════════════════
+router.delete('/:id', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { rows } = await db.query('DELETE FROM reviews WHERE id=$1 RETURNING *', [req.params.id]);
+    if (!rows.length) return res.status(404).json({ error: 'not_found' });
+    const deleted = rows[0];
+
+    await checkAndSyncVerifiedSeller(db, deleted.seller_id)
+      .catch(e => console.error('verified seller resync (review delete) error:', e.message));
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('admin review delete error:', err.message);
     res.status(500).json({ error: 'server_error' });
   }
 });

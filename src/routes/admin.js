@@ -37,7 +37,7 @@ router.get('/overview', async (req, res) => {
   try {
     const [users, listings, orders, disputes, volume, platform] = await Promise.all([
       db.query("SELECT COUNT(*) AS n, COUNT(*) FILTER (WHERE role='banned') AS banned FROM users"),
-      db.query("SELECT COUNT(*) AS n, COUNT(*) FILTER (WHERE status='active') AS active FROM listings"),
+      db.query("SELECT COUNT(*) AS n, COUNT(*) FILTER (WHERE status='active') AS active, COUNT(*) FILTER (WHERE status='pending') AS pending FROM listings"),
       db.query("SELECT COUNT(*) AS n, COUNT(*) FILTER (WHERE status='active') AS active, COUNT(*) FILTER (WHERE status='completed') AS completed FROM orders"),
       db.query("SELECT COUNT(*) AS n, COUNT(*) FILTER (WHERE status='open') AS open FROM disputes"),
       db.query("SELECT COALESCE(SUM(amount_gel),0) AS total FROM orders WHERE status='completed'"),
@@ -46,7 +46,7 @@ router.get('/overview', async (req, res) => {
 
     res.json({
       users: { total: Number(users.rows[0].n), banned: Number(users.rows[0].banned) },
-      listings: { total: Number(listings.rows[0].n), active: Number(listings.rows[0].active) },
+      listings: { total: Number(listings.rows[0].n), active: Number(listings.rows[0].active), pending: Number(listings.rows[0].pending) },
       orders: {
         total: Number(orders.rows[0].n),
         active: Number(orders.rows[0].active),
@@ -240,6 +240,88 @@ router.get('/users', async (req, res) => {
     res.json({ users: rows, total: Number(cnt[0].count), page: Number(page), pages: Math.ceil(Number(cnt[0].count) / Number(limit)) });
   } catch (err) {
     console.error('admin users list error:', err.message);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// GET /api/admin/users/:id  — მომხმარებლის სრული პროფილი + ტრანზაქციების
+// ისტორია (ბოლო 100). ⚠️ განსხვავებით users.js-ის საჯარო GET /:id-სგან,
+// აქ profile_public/role='banned' შეზღუდვები არ მოქმედებს — ადმინს
+// ნებისმიერი ანგარიშის ნახვა უნდა შეეძლოს, დაბლოკილის ჩათვლით.
+// ══════════════════════════════════════════════════════════════
+router.get('/users/:id', async (req, res) => {
+  try {
+    const { rows: u } = await db.query('SELECT * FROM users WHERE id=$1', [req.params.id]);
+    if (!u.length) return res.status(404).json({ error: 'not_found' });
+    const user = u[0];
+    delete user.password_hash; // legacy სვეტი — აღარ გამოიყენება, პასუხში არ გავუშვათ
+
+    const { rows: transactions } = await db.query(
+      'SELECT * FROM transactions WHERE user_id=$1 ORDER BY created_at DESC LIMIT 100',
+      [req.params.id]
+    );
+
+    res.json({ user, transactions });
+  } catch (err) {
+    console.error('admin user detail error:', err.message);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// PUT /api/admin/users/:id/adjust-balance  — მანუალური ბალანსის
+// კორექცია (Manual Wallet Control). amount დადებითია დასამატებლად,
+// უარყოფითია გამოსაკლებად. note სავალდებულოა — აუდიტისთვის ინახება
+// transactions.description-ში (+ admin_note-ში ვინ შეასრულა).
+// ══════════════════════════════════════════════════════════════
+router.put('/users/:id/adjust-balance', async (req, res) => {
+  try {
+    const amount = Number(req.body.amount);
+    const note   = (req.body.note || '').trim();
+
+    if (!amount || !Number.isFinite(amount)) {
+      return res.status(400).json({ error: 'invalid_amount' });
+    }
+    if (!note) {
+      return res.status(400).json({ error: 'note_required', message: 'კორექციის მიზეზი სავალდებულოა' });
+    }
+
+    const { rows: u } = await db.query('SELECT balance_gel FROM users WHERE id=$1', [req.params.id]);
+    if (!u.length) return res.status(404).json({ error: 'not_found' });
+
+    if (amount < 0 && Number(u[0].balance_gel) < Math.abs(amount)) {
+      return res.status(402).json({ error: 'insufficient_balance', available: u[0].balance_gel });
+    }
+
+    await db.transaction(async (client) => {
+      await client.query(
+        'UPDATE users SET balance_gel = balance_gel + $1 WHERE id=$2',
+        [amount, req.params.id]
+      );
+      await client.query(
+        `INSERT INTO transactions(user_id, type, amount_gel, description, status, admin_note)
+         VALUES($1,'admin_adjustment',$2,$3,'completed',$4)`,
+        [req.params.id, amount,
+         amount > 0 ? `ადმინის მიერ ბალანსზე დამატება: ${note}` : `ადმინის მიერ ბალანსიდან ჩამოჭრა: ${note}`,
+         `მოქმედი ადმინი: ${req.user.email || req.user.id}`]
+      );
+    });
+
+    res.json({ ok: true });
+
+    (async () => {
+      try {
+        await push.sendToUser(req.params.id, {
+          title: amount > 0 ? '💰 ბალანსზე დაემატა თანხა' : '💸 ბალანსიდან ჩამოიჭრა თანხა',
+          body: `${amount > 0 ? '+' : ''}₾${amount.toFixed(2)} — ${note}`,
+          url: '/?page=wallet',
+          tag: `admin-adjust-${Date.now()}`,
+        });
+      } catch (e) { console.error('adjust-balance push error:', e.message); }
+    })();
+  } catch (err) {
+    console.error('admin adjust-balance error:', err.message);
     res.status(500).json({ error: 'server_error' });
   }
 });
@@ -686,6 +768,191 @@ router.post('/withdrawals/:id/reject', requireAuth, requireAdmin, async (req, re
     mailer.sendWithdrawRejectedEmail(tx[0], refundAmount, reason)
       .catch(e => console.error('withdrawal rejected email:', e.message));
 
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// CATEGORY MANAGEMENT — დინამიური კატეგორიების მართვა
+// (საჯარო წაკითხვისთვის იხ. GET /api/listings/categories)
+// ══════════════════════════════════════════════════════════════
+
+// GET /api/admin/categories  — ყველა კატეგორია (არააქტ.-ის ჩათვლით)
+router.get('/categories', async (req, res) => {
+  try {
+    const { rows } = await db.query('SELECT * FROM categories ORDER BY sort_order ASC, name_ka ASC');
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// POST /api/admin/categories  — ახალი კატეგორიის დამატება
+router.post('/categories', async (req, res) => {
+  try {
+    const { slug, name_ka, icon, sort_order } = req.body;
+    if (!slug || !name_ka) return res.status(400).json({ error: 'slug_and_name_required' });
+    if (!/^[a-z0-9_-]{2,30}$/.test(slug)) {
+      return res.status(400).json({ error: 'invalid_slug', message: 'slug — მხოლოდ ლათინური ასოები, ციფრები, - და _' });
+    }
+
+    const { rows } = await db.query(
+      `INSERT INTO categories(slug, name_ka, icon, sort_order) VALUES($1,$2,$3,$4) RETURNING *`,
+      [slug.trim().toLowerCase(), name_ka.trim(), icon || null, Number(sort_order) || 0]
+    );
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'slug_already_exists' });
+    console.error('category create error:', err.message);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// PUT /api/admin/categories/:id  — რედაქტირება (სახელი/აიკონი/რიგი/აქტიურობა)
+router.put('/categories/:id', async (req, res) => {
+  try {
+    const { name_ka, icon, sort_order, is_active } = req.body;
+    const { rows } = await db.query(
+      `UPDATE categories SET
+         name_ka    = COALESCE($1, name_ka),
+         icon       = COALESCE($2, icon),
+         sort_order = COALESCE($3, sort_order),
+         is_active  = COALESCE($4, is_active),
+         updated_at = NOW()
+       WHERE id=$5 RETURNING *`,
+      [name_ka || null, icon || null,
+       sort_order !== undefined ? Number(sort_order) : null,
+       is_active !== undefined ? !!is_active : null,
+       req.params.id]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'not_found' });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('category update error:', err.message);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// DELETE /api/admin/categories/:id  — წაშლა (მხოლოდ თუ არცერთი
+// განცხადება არ იყენებს ამ კატეგორიას — წინააღმდეგ შემთხვევაში
+// შესთავაზეთ admin-ს დეაქტივაცია PUT-ით (is_active=false) წაშლის ნაცვლად)
+router.delete('/categories/:id', async (req, res) => {
+  try {
+    const { rows: cat } = await db.query('SELECT slug FROM categories WHERE id=$1', [req.params.id]);
+    if (!cat.length) return res.status(404).json({ error: 'not_found' });
+
+    const { rows: usage } = await db.query(
+      'SELECT COUNT(*) AS n FROM listings WHERE category=$1', [cat[0].slug]
+    );
+    if (Number(usage[0].n) > 0) {
+      return res.status(409).json({
+        error: 'category_in_use',
+        message: `ამ კატეგორიას იყენებს ${usage[0].n} განცხადება — წაშლა შეუძლებელია, გამორთეთ (is_active=false) ნაცვლად`,
+        listings_count: Number(usage[0].n),
+      });
+    }
+
+    await db.query('DELETE FROM categories WHERE id=$1', [req.params.id]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('category delete error:', err.message);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// GLOBAL ANNOUNCEMENTS — საიტის მასშტაბით შეტყობინებები
+// (საჯარო წაკითხვისთვის იხ. GET /api/stats/announcements)
+// ══════════════════════════════════════════════════════════════
+
+// GET /api/admin/announcements  — ყველა ანონსი (არააქტ.-ის ჩათვლით)
+router.get('/announcements', async (req, res) => {
+  try {
+    const { rows } = await db.query(`
+      SELECT a.*, u.username AS created_by_username
+      FROM announcements a
+      LEFT JOIN users u ON u.id = a.created_by
+      ORDER BY a.created_at DESC
+    `);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// POST /api/admin/announcements  — ახალი ანონსის შექმნა + დაუყოვნებელი
+// push ყველა მომხმარებელზე ვისაც push subscription აქვს რეგისტრირებული.
+// ⚠️ ვისაც push subscription არ აქვს, მათთვის ეს ბანერად ჩანს მთავარ
+// საიტზე შემდეგი GET /api/stats/announcements-ის დროს — push მხოლოდ
+// დამატებითი, დაუყოვნებელი არხია, არა ერთადერთი.
+router.post('/announcements', async (req, res) => {
+  try {
+    const { title, body, level = 'info', expires_at } = req.body;
+    if (!title || !body) return res.status(400).json({ error: 'title_and_body_required' });
+    if (!['info', 'warning', 'critical'].includes(level)) {
+      return res.status(400).json({ error: 'invalid_level' });
+    }
+
+    const { rows } = await db.query(
+      `INSERT INTO announcements(title, body, level, created_by, expires_at)
+       VALUES($1,$2,$3,$4,$5) RETURNING *`,
+      [title.trim(), body.trim(), level, req.user.id, expires_at || null]
+    );
+    const announcement = rows[0];
+    res.status(201).json(announcement);
+
+    // ── ყველა subscribed მომხმარებელზე push — async, პასუხს არ აყოვნებს ──
+    (async () => {
+      try {
+        const { rows: subs } = await db.query('SELECT DISTINCT user_id FROM push_subscriptions');
+        await Promise.all(subs.map(s => push.sendToUser(s.user_id, {
+          title: `📢 ${announcement.title}`,
+          body: announcement.body.slice(0, 140),
+          url: '/',
+          tag: `announcement-${announcement.id}`,
+        }).catch(() => {})));
+      } catch (e) { console.error('announcement broadcast error:', e.message); }
+    })();
+  } catch (err) {
+    console.error('announcement create error:', err.message);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// PUT /api/admin/announcements/:id  — რედაქტირება/დეაქტივაცია
+router.put('/announcements/:id', async (req, res) => {
+  try {
+    const { title, body, level, is_active, expires_at } = req.body;
+    if (level !== undefined && !['info', 'warning', 'critical'].includes(level)) {
+      return res.status(400).json({ error: 'invalid_level' });
+    }
+    const { rows } = await db.query(
+      `UPDATE announcements SET
+         title      = COALESCE($1, title),
+         body       = COALESCE($2, body),
+         level      = COALESCE($3, level),
+         is_active  = COALESCE($4, is_active),
+         expires_at = COALESCE($5, expires_at)
+       WHERE id=$6 RETURNING *`,
+      [title || null, body || null, level || null,
+       is_active !== undefined ? !!is_active : null,
+       expires_at || null, req.params.id]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'not_found' });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('announcement update error:', err.message);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// DELETE /api/admin/announcements/:id
+router.delete('/announcements/:id', async (req, res) => {
+  try {
+    const { rows } = await db.query('DELETE FROM announcements WHERE id=$1 RETURNING id', [req.params.id]);
+    if (!rows.length) return res.status(404).json({ error: 'not_found' });
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: 'server_error' });

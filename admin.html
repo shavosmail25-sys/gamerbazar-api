@@ -367,6 +367,17 @@ input,select,textarea{font-family:var(--sans)}
         <span class="sb-item-ico">₾</span>გადახდები
         <span id="wallet-nav-badge" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);background:#ef4444;color:#fff;font-size:9px;font-weight:700;min-width:16px;height:16px;border-radius:8px;text-align:center;line-height:16px;padding:0 4px"></span>
       </div>
+      <div class="sb-item" data-view="reviews" onclick="switchView('reviews')">
+        <span class="sb-item-ico">★</span>შეფასებები
+      </div>
+
+      <div class="sb-section-label">Configuration</div>
+      <div class="sb-item" data-view="categories" onclick="switchView('categories')">
+        <span class="sb-item-ico">▤</span>კატეგორიები
+      </div>
+      <div class="sb-item" data-view="announcements" onclick="switchView('announcements')">
+        <span class="sb-item-ico">📢</span>ანონსები
+      </div>
     </nav>
 
     <div class="sb-foot">
@@ -507,6 +518,33 @@ input,select,textarea{font-family:var(--sans)}
         <div class="pagination" id="listings-pagination"></div>
       </div>
 
+      <!-- ═══════════ REVIEWS ═══════════ -->
+      <div class="view" id="view-reviews">
+        <div class="view-head">
+          <div><div class="view-title">შეფასებების მოდერაცია</div><div class="view-sub">ყალბი ან შეურაცხმყოფელი შეფასებების ნახვა/წაშლა</div></div>
+          <button class="btn btn-ghost" onclick="loadReviews()">↺ განახლება</button>
+        </div>
+        <div class="list" id="reviews-list"><div class="loading">სკანირება</div></div>
+      </div>
+
+      <!-- ═══════════ CATEGORIES ═══════════ -->
+      <div class="view" id="view-categories">
+        <div class="view-head">
+          <div><div class="view-title">კატეგორიების მართვა</div><div class="view-sub">დამატება/რედაქტირება/გამორთვა — ამოქმედდება მთელ საიტზე</div></div>
+          <button class="btn btn-signal" onclick="openCategoryModal(null)">+ ახალი კატეგორია</button>
+        </div>
+        <div class="list" id="categories-list"><div class="loading">სკანირება</div></div>
+      </div>
+
+      <!-- ═══════════ ANNOUNCEMENTS ═══════════ -->
+      <div class="view" id="view-announcements">
+        <div class="view-head">
+          <div><div class="view-title">საიტის ანონსები</div><div class="view-sub">ბანერი მთავარ საიტზე + დაუყოვნებელი push ყველა subscribed მომხმარებელზე</div></div>
+          <button class="btn btn-signal" onclick="openAnnouncementModal()">+ ახალი ანონსი</button>
+        </div>
+        <div class="list" id="announcements-list"><div class="loading">სკანირება</div></div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -588,6 +626,97 @@ input,select,textarea{font-family:var(--sans)}
 </div>
 
 <div class="toast-wrap" id="toastWrap"></div>
+
+<!-- DISPUTE CHAT LOG -->
+<div class="modal-bg" id="disputeChatModal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-head"><div class="dot"></div><h3 id="dispute-chat-title">ჩატის ისტორია</h3></div>
+    <div class="sup-msgs" id="dispute-chat-body" style="max-height:60vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px;margin-bottom:12px"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('disputeChatModal')">დახურვა</button>
+    </div>
+  </div>
+</div>
+
+<!-- LISTING DETAIL -->
+<div class="modal-bg" id="listingDetailModal">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-head"><div class="dot"></div><h3 id="listing-detail-title">განცხადების დეტალები</h3></div>
+    <div id="listing-detail-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('listingDetailModal')">დახურვა</button>
+    </div>
+  </div>
+</div>
+
+<!-- USER DETAIL + MANUAL BALANCE ADJUSTMENT -->
+<div class="modal-bg" id="userDetailModal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-head"><div class="dot"></div><h3 id="user-detail-title">მომხმარებლის დეტალები</h3></div>
+    <div id="user-detail-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('userDetailModal')">დახურვა</button>
+    </div>
+  </div>
+</div>
+
+<!-- CATEGORY ADD/EDIT -->
+<div class="modal-bg" id="categoryModal">
+  <div class="modal">
+    <div class="modal-head"><div class="dot"></div><h3 id="category-modal-title">ახალი კატეგორია</h3></div>
+    <div class="field">
+      <label>Slug (ლათინური, უნიკალური)</label>
+      <input type="text" id="cat-slug" placeholder="მაგ: action">
+    </div>
+    <div class="field">
+      <label>სახელი (ქართულად)</label>
+      <input type="text" id="cat-name" placeholder="მაგ: აქშენი">
+    </div>
+    <div class="field">
+      <label>აიკონი (ემოჯი, სურვილისამებრ)</label>
+      <input type="text" id="cat-icon" placeholder="🎮">
+    </div>
+    <div class="field">
+      <label>რიგითობა</label>
+      <input type="number" id="cat-sort" value="0">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('categoryModal')">გაუქმება</button>
+      <button class="btn btn-signal" onclick="submitCategoryModal()">შენახვა</button>
+    </div>
+  </div>
+</div>
+
+<!-- ANNOUNCEMENT CREATE -->
+<div class="modal-bg" id="announcementModal">
+  <div class="modal">
+    <div class="modal-head"><div class="dot"></div><h3>ახალი ანონსი</h3></div>
+    <div class="field">
+      <label>სათაური</label>
+      <input type="text" id="ann-title" placeholder="მაგ: დაგეგმილი ტექნიკური სამუშაოები">
+    </div>
+    <div class="field">
+      <label>ტექსტი</label>
+      <textarea id="ann-body" rows="4" placeholder="დეტალური ტექსტი..."></textarea>
+    </div>
+    <div class="field">
+      <label>დონე</label>
+      <select id="ann-level">
+        <option value="info">INFO</option>
+        <option value="warning">WARNING</option>
+        <option value="critical">CRITICAL</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>ვადა (სურვილისამებრ)</label>
+      <input type="datetime-local" id="ann-expires">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('announcementModal')">გაუქმება</button>
+      <button class="btn btn-signal" onclick="submitAnnouncementModal()">გამოქვეყნება</button>
+    </div>
+  </div>
+</div>
 
 <script>
 // ══════════════════════════════════════════════════════════
@@ -772,6 +901,9 @@ function switchView(view) {
   if (view === 'users')    loadUsers();
   if (view === 'listings') loadListings();
   if (view === 'wallet')   loadWalletRequests();
+  if (view === 'reviews')  loadReviews();
+  if (view === 'categories') loadCategories();
+  if (view === 'announcements') loadAnnouncements();
 }
 
 function closeModal(id) {
@@ -804,16 +936,6 @@ async function loadOverview() {
         if (nb) { nb.textContent = total; nb.style.display = total ? 'inline-block' : 'none'; }
       });
     }).catch(()=>{});
-    if (pendingBadge) {
-      const pendingCount = d.listings.pending || 0;
-      if (pendingCount > 0) {
-        pendingBadge.textContent = `${pendingCount} pending`;
-        pendingBadge.style.display = 'inline-block';
-      } else {
-        pendingBadge.style.display = 'none';
-      }
-    }
-
     // pulse strip-ში pending indicator
     let pulseStrip = document.getElementById('pulse-strip');
     let pendingPulse = document.getElementById('pulse-pending-listings');
@@ -931,12 +1053,42 @@ async function loadDisputes() {
           ${d.status === 'resolved' ? `<div class="row-resolved-note">✓ ${d.resolution === 'release' ? 'RELEASE → გამყიდველზე' : 'REFUND → მყიდველზე'}${d.admin_note ? ' — ' + esc(d.admin_note) : ''}</div>` : ''}
         </div>
         <div class="row-actions">
+          <button class="btn btn-ghost" onclick="openDisputeChat('${d.id}')">💬 ჩატის ნახვა</button>
           ${d.status === 'open' ? `<button class="btn btn-signal" onclick="openResolveModal('${d.id}')">გადაწყვეტა</button>` : ''}
         </div>
       </div>
     `).join('');
   } catch (e) {
     list.innerHTML = '<div class="empty"><div class="empty-ico">⚠</div><div class="empty-t">ჩატვირთვის შეცდომა</div></div>';
+  }
+}
+
+// ── დავის სრული ბაიერ-სელერის ჩატის ისტორია — GET /api/disputes/:id
+// (disputes.js) უკვე აბრუნებს chat_messages-ს moderator/admin-ისთვის,
+// ცალკე ახალი backend endpoint არ იყო საჭირო. ──
+async function openDisputeChat(disputeId) {
+  const d = disputesData.find(x => x.id === disputeId);
+  const body = document.getElementById('dispute-chat-body');
+  document.getElementById('dispute-chat-title').textContent = d ? `${esc(d.listing_title)} — ჩატის ისტორია` : 'ჩატის ისტორია';
+  body.innerHTML = '<div class="loading">სკანირება</div>';
+  document.getElementById('disputeChatModal').classList.add('show');
+  try {
+    const detail = await api(`/api/disputes/${disputeId}`);
+    const messages = detail.chat_messages || [];
+    if (!messages.length) {
+      body.innerHTML = '<div class="sup-empty"><div class="empty-t">ამ შეკვეთაზე ჩატის ისტორია არ მოიძებნა</div></div>';
+      return;
+    }
+    body.innerHTML = messages.map(m => {
+      const isBuyer = m.sender_id === detail.buyer_id;
+      const time = m.created_at ? new Date(m.created_at).toLocaleString('ka-GE', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+      return `<div class="sup-msg ${isBuyer ? 'them' : 'me'}">
+        <div style="font-size:9.5px;font-weight:700;color:var(--dim);margin-bottom:3px">${esc(m.sender_username)} ${isBuyer ? '(მყიდველი)' : '(გამყიდველი)'}</div>
+        ${esc(m.content)}<div class="sup-msg-t">${time}</div>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    body.innerHTML = '<div class="empty"><div class="empty-ico">⚠</div><div class="empty-t">ჩატვირთვის შეცდომა</div></div>';
   }
 }
 
@@ -1152,6 +1304,7 @@ async function loadUsers() {
           </div>
         </div>
         <div class="row-actions">
+          <button class="btn btn-ghost" onclick="openUserDetail('${u.id}')">🔍 დეტალები</button>
           ${u.role === 'admin' ? '' : (u.role === 'banned'
             ? `<button class="btn btn-ok" onclick="openBanModal('${u.id}','unban')">განბლოკვა</button>`
             : `<button class="btn btn-signal" onclick="openBanModal('${u.id}','ban')">დაბლოკვა</button>`)}
@@ -1277,6 +1430,7 @@ async function loadListings() {
           ${l.status === 'pending' && !photosOk ? `<div style="margin-top:6px;font-size:11px;color:#f59e0b">⚠️ დასადასტურებლად საჭიროა მინიმუმ 2 ფოტო — ამჟამად ${photoCount}-ია. „დადასტ.“ დაბლოკილი იქნება, სანამ გამყიდველი არ დაამატებს.</div>` : ''}
         </div>
         <div class="row-actions">
+          <button class="btn btn-ghost" onclick="openListingDetail('${l.id}')">🔍 დეტალურად</button>
           ${l.status === 'pending' ? `
             ${photosOk
               ? `<button class="btn btn-ok" onclick="approveListing('${l.id}')">✅ დადასტ.</button>`
@@ -1542,6 +1696,307 @@ async function confirmReasonModal() {
     btn.disabled = false;
     btn.textContent = 'დადასტურება';
   }
+}
+
+// ══════════════════════════════════════════════════════════
+// LISTING DETAIL MODAL — სურათები, აღწერა, ტეგები და ყველა ველი
+// დადასტურება/უარყოფამდე. მონაცემი უკვე listingsData-შია
+// (GET /api/admin/listings აბრუნებს l.* — images-ის ჩათვლით),
+// ცალკე backend request არ სჭირდება.
+// ══════════════════════════════════════════════════════════
+function openListingDetail(listingId) {
+  const l = listingsData.find(x => x.id === listingId);
+  if (!l) return;
+  const images = l.images || [];
+  document.getElementById('listing-detail-title').textContent = l.title;
+  document.getElementById('listing-detail-body').innerHTML = `
+    ${images.length ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-bottom:16px">
+      ${images.map(url => `<a href="${esc(url)}" target="_blank" rel="noopener"><img src="${esc(url)}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid var(--line)"></a>`).join('')}
+    </div>` : '<div class="empty" style="padding:20px"><div class="empty-ico">📷</div><div class="empty-t">ფოტო არ არის ატვირთული</div></div>'}
+    <div class="modal-info" style="font-family:var(--sans)">
+      <div style="margin-bottom:8px"><b>თამაში:</b> ${esc(l.game)} &nbsp; <b>კატეგორია:</b> ${esc(l.category)} / ${esc(l.listing_type)}</div>
+      <div style="margin-bottom:8px"><b>ფასი:</b> ${fmtMoney(l.price_gel)} &nbsp; <b>სტატუსი:</b> ${esc(l.status)}</div>
+      <div style="margin-bottom:8px"><b>პლატფორმა:</b> ${esc(l.platform || '—')} &nbsp; <b>რეგიონი:</b> ${esc(l.region || '—')} &nbsp; <b>დაცვა:</b> ${esc(l.account_security || '—')}</div>
+      <div style="margin-bottom:8px"><b>ტეგები:</b> ${(l.tags||[]).map(t=>esc(t)).join(', ') || '—'}</div>
+      <div style="margin-bottom:8px"><b>გამყიდველი:</b> ${esc(l.seller_username)} (${esc(l.seller_email)})</div>
+      <div style="margin-bottom:8px"><b>ნახვები:</b> ${l.views_count} &nbsp; <b>შეკვ:</b> ${l.orders_count} &nbsp; <b>თარიღი:</b> ${fmtDate(l.created_at)}</div>
+      ${l.rejection_reason ? `<div style="color:var(--signal)"><b>უარყოფის მიზეზი:</b> ${esc(l.rejection_reason)}</div>` : ''}
+    </div>
+    <div style="white-space:pre-wrap;font-size:12.5px;line-height:1.6;color:var(--text)">${esc(l.description || 'აღწერა არ არის')}</div>
+  `;
+  document.getElementById('listingDetailModal').classList.add('show');
+}
+
+// ══════════════════════════════════════════════════════════
+// USER DETAIL MODAL — სრული პროფილი + ტრანზაქციების ისტორია +
+// მანუალური ბალანსის კორექცია
+// ══════════════════════════════════════════════════════════
+let userDetailTargetId = null;
+async function openUserDetail(userId) {
+  userDetailTargetId = userId;
+  const body = document.getElementById('user-detail-body');
+  document.getElementById('user-detail-title').textContent = 'იტვირთება...';
+  body.innerHTML = '<div class="loading">სკანირება</div>';
+  document.getElementById('userDetailModal').classList.add('show');
+  try {
+    const data = await api(`/api/admin/users/${userId}`);
+    const u = data.user;
+    document.getElementById('user-detail-title').textContent = u.display_name || u.username;
+    body.innerHTML = `
+      <div class="modal-info" style="font-family:var(--sans)">
+        <div style="margin-bottom:6px"><b>@${esc(u.username)}</b> — ${esc(u.email)}</div>
+        <div style="margin-bottom:6px"><b>როლი:</b> ${esc(u.role)} &nbsp; <b>ვერიფიც.:</b> ${u.is_verified_seller ? 'კი' : 'არა'} &nbsp; <b>VIP:</b> ${u.is_vip ? 'კი' : 'არა'}</div>
+        <div style="margin-bottom:6px"><b>ბალანსი:</b> ${fmtMoney(u.balance_gel)} &nbsp; <b>Hold:</b> ${fmtMoney(u.hold_balance_gel)} &nbsp; <b>Escrow:</b> ${fmtMoney(u.escrow_hold_gel)}</div>
+        <div style="margin-bottom:6px"><b>სულ გაყიდვები:</b> ${fmtMoney(u.total_sales_gel)} &nbsp; <b>რეგ:</b> ${fmtDate(u.created_at)} &nbsp; <b>ბოლო აქტ:</b> ${fmtDate(u.last_seen_at)}</div>
+      </div>
+
+      <div class="field">
+        <label>მანუალური ბალანსის კორექცია</label>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <input type="number" id="adjust-amount" placeholder="მაგ: 10 ან -5" style="flex:1">
+          <input type="text" id="adjust-note" placeholder="მიზეზი (სავალდებულო)" style="flex:2">
+        </div>
+        <button class="btn btn-signal" id="adjust-balance-btn" onclick="submitAdjustBalance()">კორექციის შენახვა</button>
+      </div>
+
+      <div class="field">
+        <label>ტრანზაქციები (ბოლო ${data.transactions.length})</label>
+        <div style="max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:6px">
+          ${data.transactions.length ? data.transactions.map(t => `
+            <div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;padding:7px 9px;background:var(--ink);border:1px solid var(--line);border-radius:6px">
+              <span>${esc(t.type)} — ${esc(t.description || '')}</span>
+              <span style="font-family:var(--mono);font-weight:700;color:${Number(t.amount_gel) >= 0 ? 'var(--ok)' : 'var(--signal)'}">${Number(t.amount_gel) >= 0 ? '+' : ''}${fmtMoney(t.amount_gel)}</span>
+            </div>
+          `).join('') : '<div style="color:var(--dim);font-size:11.5px">ტრანზაქციები არ არის</div>'}
+        </div>
+      </div>
+    `;
+  } catch (e) {
+    body.innerHTML = '<div class="empty"><div class="empty-ico">⚠</div><div class="empty-t">ჩატვირთვის შეცდომა</div></div>';
+  }
+}
+
+async function submitAdjustBalance() {
+  const amount = Number(document.getElementById('adjust-amount').value);
+  const note   = document.getElementById('adjust-note').value.trim();
+  if (!amount) { showToast('შეიყვანე ვალიდური თანხა', 'err'); return; }
+  if (!note) { showToast('მიზეზის მითითება სავალდებულოა', 'err'); return; }
+  const btn = document.getElementById('adjust-balance-btn');
+  btn.disabled = true; btn.textContent = 'მუშავდება...';
+  try {
+    await api(`/api/admin/users/${userDetailTargetId}/adjust-balance`, {
+      method: 'PUT',
+      body: JSON.stringify({ amount, note }),
+    });
+    showToast('✅ ბალანსი განახლდა', 'ok');
+    openUserDetail(userDetailTargetId);
+    loadUsers();
+  } catch (e) {
+    showToast(e.message || 'შეცდომა', 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = 'კორექციის შენახვა';
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// REVIEWS MODERATION
+// ══════════════════════════════════════════════════════════
+async function loadReviews() {
+  const list = document.getElementById('reviews-list');
+  list.innerHTML = '<div class="loading">სკანირება</div>';
+  try {
+    const data = await api('/api/reviews?limit=50');
+    const reviews = data.reviews || [];
+    if (!reviews.length) {
+      list.innerHTML = '<div class="empty"><div class="empty-ico">∅</div><div class="empty-t">შეფასება არ მოიძებნა</div></div>';
+      return;
+    }
+    list.innerHTML = reviews.map(r => `
+      <div class="row">
+        <div class="row-main">
+          <div class="row-title">${'⭐'.repeat(r.rating)}${'☆'.repeat(5-r.rating)} <span class="tag tag-neutral">@${esc(r.reviewer_username)} → @${esc(r.seller_username)}</span></div>
+          <div class="row-desc">${esc(r.comment || 'კომენტარის გარეშე')}</div>
+          <div class="row-meta" style="margin-top:6px"><span><b>თარიღი</b> ${fmtDate(r.created_at)}</span></div>
+        </div>
+        <div class="row-actions">
+          <button class="btn btn-signal" onclick="deleteReview('${r.id}')">🗑 წაშლა</button>
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    list.innerHTML = '<div class="empty"><div class="empty-ico">⚠</div><div class="empty-t">ჩატვირთვის შეცდომა</div></div>';
+  }
+}
+
+async function deleteReview(id) {
+  if (!confirm('წავშალო ეს შეფასება? მოქმედება შეუქცევადია.')) return;
+  try {
+    await api(`/api/reviews/${id}`, { method: 'DELETE' });
+    showToast('🗑 შეფასება წაშლილია', 'ok');
+    loadReviews();
+  } catch (e) {
+    showToast('შეცდომა', 'err');
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// CATEGORY MANAGEMENT
+// ══════════════════════════════════════════════════════════
+let categoriesData = [];
+async function loadCategories() {
+  const list = document.getElementById('categories-list');
+  list.innerHTML = '<div class="loading">სკანირება</div>';
+  try {
+    categoriesData = await api('/api/admin/categories');
+    if (!categoriesData.length) {
+      list.innerHTML = '<div class="empty"><div class="empty-ico">∅</div><div class="empty-t">კატეგორია არ მოიძებნა</div></div>';
+      return;
+    }
+    list.innerHTML = categoriesData.map(c => `
+      <div class="row">
+        <div class="row-main">
+          <div class="row-title">${c.icon || ''} ${esc(c.name_ka)} <span class="tag tag-neutral">${esc(c.slug)}</span> ${!c.is_active ? '<span class="tag tag-crit">გამორთული</span>' : ''}</div>
+          <div class="row-meta"><span><b>რიგი</b> ${c.sort_order}</span></div>
+        </div>
+        <div class="row-actions">
+          <button class="btn btn-ghost" onclick="openCategoryModal('${c.id}')">რედაქტირება</button>
+          <button class="btn btn-ghost" onclick="toggleCategoryActive('${c.id}', ${!c.is_active})">${c.is_active ? 'გამორთვა' : 'ჩართვა'}</button>
+          <button class="btn btn-signal" onclick="deleteCategory('${c.id}')">წაშლა</button>
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    list.innerHTML = '<div class="empty"><div class="empty-ico">⚠</div><div class="empty-t">ჩატვირთვის შეცდომა</div></div>';
+  }
+}
+
+let categoryModalMode = 'add';
+let categoryModalTargetId = null;
+function openCategoryModal(id) {
+  const c = id ? categoriesData.find(x => x.id === id) : null;
+  categoryModalMode = c ? 'edit' : 'add';
+  categoryModalTargetId = c ? c.id : null;
+  document.getElementById('category-modal-title').textContent = c ? 'კატეგორიის რედაქტირება' : 'ახალი კატეგორია';
+  document.getElementById('cat-slug').value = c ? c.slug : '';
+  document.getElementById('cat-slug').disabled = !!c;
+  document.getElementById('cat-name').value = c ? c.name_ka : '';
+  document.getElementById('cat-icon').value = c ? (c.icon || '') : '';
+  document.getElementById('cat-sort').value = c ? c.sort_order : 0;
+  document.getElementById('categoryModal').classList.add('show');
+}
+
+async function submitCategoryModal() {
+  const slug = document.getElementById('cat-slug').value.trim().toLowerCase();
+  const name_ka = document.getElementById('cat-name').value.trim();
+  const icon = document.getElementById('cat-icon').value.trim();
+  const sort_order = Number(document.getElementById('cat-sort').value) || 0;
+  if (!name_ka || (categoryModalMode === 'add' && !slug)) { showToast('შეავსე სავალდებულო ველები', 'err'); return; }
+
+  try {
+    if (categoryModalMode === 'add') {
+      await api('/api/admin/categories', { method: 'POST', body: JSON.stringify({ slug, name_ka, icon, sort_order }) });
+    } else {
+      await api(`/api/admin/categories/${categoryModalTargetId}`, { method: 'PUT', body: JSON.stringify({ name_ka, icon, sort_order }) });
+    }
+    showToast('✅ შენახულია', 'ok');
+    closeModal('categoryModal');
+    loadCategories();
+  } catch (e) {
+    showToast(e.message || 'შეცდომა', 'err');
+  }
+}
+
+async function toggleCategoryActive(id, newState) {
+  try {
+    await api(`/api/admin/categories/${id}`, { method: 'PUT', body: JSON.stringify({ is_active: newState }) });
+    loadCategories();
+  } catch (e) { showToast('შეცდომა', 'err'); }
+}
+
+async function deleteCategory(id) {
+  if (!confirm('წავშალო ეს კატეგორია?')) return;
+  try {
+    await api(`/api/admin/categories/${id}`, { method: 'DELETE' });
+    showToast('წაშლილია', 'ok');
+    loadCategories();
+  } catch (e) {
+    showToast(e.message || 'ვერ წაიშალა — შესაძლოა გამოიყენება განცხადებებში', 'err');
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// GLOBAL ANNOUNCEMENTS
+// ══════════════════════════════════════════════════════════
+let announcementsData = [];
+async function loadAnnouncements() {
+  const list = document.getElementById('announcements-list');
+  list.innerHTML = '<div class="loading">სკანირება</div>';
+  try {
+    announcementsData = await api('/api/admin/announcements');
+    if (!announcementsData.length) {
+      list.innerHTML = '<div class="empty"><div class="empty-ico">∅</div><div class="empty-t">ანონსი არ მოიძებნა</div></div>';
+      return;
+    }
+    const levelTag = { info: 'tag-blue', warning: 'tag-warn', critical: 'tag-crit' };
+    list.innerHTML = announcementsData.map(a => `
+      <div class="row">
+        <div class="row-main">
+          <div class="row-title">${esc(a.title)} <span class="tag ${levelTag[a.level]||'tag-neutral'}">${a.level.toUpperCase()}</span> ${!a.is_active ? '<span class="tag tag-neutral">გამორთული</span>' : ''}</div>
+          <div class="row-desc">${esc(a.body)}</div>
+          <div class="row-meta" style="margin-top:6px"><span><b>ავტორი</b> ${esc(a.created_by_username || '—')}</span><span><b>თარიღი</b> ${fmtDate(a.created_at)}</span>${a.expires_at ? `<span><b>ვადა</b> ${fmtDate(a.expires_at)}</span>` : ''}</div>
+        </div>
+        <div class="row-actions">
+          <button class="btn btn-ghost" onclick="toggleAnnouncementActive('${a.id}', ${!a.is_active})">${a.is_active ? 'გამორთვა' : 'ჩართვა'}</button>
+          <button class="btn btn-signal" onclick="deleteAnnouncement('${a.id}')">წაშლა</button>
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    list.innerHTML = '<div class="empty"><div class="empty-ico">⚠</div><div class="empty-t">ჩატვირთვის შეცდომა</div></div>';
+  }
+}
+
+function openAnnouncementModal() {
+  document.getElementById('ann-title').value = '';
+  document.getElementById('ann-body').value = '';
+  document.getElementById('ann-level').value = 'info';
+  document.getElementById('ann-expires').value = '';
+  document.getElementById('announcementModal').classList.add('show');
+}
+
+async function submitAnnouncementModal() {
+  const title = document.getElementById('ann-title').value.trim();
+  const body  = document.getElementById('ann-body').value.trim();
+  const level = document.getElementById('ann-level').value;
+  const expiresRaw = document.getElementById('ann-expires').value;
+  if (!title || !body) { showToast('შეავსე სათაური და ტექსტი', 'err'); return; }
+  try {
+    await api('/api/admin/announcements', {
+      method: 'POST',
+      body: JSON.stringify({ title, body, level, expires_at: expiresRaw ? new Date(expiresRaw).toISOString() : null }),
+    });
+    showToast('📢 ანონსი გამოქვეყნდა და push გაეგზავნა', 'ok');
+    closeModal('announcementModal');
+    loadAnnouncements();
+  } catch (e) {
+    showToast(e.message || 'შეცდომა', 'err');
+  }
+}
+
+async function toggleAnnouncementActive(id, newState) {
+  try {
+    await api(`/api/admin/announcements/${id}`, { method: 'PUT', body: JSON.stringify({ is_active: newState }) });
+    loadAnnouncements();
+  } catch (e) { showToast('შეცდომა', 'err'); }
+}
+
+async function deleteAnnouncement(id) {
+  if (!confirm('წავშალო ეს ანონსი?')) return;
+  try {
+    await api(`/api/admin/announcements/${id}`, { method: 'DELETE' });
+    showToast('წაშლილია', 'ok');
+    loadAnnouncements();
+  } catch (e) { showToast('შეცდომა', 'err'); }
 }
 
 // ══════════════════════════════════════════════════════════

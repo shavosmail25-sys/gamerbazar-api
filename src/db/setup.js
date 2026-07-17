@@ -386,6 +386,49 @@ async function setupDatabase() {
       // მოთხოვნების სიაში (admin.js GET /deposits, t.* აბრუნებს ამ
       // სვეტსაც) და მხოლოდ ამის შემდეგ იღებს Approve/Reject გადაწყვეტილებას.
       `ALTER TABLE transactions ADD COLUMN IF NOT EXISTS screenshot_url TEXT`,
+      // ── CATEGORY MANAGEMENT — დინამიური კატეგორიები ──────────────────
+      // ძველად listings.js-ში VALID_CATEGORIES მუდმივი მასივი იყო
+      // hardcoded (mobile/pc/social/boosting/currency/apps) — ახლა ეს
+      // ცხრილი ხდება ერთადერთი წყარო (Single Source of Truth), ადმინს
+      // შეუძლია დინამიურად დაამატოს/ჩართოს/გამორთოს/წაშალოს კატეგორია
+      // Watchtower-იდან (იხ. admin.js /categories). seed-ით ივსება
+      // ზუსტად ძველი 6 კატეგორია, რომ არსებული განცხადებები/ვალიდაცია
+      // მიგრაციის შემდეგ არ დაზიანდეს.
+      `CREATE TABLE IF NOT EXISTS categories (
+        id          UUID         PRIMARY KEY DEFAULT uuid_generate_v4(),
+        slug        VARCHAR(30)  NOT NULL UNIQUE,
+        name_ka     VARCHAR(60)  NOT NULL,
+        icon        VARCHAR(10),
+        sort_order  INT          NOT NULL DEFAULT 0,
+        is_active   BOOLEAN      NOT NULL DEFAULT TRUE,
+        created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+        updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_categories_active ON categories(is_active, sort_order)`,
+      `INSERT INTO categories (slug, name_ka, icon, sort_order) VALUES
+         ('mobile','მობილური','📱',1),
+         ('pc','კომპიუტერი','🖥️',2),
+         ('social','სოც. ქსელი','👥',3),
+         ('boosting','ბუსტინგი','🚀',4),
+         ('currency','ვალუტა','💰',5),
+         ('apps','აპლიკაციები','📦',6)
+       ON CONFLICT (slug) DO NOTHING`,
+      // ── GLOBAL ANNOUNCEMENTS — საიტის მასშტაბით გამოცხადებები ─────────
+      // ადმინი ქმნის announcement-ს Watchtower-იდან (admin.js /announcements) —
+      // ინახება აქ persist-banner-ისთვის (GET /api/stats/announcements,
+      // საჯარო, no-cache) და ერთდროულად push-ით ეგზავნება ყველა
+      // მომხმარებელს ვისაც push subscription აქვს რეგისტრირებული.
+      `CREATE TABLE IF NOT EXISTS announcements (
+        id          UUID         PRIMARY KEY DEFAULT uuid_generate_v4(),
+        title       VARCHAR(200) NOT NULL,
+        body        TEXT         NOT NULL,
+        level       VARCHAR(20)  NOT NULL DEFAULT 'info',
+        is_active   BOOLEAN      NOT NULL DEFAULT TRUE,
+        created_by  UUID         REFERENCES users(id),
+        expires_at  TIMESTAMPTZ,
+        created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_announcements_active ON announcements(is_active, created_at DESC)`,
     ];
     for (const sql of migrations) {
       try { await client.query(sql); } catch (e) { /* უკვე არსებობს */ }
