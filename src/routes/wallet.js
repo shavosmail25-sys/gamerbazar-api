@@ -108,10 +108,19 @@ router.get('/transactions', requireAuth, async (req, res) => {
 });
 
 // ══════════════════════════════════════════════════════════════
-// ══════════════════════════════════════════════════════════════
-// POST /api/wallet/deposit  — შეტანის მოთხოვნა (Manual BOG)
+// POST /api/wallet/deposit  — შეტანის მოთხოვნის ᲛᲝᲛᲖᲐᲓᲔᲑᲐ (Manual BOG)
 //
-// ⚠️ REFERRAL ANTI-FRAUD შენიშვნა: ეს route მხოლოდ 'pending' ტრანზაქციას
+// ⚠️ FIX: ტრანზაქცია აქ იქმნება 'draft' სტატუსით — ᲐᲠᲐ 'pending'-ით —
+// და ადმინის ელ-ფოსტა ᲐᲠ იგზავნება. მანამდე (როცა status='pending'
+// გვქონდა უკვე აქ) მოთხოვნა ადმინის პანელში/მეილზე ჩნდებოდა მაშინვე,
+// როცა მომხმარებელი უბრალოდ საბანკო დეტალების სანახავად აჭერდა
+// "გაგრძელება"-ს — ჯერ არც გადარიცხვა ჰქონდა გაკეთებული, არც სქრინშოტი
+// ატვირთული. 'pending'-ზე გადასვლა (და ადმინის შეტყობინება) ახლა
+// ხდება მხოლოდ POST /deposit/:id/screenshot-ში, რეალურ სქრინშოტის
+// ატვირთვის მომენტში — ეს ზუსტად შეესაბამება "Submit Deposit Request"
+// მოქმედებას.
+//
+// ⚠️ REFERRAL ANTI-FRAUD შენიშვნა: ეს route მხოლოდ 'draft' ტრანზაქციას
 // ქმნის — რეალური ფული ჯერ არ შესულა (ადმინს ჯერ არ დაუდასტურებია ბანკის
 // გადარიცხვა). ამიტომ "პირველი დეპოზიტის" რეფერალური ბონუსი აქ ᲐᲠ
 // ᲘᲬᲧᲔᲑᲐ — წინააღმდეგ შემთხვევაში ნებისმიერს შეეძლო უსასრულოდ შექმნას
@@ -151,9 +160,11 @@ router.post('/deposit', requireAuth, async (req, res) => {
 
     const ref = await generateShortDepositRef();
 
+    // status='draft' — ჯერ არ ჩანს არც ადმინის /api/admin/deposits
+    // სიაში (რომელიც status='pending'-ს ფილტრავს), არც ელ-ფოსტა იგზავნება.
     const { rows } = await db.query(
       `INSERT INTO transactions(user_id,type,amount_gel,status,payment_method,external_ref,description)
-       VALUES($1,'deposit',$2,'pending','BOG',$3,'ბალანსის შეტანა — BOG გადარიცხვა')
+       VALUES($1,'deposit',$2,'draft','BOG',$3,'ბალანსის შეტანა — BOG გადარიცხვა')
        RETURNING id`,
       [req.user.id, Number(amount), ref]
     );
@@ -168,13 +179,7 @@ router.post('/deposit', requireAuth, async (req, res) => {
       description: ref,
       eta_hours:   24,
     });
-
-    // ადმინს email — async
-    (async () => {
-      try {
-        await mailer.sendDepositRequestEmail(ADMIN_EMAIL, req.user, amount, ref);
-      } catch(e) { console.error('deposit email:', e.message); }
-    })();
+    // ⚠️ აქ აღარ იგზავნება ადმინის email — იხ. POST /deposit/:id/screenshot
   } catch (err) {
     res.status(500).json({ error: 'server_error' });
   }
@@ -182,14 +187,13 @@ router.post('/deposit', requireAuth, async (req, res) => {
 
 // ══════════════════════════════════════════════════════════════
 // POST /api/wallet/deposit/:id/screenshot  — ბანკის გადარიცხვის
-// დამადასტურებელი სქრინშოტის ატვირთვა უკვე შექმნილ 'pending' deposit
-// მოთხოვნაზე (multipart/form-data, ველი: screenshot).
-//
-// ეს ცალკე endpoint-ია POST /deposit-სგან, რადგან depStep2() ჯერ
-// ქმნის მოთხოვნას და აჩვენებს საბანკო დეტალებს (რომ მომხმარებელმა
-// ჯერ გადარიცხვა გააკეთოს), ხოლო სქრინშოტს მხოლოდ ამის შემდეგ,
-// "მოთხოვნის გაგზავნა" ღილაკზე დაჭერით ტვირთავს — ეს ზუსტად იმეორებს
-// admin.js-ის მოლოდინს (screenshot_url ხილული უნდა იყოს Approve-მდე).
+// დამადასტურებელი სქრინშოტის ატვირთვა 'draft' deposit მოთხოვნაზე
+// (multipart/form-data, ველი: screenshot). ეს არის ის რეალური
+// "Submit Deposit Request" მომენტი — მხოლოდ აქ:
+//   1) status 'draft' → 'pending' ხდება (ახლა ჩნდება ადმინის
+//      /api/admin/deposits რიგში),
+//   2) ადმინს ეგზავნება შეტყობინების email.
+// მანამდე (მხოლოდ ბანკის დეტალების ნახვაზე) ადმინი არაფერს ხედავს/იღებს.
 // ══════════════════════════════════════════════════════════════
 router.post('/deposit/:id/screenshot', requireAuth, depositUpload.single('screenshot'), async (req, res) => {
   try {
@@ -198,13 +202,13 @@ router.post('/deposit/:id/screenshot', requireAuth, depositUpload.single('screen
       return res.status(503).json({ error: 'image_upload_not_configured' });
 
     const { rows: tx } = await db.query(
-      `SELECT id, user_id, status FROM transactions
+      `SELECT id, user_id, status, amount_gel, external_ref FROM transactions
        WHERE id=$1 AND type='deposit'`,
       [req.params.id]
     );
     if (!tx.length) return res.status(404).json({ error: 'not_found' });
     if (tx[0].user_id !== req.user.id) return res.status(403).json({ error: 'forbidden' });
-    if (tx[0].status !== 'pending') return res.status(400).json({ error: 'not_pending' });
+    if (tx[0].status !== 'draft') return res.status(400).json({ error: 'not_pending' });
 
     const result = await cloudinary.uploadBuffer(req.file.buffer, {
       folder:    'gamerbazar/deposits',
@@ -213,11 +217,18 @@ router.post('/deposit/:id/screenshot', requireAuth, depositUpload.single('screen
     });
 
     await db.query(
-      'UPDATE transactions SET screenshot_url=$1 WHERE id=$2',
+      "UPDATE transactions SET screenshot_url=$1, status='pending' WHERE id=$2",
       [result.secure_url, req.params.id]
     );
 
     res.json({ ok: true, screenshot_url: result.secure_url });
+
+    // ადმინს email — ახლა, არა request-შექმნისას (async, პასუხს არ აყოვნებს)
+    (async () => {
+      try {
+        await mailer.sendDepositRequestEmail(ADMIN_EMAIL, req.user, tx[0].amount_gel, tx[0].external_ref);
+      } catch(e) { console.error('deposit email:', e.message); }
+    })();
   } catch (err) {
     if (err.message === 'only_images')
       return res.status(400).json({ error: 'only_images_allowed' });

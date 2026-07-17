@@ -3583,6 +3583,11 @@ async function loadTransactions() {
       if (isApproval) {
         if (t.status === 'completed')      statusBadge = `<span class="tx-s sd">✓ დამტკიცებულია</span>`;
         else if (t.status === 'failed')    statusBadge = `<span class="tx-s sf">✕ უარყოფილია</span>`;
+        // draft — მომხმარებელმა ჯერ არ ატვირთა გადარიცხვის სქრინშოტი,
+        // ადმინს ეს მოთხოვნა საერთოდ არ უჩანს/არ ეცნობება ჯერ (იხ.
+        // wallet.js POST /deposit/:id/screenshot) — ამიტომ "განხილვაშია"-სგან
+        // ცალკე, ცხადი ბეჯით ვნიშნავთ, რომ მოქმედება მომხმარებელს სჭირდება.
+        else if (t.status === 'draft')     statusBadge = `<span class="tx-s sp">📝 დაასრულეთ — ატვირთეთ სქრინშოტი</span>`;
         else                                statusBadge = `<span class="tx-s sp">⏳ განხილვაშია</span>`;
       } else {
         statusBadge = `<span class="tx-s ${c==='in'?'sd':c==='out'?'sf':'sp'}">${lbl[c]}</span>`;
