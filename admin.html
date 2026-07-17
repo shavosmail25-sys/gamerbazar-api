@@ -690,7 +690,7 @@ input,select,textarea{font-family:var(--sans)}
 <!-- ANNOUNCEMENT CREATE -->
 <div class="modal-bg" id="announcementModal">
   <div class="modal">
-    <div class="modal-head"><div class="dot"></div><h3>ახალი ანონსი</h3></div>
+    <div class="modal-head"><div class="dot"></div><h3 id="announcement-modal-title">ახალი ანონსი</h3></div>
     <div class="field">
       <label>სათაური</label>
       <input type="text" id="ann-title" placeholder="მაგ: დაგეგმილი ტექნიკური სამუშაოები">
@@ -713,7 +713,7 @@ input,select,textarea{font-family:var(--sans)}
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('announcementModal')">გაუქმება</button>
-      <button class="btn btn-signal" onclick="submitAnnouncementModal()">გამოქვეყნება</button>
+      <button class="btn btn-signal" id="announcement-modal-submit-btn" onclick="submitAnnouncementModal()">გამოქვეყნება</button>
     </div>
   </div>
 </div>
@@ -1946,6 +1946,7 @@ async function loadAnnouncements() {
           <div class="row-meta" style="margin-top:6px"><span><b>ავტორი</b> ${esc(a.created_by_username || '—')}</span><span><b>თარიღი</b> ${fmtDate(a.created_at)}</span>${a.expires_at ? `<span><b>ვადა</b> ${fmtDate(a.expires_at)}</span>` : ''}</div>
         </div>
         <div class="row-actions">
+          <button class="btn btn-ghost" onclick="openAnnouncementModal('${a.id}')">რედაქტირება</button>
           <button class="btn btn-ghost" onclick="toggleAnnouncementActive('${a.id}', ${!a.is_active})">${a.is_active ? 'გამორთვა' : 'ჩართვა'}</button>
           <button class="btn btn-signal" onclick="deleteAnnouncement('${a.id}')">წაშლა</button>
         </div>
@@ -1956,11 +1957,31 @@ async function loadAnnouncements() {
   }
 }
 
-function openAnnouncementModal() {
-  document.getElementById('ann-title').value = '';
-  document.getElementById('ann-body').value = '';
-  document.getElementById('ann-level').value = 'info';
-  document.getElementById('ann-expires').value = '';
+let announcementModalMode = 'add';
+let announcementModalTargetId = null;
+
+// datetime-local input-ს სჭირდება ლოკალური დრო "YYYY-MM-DDTHH:mm" ფორმატში —
+// ISO სტრინგიდან (UTC) ბრაუზერის ლოკალურ დროზე გადაყვანა ჩვენების დროს
+function toDatetimeLocalValue(isoString) {
+  const d = new Date(isoString);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function openAnnouncementModal(id) {
+  const a = id ? announcementsData.find(x => x.id === id) : null;
+  announcementModalMode = a ? 'edit' : 'add';
+  announcementModalTargetId = a ? a.id : null;
+
+  document.getElementById('announcement-modal-title').textContent = a ? 'ანონსის რედაქტირება' : 'ახალი ანონსი';
+  document.getElementById('announcement-modal-submit-btn').textContent = a ? 'შენახვა' : 'გამოქვეყნება';
+  document.getElementById('ann-title').value = a ? a.title : '';
+  document.getElementById('ann-body').value = a ? a.body : '';
+  document.getElementById('ann-level').value = a ? a.level : 'info';
+  // ⚠️ ვადის გასუფთავება რედაქტირებისას — თუ ველი ცარიელი დარჩა submit-ისას,
+  // expires_at NULL-ზე გადადის (ე.ი. აღარასდროს იწურება), რაც ყველაზე მარტივი
+  // გზაა ვადაგასული/შეცდომით ადრეული თარიღის გამოსასწორებლად.
+  document.getElementById('ann-expires').value = (a && a.expires_at) ? toDatetimeLocalValue(a.expires_at) : '';
   document.getElementById('announcementModal').classList.add('show');
 }
 
@@ -1970,12 +1991,17 @@ async function submitAnnouncementModal() {
   const level = document.getElementById('ann-level').value;
   const expiresRaw = document.getElementById('ann-expires').value;
   if (!title || !body) { showToast('შეავსე სათაური და ტექსტი', 'err'); return; }
+
+  const payload = { title, body, level, expires_at: expiresRaw ? new Date(expiresRaw).toISOString() : null };
+
   try {
-    await api('/api/admin/announcements', {
-      method: 'POST',
-      body: JSON.stringify({ title, body, level, expires_at: expiresRaw ? new Date(expiresRaw).toISOString() : null }),
-    });
-    showToast('📢 ანონსი გამოქვეყნდა და push გაეგზავნა', 'ok');
+    if (announcementModalMode === 'edit') {
+      await api(`/api/admin/announcements/${announcementModalTargetId}`, { method: 'PUT', body: JSON.stringify(payload) });
+      showToast('✅ ანონსი განახლდა', 'ok');
+    } else {
+      await api('/api/admin/announcements', { method: 'POST', body: JSON.stringify(payload) });
+      showToast('📢 ანონსი გამოქვეყნდა და push გაეგზავნა', 'ok');
+    }
     closeModal('announcementModal');
     loadAnnouncements();
   } catch (e) {
