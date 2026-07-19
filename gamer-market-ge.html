@@ -2474,6 +2474,27 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
   </div>
 </div>
 
+<!-- CREDENTIALS VAULT — REVEAL CONSENT MODAL (მყიდველი) — ᲡᲐᲕᲐᲚᲓᲔᲑᲣᲚᲝ
+     "gate" ᲜᲐᲛᲓᲕᲘᲚᲐᲓ ᲠᲔᲐᲚᲣᲠᲘ ᲛᲝᲜᲐᲪᲔᲛᲔᲑᲘᲡ ᲜᲐᲮᲕᲐᲛᲓᲔ: მონაცემები (და API-ის
+     /reveal გამოძახება) ჩნდება მხოლოდ ამ checkbox-ის დადასტურების
+     შემდეგ — confirmRevealConsent()-ში. ──> -->
+<div class="modal-bg" id="credsRevealConsentModal" onclick="if(event.target===this)closeM('credsRevealConsentModal')">
+  <div class="modal">
+    <div class="modal-title">🎥 სავალდებულო სქრინ-ჩაწერა</div>
+    <div style="background:var(--rd);border:1px solid #e05d5d25;border-radius:8px;padding:10px;font-size:11.5px;color:var(--muted2);line-height:1.5;margin-bottom:14px">
+      ანგარიშის მონაცემების გახსნისთანავე ვალდებული ხარ დაიწყო <b style="color:var(--text)">უწყვეტი (დაუმონტაჟებელი) სქრინ-ჩაწერა</b> და განაგრძო მანამ, სანამ წარმატებით არ შეხვალ თამაშის ანგარიშზე. სრული ჩანაწერის გარეშე "პაროლი არასწორია"-ს ტიპის პრეტენზიებზე თანხა <b style="color:var(--text)">არ დაბრუნდება</b>.
+    </div>
+    <label class="chk-agree" id="creds-reveal-ack-row">
+      <input type="checkbox" id="creds-reveal-ack-checkbox" onchange="document.getElementById('creds-reveal-ack-row').classList.remove('needs-check')">
+      <span>ვადასტურებ, რომ სქრინ-ჩაწერას <strong>დავიწყებ ახლავე</strong>, მონაცემების გახსნამდე, და გავაგრძელებ ანგარიშზე წარმატებულ შესვლამდე.</span>
+    </label>
+    <div class="m-acts">
+      <button class="btn btn-g" onclick="closeM('credsRevealConsentModal')">გაუქ.</button>
+      <button class="btn btn-a" id="creds-reveal-consent-btn" onclick="confirmRevealConsent()">🔓 მონაცემების ნახვა</button>
+    </div>
+  </div>
+</div>
+
 <!-- CREDENTIALS VAULT — REVEAL MODAL (მყიდველი) -->
 <div class="modal-bg" id="credsRevealModal" onclick="if(event.target===this)closeM('credsRevealModal')">
   <div class="modal">
@@ -2494,7 +2515,11 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
       </div>
     </div>
     <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:6px" id="creds-out-viewed-at"></div>
-    <div class="m-acts"><button class="btn btn-g" onclick="closeM('credsRevealModal')">დახურვა</button></div>
+    <div style="font-size:11.5px;text-align:center;margin-top:8px;font-weight:600" id="creds-out-deadline"></div>
+    <div class="m-acts">
+      <button class="btn btn-g" onclick="closeM('credsRevealModal')">დახურვა</button>
+      <button class="btn btn-a" id="creds-out-confirm-btn" onclick="closeM('credsRevealModal');confirmCurrentOrder()" style="display:none">✅ წვდომის დადასტ.</button>
+    </div>
   </div>
 </div>
 
@@ -4873,7 +4898,9 @@ function renderCredsPanel(order) {
       panel.innerHTML = `
         <div class="ccp-text">✅ გადაცემულია <span class="ccp-time">${submittedAt}</span>
           ${viewedAt ? ` · 👁 მყიდველმა ნახა <span class="ccp-time">${viewedAt}</span>` : ' · <b>მყიდველს ჯერ არ უნახავს</b>'}
-        </div>`;
+        </div>
+        <div id="ccp-deadline-slot"></div>`;
+      if (viewedAt) renderCcpDeadlineSlot(order);
     }
   } else if (isBuyer) {
     if (!order.has_credentials) {
@@ -4885,9 +4912,74 @@ function renderCredsPanel(order) {
     } else {
       panel.innerHTML = `
         <div class="ccp-text">👁 ნანახია <span class="ccp-time">${viewedAt}</span></div>
-        <button class="btn btn-g btn-sm" onclick="openCredentialsRevealModal()">🔓 ხელახლა ნახვა</button>`;
+        <div id="ccp-deadline-slot"></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
+          <button class="btn btn-g btn-sm" onclick="openCredentialsRevealModal()">🔓 ხელახლა ნახვა</button>
+          ${renderConfirmAccessBtnHtml(order)}
+        </div>`;
+      renderCcpDeadlineSlot(order);
     }
   }
+}
+
+// ── "Confirm Access" ღილაკი — ვჩენთ vault პანელში პირდაპირ, generic
+// header-ის "დადასტ." ღილაკისგან დამოუკიდებლად (ის ჯერ status==='delivered'-ს
+// ითხოვს, ვაულტის ნაკადს კი ეს არ სჭირდება — escrow_status==='held' საკმარისია). ──
+function renderConfirmAccessBtnHtml(order) {
+  const canAct = ['active', 'delivered'].includes(order.status) && order.escrow_status === 'held';
+  if (!canAct) return '';
+  return `<button class="btn btn-a btn-sm" onclick="confirmCurrentOrder()">✅ წვდომის დადასტ.</button>`;
+}
+
+// ── Confirm-Access countdown-ის ჩასმა vault პანელში — canAct-ის
+// შემთხვევაში (ორდერი ჯერ კიდევ ღიაა) ცოცხალი ტაიმერი ჩნდება,
+// წინააღმდეგ შემთხვევაში (დასრულებული/დავადებული) არაფერი ჩანს. ──
+function renderCcpDeadlineSlot(order) {
+  const slot = document.getElementById('ccp-deadline-slot');
+  if (!slot) return;
+  const canAct = ['active', 'delivered'].includes(order.status) && order.escrow_status === 'held';
+  if (!canAct || !order.access_confirm_deadline) { slot.innerHTML = ''; return; }
+
+  const deadline = new Date(order.access_confirm_deadline);
+  const expired  = deadline - Date.now() <= 0;
+  const isBuyer = order.buyer_id === currentUser.id;
+  if (expired) {
+    slot.innerHTML = isBuyer
+      ? `<div class="ccp-text" style="color:var(--red)">⏰ Confirm Access-ის ვადა გავიდა — თუ შეხვედი ანგარიშზე, დაადასტურე ახლავე; თუ ვერა, დაუყოვნებლივ გახსენი დავა.</div>`
+      : `<div class="ccp-text" style="color:var(--red)">⏰ მყიდველის Confirm Access ვადა გავიდა.</div>`;
+  } else {
+    slot.innerHTML = `<div class="ccp-text">⏳ დარჩენილია <span class="ccp-cdown ccp-time" data-deadline="${deadline.toISOString()}">--:--</span> — Confirm Access-ისთვის</div>`;
+    startCredsCountdown();
+  }
+}
+
+// ── vault-ის საკუთარი countdown ტაიმერი (ცალკეა order-history-ის
+// .oh-cdown-ისგან, რომ chat-ის ღიაობა order-history-ის გვერდის
+// ვიზიტზე აღარ იყოს დამოკიდებული). ──
+let _credsCdownInterval = null;
+function startCredsCountdown() {
+  if (_credsCdownInterval) clearInterval(_credsCdownInterval);
+  const tick = () => {
+    const els = document.querySelectorAll('.ccp-cdown[data-deadline]');
+    if (!els.length) { clearInterval(_credsCdownInterval); _credsCdownInterval = null; return; }
+    els.forEach(el => {
+      const left = new Date(el.dataset.deadline) - Date.now();
+      if (left <= 0) {
+        // ვადა ახლახან ამოიწურა — panel-ის თავიდან დახატვა, რომ
+        // გამაფრთხილებელი ტექსტი გამოჩნდეს ტაიმერის მაგივრად.
+        if (window._credsOrderId) {
+          api('/api/orders/' + window._credsOrderId).then(o => renderCredsPanel(o)).catch(() => {});
+        }
+        return;
+      }
+      const h = String(Math.floor(left / 3600000)).padStart(2, '0');
+      const m = String(Math.floor((left % 3600000) / 60000)).padStart(2, '0');
+      const s = String(Math.floor((left % 60000) / 1000)).padStart(2, '0');
+      el.textContent = (left < 3600000) ? `${m}:${s}` : `${h}:${m}:${s}`;
+    });
+  };
+  tick();
+  _credsCdownInterval = setInterval(tick, 1000);
 }
 
 // ── გამყიდველი: submit modal-ის გახსნა ───────────────────────────
@@ -4924,25 +5016,75 @@ async function submitCredentialsVault() {
   }
 }
 
-// ── მყიდველი: reveal modal-ის გახსნა — ყოველ დაჭერაზე ვიძახებთ
-// /reveal-ს (ბექენდი idempotent-ია: timestamp მხოლოდ პირველ
-// გახსნაზე ფიქსირდება, შემდეგ უბრალოდ იმეორებს უკვე შენახულ დროს). ──
-async function openCredentialsRevealModal() {
+// ── მყიდველი: "🔓 მონაცემების ნახვა" ღილაკი — ᲐᲠ ვიძახებთ /reveal-ს
+// პირდაპირ! ჯერ იხსნება სავალდებულო სქრინ-ჩაწერის თანხმობის მოდალი
+// (credsRevealConsentModal) — რეალური API-ის გამოძახება და
+// მონაცემების ჩვენება ხდება მხოლოდ confirmRevealConsent()-ში,
+// checkbox-ის მონიშვნის შემდეგ. ──
+function openCredentialsRevealModal() {
   const orderId = window._credsOrderId;
   if (!orderId) return;
+  const chk = document.getElementById('creds-reveal-ack-checkbox');
+  const row = document.getElementById('creds-reveal-ack-row');
+  if (chk) chk.checked = false;
+  if (row) row.classList.remove('needs-check');
+  openM('credsRevealConsentModal');
+}
+
+// ── checkbox დადასტურების შემდეგ — რეალური /reveal გამოძახება.
+// ბექენდიც იმავეს ამოწმებს (video_proof_reveal_ack: true) —
+// frontend-ის checkbox მარტო საკმარისი არაა. ──
+async function confirmRevealConsent() {
+  const orderId = window._credsOrderId;
+  if (!orderId) return;
+
+  const chk = document.getElementById('creds-reveal-ack-checkbox');
+  const row = document.getElementById('creds-reveal-ack-row');
+  if (!chk || !chk.checked) {
+    if (row) { row.classList.remove('needs-check'); void row.offsetWidth; row.classList.add('needs-check'); }
+    showToast('გასაგრძელებლად საჭიროა დაეთანხმო სქრინ-ჩაწერის პირობას', 'err');
+    return;
+  }
+
+  const btn = document.getElementById('creds-reveal-consent-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳...'; }
   try {
-    const data = await api(`/api/orders/${orderId}/credentials/reveal`, { method: 'POST' });
+    const data = await api(`/api/orders/${orderId}/credentials/reveal`, {
+      method: 'POST',
+      body: JSON.stringify({ video_proof_reveal_ack: true }),
+    });
+    closeM('credsRevealConsentModal');
+
     document.getElementById('creds-out-email').value    = data.email;
     document.getElementById('creds-out-password').value = data.password;
     const viewedAt = data.viewed_at ? new Date(data.viewed_at).toLocaleString('ka-GE') : '';
     document.getElementById('creds-out-viewed-at').textContent = viewedAt ? `ნანახია: ${viewedAt}` : '';
+    renderCredsOutDeadline(data.access_confirm_deadline);
     openM('credsRevealModal');
-    // panel-ის განახლება — timestamp რომ დაუყოვნებლივ გამოჩნდეს
+
+    // panel-ის განახლება — timestamp/countdown რომ დაუყოვნებლივ გამოჩნდეს
     const order = await api('/api/orders/' + orderId).catch(() => null);
     renderCredsPanel(order);
   } catch (e) {
     showToast(e.message || 'ვერ გაიხსნა', 'err');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🔓 მონაცემების ნახვა'; }
   }
+}
+
+// ── reveal მოდალის შიგნით Confirm-Access ვადის/ღილაკის ჩვენება ──
+function renderCredsOutDeadline(deadlineIso) {
+  const slot = document.getElementById('creds-out-deadline');
+  const btn  = document.getElementById('creds-out-confirm-btn');
+  if (!slot) return;
+  if (!deadlineIso) { slot.textContent = ''; if (btn) btn.style.display = 'none'; return; }
+  const deadline = new Date(deadlineIso);
+  const expired  = deadline - Date.now() <= 0;
+  slot.style.color = expired ? 'var(--red)' : 'var(--gold)';
+  slot.textContent = expired
+    ? '⏰ Confirm Access-ის ვადა ამოიწურა'
+    : `⏳ Confirm Access-ის ვადა: ${deadline.toLocaleString('ka-GE')}`;
+  if (btn) btn.style.display = 'inline-block';
 }
 
 function copyCredsField(inputId) {

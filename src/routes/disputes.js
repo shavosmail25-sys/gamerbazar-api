@@ -155,6 +155,7 @@ router.get('/', requireAuth, requireModerator, async (req, res) => {
         -- საშუალებას აძლევს შეადაროს გარე მტკიცებულებას (პაროლის
         -- ცვლილების დრო) ცალკე გამოძიების გარეშე.
         o.video_proof_agreed, o.credentials_submitted_at, o.credentials_viewed_at,
+        o.credentials_reveal_ack_at, o.access_confirm_deadline,
         (o.credentials_secret IS NOT NULL) AS has_credentials,
         l.title AS listing_title, l.game,
         ob.username AS buyer_username, ob.id AS buyer_id,
@@ -187,6 +188,7 @@ router.get('/:id', requireAuth, async (req, res) => {
       SELECT d.*,
         o.buyer_id, o.seller_id, o.amount_gel, o.listing_id,
         o.video_proof_agreed, o.credentials_submitted_at, o.credentials_viewed_at,
+        o.credentials_reveal_ack_at, o.access_confirm_deadline,
         (o.credentials_secret IS NOT NULL) AS has_credentials,
         ob.username AS buyer_username,
         os.username AS seller_username,

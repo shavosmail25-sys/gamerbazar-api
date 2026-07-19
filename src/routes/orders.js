@@ -24,8 +24,19 @@ const ORDER_SAFE_COLUMNS = `
   o.delivered_at, o.disputed_at, o.completed_at, o.cancelled_at, o.cancel_reason,
   o.reminder_24h_sent, o.created_at, o.updated_at,
   o.video_proof_agreed, o.credentials_submitted_at, o.credentials_viewed_at,
+  o.credentials_reveal_ack_at, o.access_confirm_deadline,
   (o.credentials_secret IS NOT NULL) AS has_credentials
 `;
+
+// ── ANTI-SCAM: "Confirm Access" ფანჯარა — მას შემდეგ რაც მყიდველი
+// პირველად ხსნის ანგარიშის მონაცემებს (POST /credentials/reveal),
+// ეძლევა მკაცრად შეზღუდული დრო რომ შევიდეს ანგარიშზე და დაადასტუროს
+// წვდომა. ვადის გასვლა თავისთავად არაფერს აუქმებს/ათავისუფლებს —
+// მყიდველს მაინც შეუძლია confirm-ი გააკეთოს ან დავა გახსნას; უბრალოდ
+// UI-ში იცვლება მინიშნება, და ეს ვადა disputes.js-ის მეშვეობით
+// ადმინისთვისაც ჩანს დავის განხილვისას. env-ით რეგულირებადია, რომ
+// production-ში მარტივად შეიცვალოს კოდის დეპლოის გარეშე.
+const ACCESS_CONFIRM_WINDOW_MINUTES = Number(process.env.ACCESS_CONFIRM_WINDOW_MINUTES) || 45;
 
 // ── NO-CACHE — შეკვეთის სტატუსი (pending/completed/disputed) რეალურ
 // დროში იცვლება; ვუკრძალავთ ბრაუზერს/პროქსის დაკეშვას.
@@ -406,6 +417,20 @@ router.post('/:id/credentials', requireAuth, async (req, res) => {
 // ეს შეუქცევადია და დავის შემთხვევაში ადმინის მთავარი მტკიცებულებაა.
 router.post('/:id/credentials/reveal', requireAuth, async (req, res) => {
   try {
+    // ── ANTI-SCAM: სავალდებულო "Video Proof" თანხმობა ᲖᲣᲡᲢ ამ
+    // მომენტში — ისევე როგორც შეკვეთის შექმნისას, frontend-ის checkbox
+    // მარტო საკმარისი არაა. ეს დამატებითი, reveal-ის მომენტზე მიბმული
+    // თანხმობაა (არა მხოლოდ ჩექაუთის დროინდელი), რომ დავის შემთხვევაში
+    // ზუსტად დაფიქსირდეს — მყიდველი გაფრთხილებული იყო კონკრეტულად იმ
+    // წამს, როცა პაროლი გაუხსნეს, არა ერთი დღით ადრე ჩექაუთზე. ──
+    const { video_proof_reveal_ack } = req.body;
+    if (video_proof_reveal_ack !== true) {
+      return res.status(400).json({
+        error: 'video_proof_reveal_ack_required',
+        message: 'მონაცემების გახსნამდე სავალდებულოა დაეთანხმო სქრინ-ჩაწერის პირობას',
+      });
+    }
+
     const { rows } = await db.query('SELECT * FROM orders WHERE id=$1', [req.params.id]);
     if (!rows.length) return res.status(404).json({ error: 'not_found' });
     const order = rows[0];
@@ -420,16 +445,38 @@ router.post('/:id/credentials/reveal', requireAuth, async (req, res) => {
     }
 
     const isFirstView = !order.credentials_viewed_at;
-    let viewedAt = order.credentials_viewed_at;
+    let viewedAt        = order.credentials_viewed_at;
+    let revealAckAt     = order.credentials_reveal_ack_at;
+    let confirmDeadline = order.access_confirm_deadline;
+
     if (isFirstView) {
+      // Confirm-Access ვადა მხოლოდ პირველ ნახვაზე ერთხელ ითვლება —
+      // ხელახალი გახსნები (ქვემოთ) აღარ არყევს/ახანგრძლივებს მას.
+      const deadline = new Date(Date.now() + ACCESS_CONFIRM_WINDOW_MINUTES * 60 * 1000);
       const { rows: updated } = await db.query(`
-        UPDATE orders SET credentials_viewed_at = NOW(), updated_at = NOW()
+        UPDATE orders SET
+          credentials_viewed_at     = NOW(),
+          credentials_reveal_ack_at = NOW(),
+          access_confirm_deadline   = $2,
+          updated_at = NOW()
         WHERE id = $1 AND credentials_viewed_at IS NULL
-        RETURNING credentials_viewed_at
-      `, [order.id]);
+        RETURNING credentials_viewed_at, credentials_reveal_ack_at, access_confirm_deadline
+      `, [order.id, deadline]);
       // race condition-ის დაცვა — თუ ორმა request-მა ერთდროულად მოხვდა აქ,
       // WHERE ...IS NULL გარანტიას იძლევა, რომ მხოლოდ ერთი მოიგებს "პირველობას".
-      viewedAt = updated.length ? updated[0].credentials_viewed_at : order.credentials_viewed_at;
+      if (updated.length) {
+        viewedAt        = updated[0].credentials_viewed_at;
+        revealAckAt     = updated[0].credentials_reveal_ack_at;
+        confirmDeadline = updated[0].access_confirm_deadline;
+      } else {
+        const { rows: refetch } = await db.query(
+          'SELECT credentials_viewed_at, credentials_reveal_ack_at, access_confirm_deadline FROM orders WHERE id=$1',
+          [order.id]
+        );
+        viewedAt        = refetch[0].credentials_viewed_at;
+        revealAckAt     = refetch[0].credentials_reveal_ack_at;
+        confirmDeadline = refetch[0].access_confirm_deadline;
+      }
     }
 
     const decrypted = decryptCredentials(order.credentials_secret);
@@ -439,6 +486,8 @@ router.post('/:id/credentials/reveal', requireAuth, async (req, res) => {
       password: decrypted.password,
       submitted_at: order.credentials_submitted_at,
       viewed_at: viewedAt,
+      reveal_ack_at: revealAckAt,
+      access_confirm_deadline: confirmDeadline,
       first_view: isFirstView,
     });
 
@@ -447,14 +496,16 @@ router.post('/:id/credentials/reveal', requireAuth, async (req, res) => {
     if (isFirstView) {
       (async () => {
         try {
-          const stamp = new Date(viewedAt).toLocaleString('ka-GE');
+          const stamp    = new Date(viewedAt).toLocaleString('ka-GE');
+          const dlStamp  = new Date(confirmDeadline).toLocaleString('ka-GE');
           const { rows: roomRows } = await db.query('SELECT id FROM chat_rooms WHERE order_id=$1', [order.id]);
           if (roomRows.length) {
             const { rows: msgRows } = await db.query(`
               INSERT INTO messages(room_id, sender_id, content, content_type)
               VALUES($1, $2, $3, 'system')
               RETURNING *
-            `, [roomRows[0].id, req.user.id, `🔓 მყიდველმა გახსნა ანგარიშის მონაცემები — ${stamp}. ეს დრო შენახულია დავის შემთხვევისთვის.`]);
+            `, [roomRows[0].id, req.user.id,
+                `🔓 მყიდველმა გახსნა ანგარიშის მონაცემები — ${stamp}. ეს დრო შენახულია დავის შემთხვევისთვის. მყიდველს აქვს ვადა (${dlStamp}) რომ შევიდეს ანგარიშზე და "Confirm Access" დააჭიროს.`]);
             chat.broadcastMessageToRoom(roomRows[0].id, msgRows[0]);
           }
           await push.sendToUser(order.seller_id, {

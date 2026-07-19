@@ -448,6 +448,15 @@ async function setupDatabase() {
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS credentials_secret        TEXT`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS credentials_submitted_at TIMESTAMPTZ`,
       `ALTER TABLE orders ADD COLUMN IF NOT EXISTS credentials_viewed_at    TIMESTAMPTZ`,
+      // 3b) Confirm-Access ფანჯარა — მას შემდეგ, რაც მყიდველი პირველად
+      //    ხსნის მონაცემებს, ეძლევა მკაცრად შეზღუდული დრო (ნაგულ. 45წთ,
+      //    იხ. ACCESS_CONFIRM_WINDOW_MINUTES routes/orders.js-ში) რომ
+      //    შევიდეს ანგარიშზე და დააჭიროს "Confirm Access". ეს ვადა და
+      //    reveal-ის მომენტში თანხმობის ზუსტი დრო (ორივე ცალკე
+      //    დაფიქსირებული credentials_viewed_at-ისგან) დავის შემთხვევაში
+      //    ადმინს ევიდენციის დამატებით წერტილს აძლევს.
+      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS credentials_reveal_ack_at TIMESTAMPTZ`,
+      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS access_confirm_deadline  TIMESTAMPTZ`,
       // 3) Clean Email Policy — გამყიდველი განცხადების შექმნისას
       //    ადასტურებს, რომ ანგარიშზე მიბმული email "სუფთაა" (ახალი,
       //    არა პირადი) და მასზეც წვდომას აწვდის მყიდველს — ეს
