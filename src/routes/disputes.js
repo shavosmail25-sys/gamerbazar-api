@@ -149,6 +149,13 @@ router.get('/', requireAuth, requireModerator, async (req, res) => {
     const { rows } = await db.query(`
       SELECT d.*,
         o.amount_gel, o.status AS order_status, o.escrow_status, o.listing_id,
+        -- ── ANTI-SCAM ევიდენცია — Watchtower-ის დავის ბარათზე პირდაპირ
+        -- ჩანს, დაეთანხმა თუ არა მყიდველი Video Proof პირობას, და
+        -- ზუსტად როდის გადასცა/ნახა ანგარიშის მონაცემები — ეს ადმინს
+        -- საშუალებას აძლევს შეადაროს გარე მტკიცებულებას (პაროლის
+        -- ცვლილების დრო) ცალკე გამოძიების გარეშე.
+        o.video_proof_agreed, o.credentials_submitted_at, o.credentials_viewed_at,
+        (o.credentials_secret IS NOT NULL) AS has_credentials,
         l.title AS listing_title, l.game,
         ob.username AS buyer_username, ob.id AS buyer_id,
         os.username AS seller_username, os.id AS seller_id,
@@ -179,6 +186,8 @@ router.get('/:id', requireAuth, async (req, res) => {
     const { rows } = await db.query(`
       SELECT d.*,
         o.buyer_id, o.seller_id, o.amount_gel, o.listing_id,
+        o.video_proof_agreed, o.credentials_submitted_at, o.credentials_viewed_at,
+        (o.credentials_secret IS NOT NULL) AS has_credentials,
         ob.username AS buyer_username,
         os.username AS seller_username,
         l.title AS listing_title, l.game

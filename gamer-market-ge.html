@@ -463,6 +463,15 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 .ld-escrow-note{background:var(--ad);border:1px solid var(--ad2);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:11.5px;color:var(--accent);line-height:1.5}
 .ld-views{text-align:center;font-size:11px;color:var(--muted);margin-top:12px}
 
+/* ── მკაცრი, სავალდებულო თანხმობის checkbox-row — Video Proof
+   (ყიდვისას) და Clean Email (განცხ. შექმნისას) ერთი და იგივე
+   სტილით, გამორჩეული gold-tint-ით, რომ იუზერმა ვერ გამოტოვოს. ── */
+.chk-agree{display:flex;align-items:flex-start;gap:9px;background:var(--gd);border:1px solid var(--gd2);border-radius:8px;padding:11px 12px;margin-bottom:14px;font-size:11.5px;line-height:1.5;color:var(--muted2);cursor:pointer;transition:border-color .15s}
+.chk-agree strong{color:var(--text)}
+.chk-agree input[type="checkbox"]{width:16px;height:16px;flex-shrink:0;margin-top:1px;accent-color:var(--gold);cursor:pointer}
+.chk-agree.needs-check{border-color:var(--red);animation:chkShake .4s}
+@keyframes chkShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+
 .ld-seller-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:border-color .15s}
 .ld-seller-card:hover{border-color:var(--border3)}
 .ld-seller-ava{width:42px;height:42px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:var(--accent);flex-shrink:0;overflow:hidden}
@@ -536,6 +545,14 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 .msg.u .msg-b{background:var(--bg3);border:1px solid var(--border);border-radius:12px 12px 12px 3px}
 .msg-t{font-size:9px;color:var(--muted);margin-top:2px;padding:0 2px}
 .escrow-pill{background:var(--gd);border:1px solid var(--gd2);border-radius:8px;padding:9px 13px;font-size:11px;color:var(--gold);text-align:center;margin:4px 0}
+
+/* ── Credentials Vault პანელი — ჩატის header-ის ქვემოთ, ANTI-SCAM
+   ფუნქციონალის ვიზუალური ბირთვი ── */
+.chat-creds-panel{padding:9px 16px;border-bottom:1px solid var(--border);background:var(--bg3);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.ccp-text{font-size:11.5px;color:var(--muted2);line-height:1.5}
+.ccp-text b{color:var(--text)}
+.ccp-time{font-family:var(--mono);color:var(--gold)}
+
 .chat-in{padding:9px 13px;border-top:1px solid var(--border);background:var(--bg2);flex-shrink:0}
 .chat-in-row{display:flex;gap:7px;align-items:flex-end;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:6px 9px;transition:border-color .15s}
 .chat-in-row:focus-within{border-color:var(--ad2)}
@@ -1370,6 +1387,11 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
               🔒 <strong>Escrow დაცვა</strong> — ფული გაიყინება სანამ ექაუნთს მიიღებ.
             </div>
 
+            <label class="chk-agree" id="ld-video-proof-row">
+              <input type="checkbox" id="ld-video-proof-checkbox" onchange="document.getElementById('ld-video-proof-row').classList.remove('needs-check')">
+              <span>ვეთანხმები, რომ სქრინ-ჩავიწერო <strong>მთელი პროცესი</strong> — მონაცემების ნახვიდან ანგარიშზე შესვლამდე. <strong>დაუმონტაჟებელი ვიდეო მტკიცებულების გარეშე თანხა არ დაბრუნდება.</strong></span>
+            </label>
+
             <div id="ld-actions">
               <button class="btn btn-a" id="ld-buy-btn" onclick="buyListingDetail()" style="width:100%;padding:12px;font-size:14px">
                 🛒 ყიდვა — <span id="ld-buy-price">₾0</span>
@@ -1450,6 +1472,9 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
           </div>
         </div>
       </div>
+      <!-- Credentials Vault — ANTI-SCAM: მხოლოდ 'account' ტიპის შეკვეთის
+           ჩატში ჩნდება, დინამიურად ივსება renderCredsPanel()-ით -->
+      <div id="chat-creds-panel" class="chat-creds-panel" style="display:none"></div>
       <!-- Messages -->
       <div class="chat-msgs" id="chat-msgs">
         <div class="empty" style="margin:auto;text-align:center;opacity:.4">
@@ -1927,6 +1952,11 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
     <div class="cl-step" id="cl-step-3" style="display:none">
       <div class="cl-sec-title" style="margin-bottom:12px">📢 განთავსება</div>
       <div id="post-vip-status-box" style="border-radius:10px;padding:14px;text-align:center;font-size:13px"></div>
+
+      <label class="chk-agree" id="post-clean-email-row" style="margin-top:14px">
+        <input type="checkbox" id="post-clean-email-checkbox" onchange="onCleanEmailChkChange()">
+        <span>ვადასტურებ, რომ ეს ანგარიში მიბმულია <strong>სუფთა, ახლად შექმნილ ელ-ფოსტაზე</strong>, და ამ ელ-ფოსტაზეც წვდომას გადავცემ მყიდველს. <strong>პირად ელ-ფოსტას არ ვიყენებ.</strong></span>
+      </label>
 
       <div class="cl-desktop-nav">
         <button class="btn btn-g" onclick="clBack()">← უკან</button>
@@ -2425,6 +2455,46 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
       <button class="btn btn-g" onclick="closeM('orderSuccessModal')">დახურვა</button>
       <button class="btn btn-a" onclick="closeM('orderSuccessModal');openOrderChat(window._lastOrderId)">💬 ჩატი</button>
     </div>
+  </div>
+</div>
+
+<!-- CREDENTIALS VAULT — SUBMIT MODAL (გამყიდველი) -->
+<div class="modal-bg" id="credsSubmitModal" onclick="if(event.target===this)closeM('credsSubmitModal')">
+  <div class="modal">
+    <div class="modal-title">🔐 ანგარიშის მონაცემების გადაცემა</div>
+    <div style="background:var(--gd);border:1px solid var(--gd2);border-radius:8px;padding:10px;font-size:11.5px;color:var(--muted2);line-height:1.5;margin-bottom:14px">
+      მონაცემები <b style="color:var(--text)">დაშიფრულად</b> ინახება — ჩვეულ ტექსტში აღარსად ჩანს. მყიდველის მიერ ნახვის ზუსტი დრო ავტ. ფიქსირდება.
+    </div>
+    <div class="form-g"><label class="form-l">ანგარიშის ელ-ფოსტა</label><input class="form-i" id="creds-in-email" type="text" placeholder="account@email.com"></div>
+    <div class="form-g"><label class="form-l">პაროლი</label><input class="form-i" id="creds-in-password" type="text" placeholder="პაროლი"></div>
+    <div class="m-acts">
+      <button class="btn btn-g" onclick="closeM('credsSubmitModal')">გაუქ.</button>
+      <button class="btn btn-a" id="creds-submit-btn" onclick="submitCredentialsVault()">გადაცემა</button>
+    </div>
+  </div>
+</div>
+
+<!-- CREDENTIALS VAULT — REVEAL MODAL (მყიდველი) -->
+<div class="modal-bg" id="credsRevealModal" onclick="if(event.target===this)closeM('credsRevealModal')">
+  <div class="modal">
+    <div class="modal-title">🔓 ანგარიშის მონაცემები</div>
+    <div id="creds-reveal-warning" style="background:var(--rd);border:1px solid #e05d5d25;border-radius:8px;padding:10px;font-size:11.5px;color:var(--muted2);line-height:1.5;margin-bottom:14px">
+      ⚠️ დაიწყე <b style="color:var(--text)">სქრინ-ჩაწერა ახლავე</b>, სანამ მონაცემებს გახსნი — ვიდეო მტკიცებულების გარეშე დავის შემთხვევაში თანხა ვერ დაბრუნდება.
+    </div>
+    <div class="form-g"><label class="form-l">ანგარიშის ელ-ფოსტა</label>
+      <div style="display:flex;gap:6px">
+        <input class="form-i" id="creds-out-email" readonly style="flex:1">
+        <button class="btn btn-g btn-sm" onclick="copyCredsField('creds-out-email')">📋</button>
+      </div>
+    </div>
+    <div class="form-g"><label class="form-l">პაროლი</label>
+      <div style="display:flex;gap:6px">
+        <input class="form-i" id="creds-out-password" readonly style="flex:1">
+        <button class="btn btn-g btn-sm" onclick="copyCredsField('creds-out-password')">📋</button>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:6px" id="creds-out-viewed-at"></div>
+    <div class="m-acts"><button class="btn btn-g" onclick="closeM('credsRevealModal')">დახურვა</button></div>
   </div>
 </div>
 
@@ -3832,12 +3902,19 @@ function renderListingDetail(l) {
   const actionsEl  = document.getElementById('ld-actions');
   const guestEl    = document.getElementById('ld-guest-msg');
   const ownEl      = document.getElementById('ld-own-msg');
+  const vpRow      = document.getElementById('ld-video-proof-row');
+  const vpChk      = document.getElementById('ld-video-proof-checkbox');
+  if (vpChk) vpChk.checked = false; // ყოველ ახალ განცხადებაზე თავიდან უნდა დაეთანხმოს
+  if (vpRow) vpRow.classList.remove('needs-check');
   if (!currentUser) {
     actionsEl.style.display = 'none'; guestEl.style.display = 'block'; ownEl.style.display = 'none';
+    if (vpRow) vpRow.style.display = 'none';
   } else if (l.seller_id === currentUser.id) {
     actionsEl.style.display = 'none'; guestEl.style.display = 'none'; ownEl.style.display = 'block';
+    if (vpRow) vpRow.style.display = 'none';
   } else {
     actionsEl.style.display = 'block'; guestEl.style.display = 'none'; ownEl.style.display = 'none';
+    if (vpRow) vpRow.style.display = 'flex';
   }
 
   // seller
@@ -3988,13 +4065,25 @@ async function buyListingDetail() {
     showToast('საკუთარ განცხადებას ვერ ყიდულობ', 'err'); return;
   }
 
+  // ── ANTI-SCAM: Video Proof თანხმობის სავალდებულო შემოწმება ──
+  const videoProofChk = document.getElementById('ld-video-proof-checkbox');
+  if (!videoProofChk || !videoProofChk.checked) {
+    showToast('გასაგრძელებლად საჭიროა დაეთანხმო სქრინ-ჩაწერის პირობას', 'err');
+    const row = document.getElementById('ld-video-proof-row');
+    if (row) {
+      row.classList.remove('needs-check'); void row.offsetWidth; row.classList.add('needs-check');
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    return;
+  }
+
   const btn = document.getElementById('ld-buy-btn');
   if (btn) { btn.textContent = '⏳ იქმნება...'; btn.disabled = true; }
 
   try {
     const order = await api('/api/orders', {
       method: 'POST',
-      body: JSON.stringify({ listing_id: currentListing.id })
+      body: JSON.stringify({ listing_id: currentListing.id, video_proof_agreed: true })
     });
 
     window._lastOrderId = order.id;
@@ -4012,8 +4101,10 @@ async function buyListingDetail() {
     if (currentListing) {
       const ldStatus = document.getElementById('ld-status');
       const ldBuyBtn = document.getElementById('ld-buy-btn');
+      const ldVpRow  = document.getElementById('ld-video-proof-row');
       if (ldStatus) { ldStatus.textContent = 'გაყიდულია'; ldStatus.style.color = '#60a5fa'; }
       if (ldBuyBtn) { ldBuyBtn.style.display = 'none'; }
+      if (ldVpRow)  { ldVpRow.style.display = 'none'; }
     }
 
   } catch(e) {
@@ -4687,42 +4778,49 @@ async function openChatRoom(el) {
   const deliverBtn = document.getElementById('chat-deliver-btn');
   const confirmBtn = document.getElementById('chat-confirm-btn');
   const disputeBtn = document.getElementById('chat-dispute-btn');
+  const credsPanel = document.getElementById('chat-creds-panel');
+
+  // ── ორდერის სრული დეტალის ერთხელ fetch — escrow pill-ისთვისაც და
+  // Credentials Vault პანელისთვისაც ვიყენებთ იმავე მოთხოვნას (აღარ
+  // ვცდილობთ ორჯერ დაძახებას). Support ოთახზე ორდერი საერთოდ არ არსებობს. ──
+  const order = (!isSupportRoom && orderId) ? await api('/api/orders/' + orderId).catch(() => null) : null;
+
   if (pillEl) {
-    const showPill = escrow === 'held' || escrow === 'held_delivered';
-    pillEl.style.display = showPill ? 'block' : 'none';
-    if (pillText) pillText.textContent = `Escrow · ₾${Number(amount).toFixed(2)}`;
-    if (showPill || escrow === 'held') {
-      const order = await api('/api/orders/' + orderId).catch(()=>null);
-      if (order) {
-        window._chatOrderAmount = order.seller_receives || order.amount_gel;
-        const isBuyer    = order.buyer_id  === currentUser.id;
-        const isSeller   = order.seller_id === currentUser.id;
-        const status     = order.status;
-        const isDisputed = status === 'disputed';
-        const escrowSt   = order.escrow_status;
+    if (order) {
+      window._chatOrderAmount = order.seller_receives || order.amount_gel;
+      const isBuyer    = order.buyer_id  === currentUser.id;
+      const isSeller   = order.seller_id === currentUser.id;
+      const status     = order.status;
+      const isDisputed = status === 'disputed';
+      const escrowSt   = order.escrow_status;
 
-        // pill ჩვენება — escrow held ან delivered სტატუსზე
-        const shouldShow = escrowSt === 'held' && !['completed','cancelled'].includes(status);
-        pillEl.style.display = shouldShow ? 'block' : 'none';
+      // pill ჩვენება — escrow held ან delivered სტატუსზე
+      const shouldShow = escrowSt === 'held' && !['completed','cancelled'].includes(status);
+      pillEl.style.display = shouldShow ? 'block' : 'none';
+      if (pillText) pillText.textContent = `Escrow · ₾${Number(amount).toFixed(2)}`;
 
-        // გამყიდველს: "გადავეცი" — მხოლოდ active-ზე
-        if (deliverBtn) deliverBtn.style.display =
-          (isSeller && status === 'active' && escrowSt === 'held' && !isDisputed) ? 'inline-block' : 'none';
+      // გამყიდველს: "გადავეცი" — მხოლოდ active-ზე
+      if (deliverBtn) deliverBtn.style.display =
+        (isSeller && status === 'active' && escrowSt === 'held' && !isDisputed) ? 'inline-block' : 'none';
 
-        // მყიდველს: "დადასტ." — მხოლოდ delivered-ზე
-        if (confirmBtn) confirmBtn.style.display =
-          (isBuyer && status === 'delivered' && escrowSt === 'held' && !isDisputed) ? 'inline-block' : 'none';
+      // მყიდველს: "დადასტ." — მხოლოდ delivered-ზე
+      if (confirmBtn) confirmBtn.style.display =
+        (isBuyer && status === 'delivered' && escrowSt === 'held' && !isDisputed) ? 'inline-block' : 'none';
 
-        // "დავა" — delivered-ზე ორივეს
-        if (disputeBtn) disputeBtn.style.display =
-          ((isBuyer || isSeller) && status === 'delivered' && escrowSt === 'held' && !isDisputed) ? 'inline-block' : 'none';
-      }
+      // "დავა" — delivered-ზე ორივეს
+      if (disputeBtn) disputeBtn.style.display =
+        ((isBuyer || isSeller) && status === 'delivered' && escrowSt === 'held' && !isDisputed) ? 'inline-block' : 'none';
     } else {
+      pillEl.style.display = 'none';
       if (deliverBtn) deliverBtn.style.display = 'none';
       if (confirmBtn) confirmBtn.style.display = 'none';
       if (disputeBtn) disputeBtn.style.display = 'none';
     }
   }
+
+  // ── Credentials Vault პანელი — escrow pill-ისგან დამოუკიდებლად,
+  // რომ დავის (disputed) დროსაც კი ჩანდეს ევიდენციის დროშტამპები. ──
+  renderCredsPanel(order);
 
   // input area
   const inputArea = document.getElementById('chat-input-area');
@@ -4736,6 +4834,124 @@ async function openChatRoom(el) {
 
   // mobile-ze — sidebar daiketa, main chat chandes
   hideChatSidebarMobile();
+}
+
+// ══════════════════════════════════════════════════════════
+// 🔐 CREDENTIALS VAULT — ANTI-SCAM
+// ══════════════════════════════════════════════════════════
+
+// ── ორდერისთვის panel-ის აწყობა role/state-ის მიხედვით ──────────
+// მხოლოდ 'account' ტიპის განცხადებაზეა აზრი (ბუსტინგი/ვალუტა/
+// სერვისს ანგარიშის მონაცემი არ სჭირდება).
+function renderCredsPanel(order) {
+  const panel = document.getElementById('chat-creds-panel');
+  if (!panel) return;
+
+  if (!order || order.listing_type !== 'account' || !['active','delivered','disputed','completed'].includes(order.status)) {
+    panel.style.display = 'none';
+    panel.innerHTML = '';
+    return;
+  }
+
+  window._credsOrderId = order.id;
+  const isBuyer  = order.buyer_id  === currentUser.id;
+  const isSeller = order.seller_id === currentUser.id;
+  if (!isBuyer && !isSeller) { panel.style.display = 'none'; return; }
+
+  const fmtT = (t) => t ? new Date(t).toLocaleString('ka-GE', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : null;
+  const submittedAt = fmtT(order.credentials_submitted_at);
+  const viewedAt    = fmtT(order.credentials_viewed_at);
+
+  panel.style.display = 'flex';
+
+  if (isSeller) {
+    if (!order.has_credentials) {
+      panel.innerHTML = `
+        <div class="ccp-text">🔐 ჯერ არ გადმოგიცია ანგარიშის მონაცემები</div>
+        <button class="btn btn-a btn-sm" onclick="openCredentialsSubmitModal()">მონაცემების გადაცემა</button>`;
+    } else {
+      panel.innerHTML = `
+        <div class="ccp-text">✅ გადაცემულია <span class="ccp-time">${submittedAt}</span>
+          ${viewedAt ? ` · 👁 მყიდველმა ნახა <span class="ccp-time">${viewedAt}</span>` : ' · <b>მყიდველს ჯერ არ უნახავს</b>'}
+        </div>`;
+    }
+  } else if (isBuyer) {
+    if (!order.has_credentials) {
+      panel.innerHTML = `<div class="ccp-text">⏳ გამყიდველი ჯერ არ გადმოგცემთ ანგარიშის მონაცემებს</div>`;
+    } else if (!viewedAt) {
+      panel.innerHTML = `
+        <div class="ccp-text">🔐 გამყიდველმა გადმოგცათ მონაცემები <span class="ccp-time">${submittedAt}</span></div>
+        <button class="btn btn-a btn-sm" onclick="openCredentialsRevealModal()">🔓 მონაცემების ნახვა</button>`;
+    } else {
+      panel.innerHTML = `
+        <div class="ccp-text">👁 ნანახია <span class="ccp-time">${viewedAt}</span></div>
+        <button class="btn btn-g btn-sm" onclick="openCredentialsRevealModal()">🔓 ხელახლა ნახვა</button>`;
+    }
+  }
+}
+
+// ── გამყიდველი: submit modal-ის გახსნა ───────────────────────────
+function openCredentialsSubmitModal() {
+  const emailEl = document.getElementById('creds-in-email');
+  const passEl  = document.getElementById('creds-in-password');
+  if (emailEl) emailEl.value = '';
+  if (passEl)  passEl.value  = '';
+  openM('credsSubmitModal');
+}
+
+async function submitCredentialsVault() {
+  const orderId = window._credsOrderId;
+  if (!orderId) return;
+  const email    = document.getElementById('creds-in-email')?.value.trim();
+  const password = document.getElementById('creds-in-password')?.value;
+  if (!email || !password) { showToast('შეავსე ორივე ველი', 'err'); return; }
+
+  const btn = document.getElementById('creds-submit-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ იგზავნება...'; }
+  try {
+    await api(`/api/orders/${orderId}/credentials`, {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+    closeM('credsSubmitModal');
+    showToast('✅ მონაცემები დაშიფრულად გადაეცა', 'ok');
+    const order = await api('/api/orders/' + orderId).catch(() => null);
+    renderCredsPanel(order);
+  } catch (e) {
+    showToast(e.message || 'ვერ გადაეცა', 'err');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'გადაცემა'; }
+  }
+}
+
+// ── მყიდველი: reveal modal-ის გახსნა — ყოველ დაჭერაზე ვიძახებთ
+// /reveal-ს (ბექენდი idempotent-ია: timestamp მხოლოდ პირველ
+// გახსნაზე ფიქსირდება, შემდეგ უბრალოდ იმეორებს უკვე შენახულ დროს). ──
+async function openCredentialsRevealModal() {
+  const orderId = window._credsOrderId;
+  if (!orderId) return;
+  try {
+    const data = await api(`/api/orders/${orderId}/credentials/reveal`, { method: 'POST' });
+    document.getElementById('creds-out-email').value    = data.email;
+    document.getElementById('creds-out-password').value = data.password;
+    const viewedAt = data.viewed_at ? new Date(data.viewed_at).toLocaleString('ka-GE') : '';
+    document.getElementById('creds-out-viewed-at').textContent = viewedAt ? `ნანახია: ${viewedAt}` : '';
+    openM('credsRevealModal');
+    // panel-ის განახლება — timestamp რომ დაუყოვნებლივ გამოჩნდეს
+    const order = await api('/api/orders/' + orderId).catch(() => null);
+    renderCredsPanel(order);
+  } catch (e) {
+    showToast(e.message || 'ვერ გაიხსნა', 'err');
+  }
+}
+
+function copyCredsField(inputId) {
+  const el = document.getElementById(inputId);
+  if (!el || !el.value) return;
+  navigator.clipboard?.writeText(el.value).then(
+    () => showToast('📋 დაკოპირდა', 'ok'),
+    () => { el.select(); document.execCommand('copy'); showToast('📋 დაკოპირდა', 'ok'); }
+  );
 }
 
 // ── Mobile chat sidebar toggle ──────────────────────────────────
@@ -5403,7 +5619,13 @@ function clGoToStep(n) {
     nextBtn.disabled = (n === 1 && !document.getElementById('post-category').value);
     if (n === 1) { nextBtn.textContent = 'აირჩიე კატეგორია'; nextBtn.onclick = clNext; }
     else if (n === 2) { nextBtn.textContent = 'გაგრძელება →'; nextBtn.onclick = clNext; nextBtn.disabled = !postImgMinMet(); }
-    else { nextBtn.textContent = 'გამოქვეყნება'; nextBtn.onclick = postListing; nextBtn.disabled = false; }
+    else {
+      nextBtn.textContent = 'გამოქვეყნება'; nextBtn.onclick = postListing;
+      const cleanEmailChecked = !!(document.getElementById('post-clean-email-checkbox') || {}).checked;
+      nextBtn.disabled = !cleanEmailChecked;
+      const deskBtn = document.getElementById('post-submit-btn-desktop');
+      if (deskBtn) deskBtn.disabled = !cleanEmailChecked;
+    }
   }
   window.scrollTo(0, 0);
 }
@@ -5452,6 +5674,8 @@ function clResetForm() {
   const sampGroup = document.getElementById('post-samp-type-group'); if (sampGroup) sampGroup.style.display = 'none';
   const imgErr = document.getElementById('post-img-err'); if (imgErr) imgErr.style.display = 'none';
   const imgZone = document.getElementById('post-img-area'); if (imgZone) imgZone.classList.remove('needs-photos');
+  const ceChk = document.getElementById('post-clean-email-checkbox'); if (ceChk) ceChk.checked = false;
+  const ceRow = document.getElementById('post-clean-email-row'); if (ceRow) ceRow.classList.remove('needs-check');
   renderImgStrip();
   renderVipStatusBox();
   clGoToStep(1);
@@ -5553,6 +5777,19 @@ function updateCreateListingSubmitState() {
   if (nextBtn) nextBtn.disabled = !postImgMinMet();
 }
 
+// ── ANTI-SCAM: "Clean Email" checkbox — სანამ არ მოინიშნება,
+// გამოქვეყნების ღილაკები (მობილურის sticky + დესკტოპის) დაბლოკილია.
+function onCleanEmailChkChange() {
+  const row     = document.getElementById('post-clean-email-row');
+  const checked = !!document.getElementById('post-clean-email-checkbox')?.checked;
+  if (row) row.classList.remove('needs-check');
+  if (clStep !== 3) return;
+  const nextBtn = document.getElementById('cl-next-btn');
+  const deskBtn = document.getElementById('post-submit-btn-desktop');
+  if (nextBtn) nextBtn.disabled = !checked;
+  if (deskBtn) deskBtn.disabled = !checked;
+}
+
 function removePostImg(idx) {
   postImgFiles.splice(idx, 1);
   renderImgStrip();
@@ -5601,6 +5838,19 @@ async function postListing() {
     return;
   }
 
+  // ── ANTI-SCAM: "Clean Email" თანხმობის სავალდებულო შემოწმება ──
+  const cleanEmailChk = document.getElementById('post-clean-email-checkbox');
+  if (!cleanEmailChk || !cleanEmailChk.checked) {
+    showToast('სავალდებულოა დაადასტურო „სუფთა ელ-ფოსტის" პირობა', 'err');
+    clGoToStep(3);
+    const row = document.getElementById('post-clean-email-row');
+    if (row) {
+      row.classList.remove('needs-check'); void row.offsetWidth; row.classList.add('needs-check');
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    return;
+  }
+
   // ორივე submit ღილაკი (მობილურის sticky bottom-nav + დესკტოპის) ერთდროულად ვმართავთ
   const btns = [document.getElementById('cl-next-btn'), document.getElementById('post-submit-btn-desktop')].filter(Boolean);
   btns.forEach(b => { b.dataset.origText = b.textContent; b.textContent = '⏳ ქმნება...'; b.disabled = true; });
@@ -5624,6 +5874,7 @@ async function postListing() {
     fd.append('region', region);
     if (account_security) fd.append('account_security', account_security);
     if (game === 'SA-MP' && sampType) fd.append('tags', sampType);
+    fd.append('clean_email_confirmed', 'true');
     postImgFiles.forEach(f => fd.append('images', f));
 
     const resp = await fetch(API_URL + '/api/listings', {

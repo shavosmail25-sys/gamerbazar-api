@@ -319,8 +319,22 @@ router.post('/', requireAuth, checkVipStatus, imgUpload.array('images', 5), asyn
   try {
     const {
       category, game, listing_type, title, description, tags, price_gel,
-      platform, region, account_security,
+      platform, region, account_security, clean_email_confirmed,
     } = req.body;
+
+    // ── ANTI-SCAM: "Clean Email" პოლიტიკის სავალდებულო დათანხმება ──
+    // multipart/form-data-ზე checkbox მოდის string-ად ('true'/'false'
+    // ან საერთოდ არ მოდის თუ მოხსნილია) — არა native boolean-ად,
+    // ამიტომ ორივე ფორმას ვამოწმებთ. Frontend-ის ვალიდაციის გვერდის
+    // ავლაც ვერანაირად ვერ დაარეგისტრირებს ამ თანხმობის გარეშე
+    // განცხადებას (defense-in-depth, იგივე პატერნი რაც 2-ფოტოს
+    // მინიმუმს აქვს ზემოთ).
+    if (clean_email_confirmed !== 'true' && clean_email_confirmed !== true) {
+      return res.status(400).json({
+        error: 'clean_email_confirmation_required',
+        message: 'სავალდებულოა დაადასტურო, რომ ანგარიშს სუფთა/ახალი ელ-ფოსტა აქვს მიბმული',
+      });
+    }
 
     // ── სავალდებულო მინიმუმ 2 ფოტო — პირველი და ყველაზე მკაცრი ბარიერი.
     // ვამოწმებთ ყველაფრის წინ, რომ API-ის პირდაპირი გამოძახებითაც
@@ -422,8 +436,8 @@ router.post('/', requireAuth, checkVipStatus, imgUpload.array('images', 5), asyn
     const { rows } = await db.query(`
       INSERT INTO listings
         (id, seller_id, category, game, listing_type, title, description, tags, price_gel, status, is_vip, vip_expires_at,
-         platform, region, account_security, images)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending',$10,$11,$12,$13,$14,$15)
+         platform, region, account_security, images, clean_email_confirmed)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending',$10,$11,$12,$13,$14,$15,TRUE)
       RETURNING *
     `, [listingId, req.user.id, category, game, normalizedType, title,
         description || '', tagsArr, Number(price_gel), isVip, vipExpiresAt,

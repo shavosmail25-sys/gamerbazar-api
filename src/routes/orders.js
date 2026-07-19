@@ -10,7 +10,22 @@ const ledger  = require('../utils/ledger');
 const referral = require('../utils/referral');
 const chat    = require('./chat');
 const { checkAndSyncVerifiedSeller } = require('../utils/verifiedSeller');
+const { encryptCredentials, decryptCredentials } = require('../utils/credentialsVault');
 const router  = express.Router();
+
+// ── ORDERS-ის საჯარო(ავტორიზებულ მომხმ.) სვეტების whitelist —
+// `SELECT o.*`-ის ნაცვლად ყველგან ამას ვიყენებთ /me, /history, /:id-ში,
+// რომ credentials_secret (დაშიფრული ბლობიც კი) არასდროს გავეცეს
+// კლიენტს პირდაპირ — მხოლოდ სპეც. /credentials/reveal როუტი
+// აბრუნებს გაშიფრულ მონაცემს, და მხოლოდ მყიდველს. ──
+const ORDER_SAFE_COLUMNS = `
+  o.id, o.listing_id, o.buyer_id, o.seller_id, o.amount_gel, o.platform_fee_pct,
+  o.seller_receives, o.escrow_status, o.confirm_deadline, o.status, o.buyer_confirmed,
+  o.delivered_at, o.disputed_at, o.completed_at, o.cancelled_at, o.cancel_reason,
+  o.reminder_24h_sent, o.created_at, o.updated_at,
+  o.video_proof_agreed, o.credentials_submitted_at, o.credentials_viewed_at,
+  (o.credentials_secret IS NOT NULL) AS has_credentials
+`;
 
 // ── NO-CACHE — შეკვეთის სტატუსი (pending/completed/disputed) რეალურ
 // დროში იცვლება; ვუკრძალავთ ბრაუზერს/პროქსის დაკეშვას.
@@ -37,8 +52,20 @@ ledger.startHoldsScheduler();
 // ══════════════════════════════════════════════════════════════
 router.post('/', requireAuth, async (req, res) => {
   try {
-    const { listing_id } = req.body;
+    const { listing_id, video_proof_agreed } = req.body;
     if (!listing_id) return res.status(400).json({ error: 'listing_id required' });
+
+    // ── ANTI-SCAM: სავალდებულო "Video Proof" თანხმობა ──────────────
+    // Frontend-ის checkbox მარტო საკმარისი არაა — ბექენდზეც მკაცრად
+    // მოწმდება, რომ API-ის პირდაპირი გამოძახებითაც (checkbox-ის
+    // client-side ვალიდაციის გვერდის ავლით) ფიზიკურად შეუძლებელი
+    // იყოს ისეთი order-ის შექმნა, რომელსაც ეს თანხმობა არ ახლავს.
+    if (video_proof_agreed !== true) {
+      return res.status(400).json({
+        error: 'video_proof_agreement_required',
+        message: 'გასაგრძელებლად სავალდებულოა დაეთანხმო სქრინ-ჩაწერის პირობას',
+      });
+    }
 
     const { rows: ls } = await db.query(
       "SELECT * FROM listings WHERE id=$1 AND status='active'", [listing_id]
@@ -63,8 +90,8 @@ router.post('/', requireAuth, async (req, res) => {
       const { rows: o } = await client.query(`
         INSERT INTO orders
           (listing_id,buyer_id,seller_id,amount_gel,platform_fee_pct,seller_receives,
-           escrow_status,status)
-        VALUES ($1,$2,$3,$4,5,$5,'held','active')
+           escrow_status,status,video_proof_agreed)
+        VALUES ($1,$2,$3,$4,5,$5,'held','active',TRUE)
         RETURNING *
       `, [listing_id, req.user.id, listing.seller_id, listing.price_gel, receives]);
       order = o[0];
@@ -189,7 +216,7 @@ router.post('/:id/deliver', requireAuth, async (req, res) => {
 router.get('/me', requireAuth, async (req, res) => {
   try {
     const { rows } = await db.query(`
-      SELECT o.*,
+      SELECT ${ORDER_SAFE_COLUMNS},
         l.title AS listing_title, l.game, l.listing_type,
         b.username AS buyer_username, b.avatar_url AS buyer_avatar,
         s.username AS seller_username, s.avatar_url AS seller_avatar
@@ -224,7 +251,7 @@ router.get('/history', requireAuth, async (req, res) => {
 
     const { rows } = await db.query(`
       SELECT
-        o.*,
+        ${ORDER_SAFE_COLUMNS},
         l.title AS listing_title, l.game, l.category,
         b.username AS buyer_username, b.avatar_url AS buyer_avatar,
         s.username AS seller_username, s.avatar_url AS seller_avatar,
@@ -269,8 +296,8 @@ router.get('/history', requireAuth, async (req, res) => {
 router.get('/:id', requireAuth, async (req, res) => {
   try {
     const { rows } = await db.query(`
-      SELECT o.*,
-        l.title AS listing_title, l.game, l.price_gel,
+      SELECT ${ORDER_SAFE_COLUMNS},
+        l.title AS listing_title, l.game, l.price_gel, l.listing_type,
         b.username AS buyer_username,
         s.username AS seller_username,
         cr.id AS chat_room_id,
@@ -289,6 +316,158 @@ router.get('/:id', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'forbidden' });
     res.json(order);
   } catch (err) {
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// ANTI-SCAM: CREDENTIALS VAULT
+//
+// POST /api/orders/:id/credentials         — გამყიდველი წარადგენს
+// POST /api/orders/:id/credentials/reveal  — მყიდველი ხსნის (± timestamp)
+//
+// ⚠️ დიზაინის მთავარი წესი: მონაცემი ჩვეულ chat-ში პირდაპირ ტექსტში
+// არასდროს გადაეცემა — მხოლოდ ამ დაშიფრული Vault-ის საშუალებით,
+// რომ ზუსტად დაფიქსირდეს (ა) გადაცემის და (ბ) პირველი ნახვის დრო.
+// ══════════════════════════════════════════════════════════════
+
+// POST /api/orders/:id/credentials — გამყიდველი: ანგარიშის მონაცემების ატვირთვა
+router.post('/:id/credentials', requireAuth, async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'email_and_password_required' });
+    }
+
+    const { rows } = await db.query('SELECT * FROM orders WHERE id=$1', [req.params.id]);
+    if (!rows.length) return res.status(404).json({ error: 'not_found' });
+    const order = rows[0];
+
+    if (order.seller_id !== req.user.id)
+      return res.status(403).json({ error: 'only_seller' });
+    if (!['active', 'delivered'].includes(order.status)) {
+      return res.status(400).json({
+        error: 'cannot_submit_credentials', current: order.status,
+        message: 'მონაცემების გადაცემა შესაძლებელია მხოლოდ აქტიურ შეკვეთაზე',
+      });
+    }
+    // ── მას შემდეგ, რაც მყიდველმა უკვე ნახა მონაცემი, გამყიდველს
+    // აღარ შეუძლია მისი ჩანაცვლება — წინააღმდეგ შემთხვევაში
+    // ევიდენციის (timestamp-ების შედარების) მთელი აზრი გაქრებოდა,
+    // რადგან გამყიდველს "ცვლილების შემდეგ" ახალი ვერსია შეეძლო ჩაეწერა. ──
+    if (order.credentials_viewed_at) {
+      return res.status(409).json({
+        error: 'already_viewed_locked',
+        message: 'მყიდველმა უკვე ნახა მონაცემები — შეცვლა შეუძლებელია',
+      });
+    }
+
+    const secret = encryptCredentials({ email: String(email).trim(), password: String(password) });
+
+    await db.query(`
+      UPDATE orders SET
+        credentials_secret = $1,
+        credentials_submitted_at = NOW(),
+        updated_at = NOW()
+      WHERE id = $2
+    `, [secret, order.id]);
+
+    res.json({ ok: true, submitted_at: new Date().toISOString() });
+
+    // ჩატში სისტ. შეტყობინება (თავად მონაცემის გარეშე!) + push მყიდველს
+    (async () => {
+      try {
+        const { rows: roomRows } = await db.query('SELECT id FROM chat_rooms WHERE order_id=$1', [order.id]);
+        if (roomRows.length) {
+          const { rows: msgRows } = await db.query(`
+            INSERT INTO messages(room_id, sender_id, content, content_type)
+            VALUES($1, $2, '🔐 გამყიდველმა ანგარიშის მონაცემები Vault-ში ატვირთა. დააჭირე „მონაცემების ნახვა“-ს ჩატის ზემოთ.', 'system')
+            RETURNING *
+          `, [roomRows[0].id, req.user.id]);
+          chat.broadcastMessageToRoom(roomRows[0].id, msgRows[0]);
+          chat.broadcastEventToRoom(roomRows[0].id, { event: 'credentials_submitted', order_id: order.id });
+        }
+        await push.sendToUser(order.buyer_id, {
+          title: '🔐 ანგარიშის მონაცემები მზადაა',
+          body: 'გამყიდველმა Vault-ში ატვირთა — გახსენი ჩატში',
+          url: `/?order=${order.id}`,
+          tag: `order-${order.id}-credentials`,
+        });
+      } catch (e) { console.error('credentials submit notify error:', e.message); }
+    })();
+  } catch (err) {
+    console.error('credentials submit error:', err.message);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// POST /api/orders/:id/credentials/reveal — მყიდველი: მონაცემების ნახვა
+// პირველი გახსნისას ფიქსირდება ზუსტი დრო (credentials_viewed_at) —
+// ეს შეუქცევადია და დავის შემთხვევაში ადმინის მთავარი მტკიცებულებაა.
+router.post('/:id/credentials/reveal', requireAuth, async (req, res) => {
+  try {
+    const { rows } = await db.query('SELECT * FROM orders WHERE id=$1', [req.params.id]);
+    if (!rows.length) return res.status(404).json({ error: 'not_found' });
+    const order = rows[0];
+
+    if (order.buyer_id !== req.user.id)
+      return res.status(403).json({ error: 'only_buyer' });
+    if (!order.credentials_secret) {
+      return res.status(404).json({
+        error: 'credentials_not_submitted',
+        message: 'გამყიდველს ჯერ არ გადმოუცია მონაცემები',
+      });
+    }
+
+    const isFirstView = !order.credentials_viewed_at;
+    let viewedAt = order.credentials_viewed_at;
+    if (isFirstView) {
+      const { rows: updated } = await db.query(`
+        UPDATE orders SET credentials_viewed_at = NOW(), updated_at = NOW()
+        WHERE id = $1 AND credentials_viewed_at IS NULL
+        RETURNING credentials_viewed_at
+      `, [order.id]);
+      // race condition-ის დაცვა — თუ ორმა request-მა ერთდროულად მოხვდა აქ,
+      // WHERE ...IS NULL გარანტიას იძლევა, რომ მხოლოდ ერთი მოიგებს "პირველობას".
+      viewedAt = updated.length ? updated[0].credentials_viewed_at : order.credentials_viewed_at;
+    }
+
+    const decrypted = decryptCredentials(order.credentials_secret);
+
+    res.json({
+      email: decrypted.email,
+      password: decrypted.password,
+      submitted_at: order.credentials_submitted_at,
+      viewed_at: viewedAt,
+      first_view: isFirstView,
+    });
+
+    // ── მხოლოდ პირველ ნახვაზე ვაქვეყნებთ ჩატში ზუსტ დროს + push
+    // გამყიდველს — ეს არის ის ჩანაწერი, რასაც ადმინი დავისას ხედავს. ──
+    if (isFirstView) {
+      (async () => {
+        try {
+          const stamp = new Date(viewedAt).toLocaleString('ka-GE');
+          const { rows: roomRows } = await db.query('SELECT id FROM chat_rooms WHERE order_id=$1', [order.id]);
+          if (roomRows.length) {
+            const { rows: msgRows } = await db.query(`
+              INSERT INTO messages(room_id, sender_id, content, content_type)
+              VALUES($1, $2, $3, 'system')
+              RETURNING *
+            `, [roomRows[0].id, req.user.id, `🔓 მყიდველმა გახსნა ანგარიშის მონაცემები — ${stamp}. ეს დრო შენახულია დავის შემთხვევისთვის.`]);
+            chat.broadcastMessageToRoom(roomRows[0].id, msgRows[0]);
+          }
+          await push.sendToUser(order.seller_id, {
+            title: '👁️ მყიდველმა ნახა მონაცემები',
+            body: `${stamp}`,
+            url: `/?order=${order.id}`,
+            tag: `order-${order.id}-credentials-viewed`,
+          });
+        } catch (e) { console.error('credentials reveal notify error:', e.message); }
+      })();
+    }
+  } catch (err) {
+    console.error('credentials reveal error:', err.message);
     res.status(500).json({ error: 'server_error' });
   }
 });

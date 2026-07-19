@@ -429,6 +429,32 @@ async function setupDatabase() {
         created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
       )`,
       `CREATE INDEX IF NOT EXISTS idx_announcements_active ON announcements(is_active, created_at DESC)`,
+      // ── ANTI-SCAM SUITE ──────────────────────────────────────────────
+      // 1) Video Proof — მყიდველი ვალდებულია ყიდვის მომენტში დაეთანხმოს
+      //    სქრინ-ჩაწერის პირობას; ეს დათანხმება ერთხელ და
+      //    შეუქცევადად ფიქსირდება order-ზე (client-side checkbox მარტო
+      //    საკმარისი არაა — თუ ბექენდზე არ არის დაფიქს., API-ის
+      //    პირდაპირი გამოძახებით შეიძლებოდა გვერდის ავლა).
+      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS video_proof_agreed BOOLEAN NOT NULL DEFAULT FALSE`,
+      // 2) Credentials Vault — გამყიდველი ანგარიშის email+პაროლს
+      //    სავალდებულოდ ცალკე, დაშიფრული ("iv:tag:ciphertext") ფორმით
+      //    წარადგენს (არა ჩვეულ chat-ში პირდაპირ ტექსტში), რომ ზუსტად
+      //    გავზომოთ ორი დროის წერტილი: (ა) როდის გაუზიარა გამყ-მა
+      //    მონაცემი და (ბ) ზუსტად რომელ წამს გახსნა/ნახა მყიდველმა.
+      //    ეს ორი timestamp-ი შემდეგ ადმინის მიერ დავის დროს შედარდება
+      //    გარე მტკიცებულებას (მაგ. როდის შეიცვალა პაროლი ბაზაში/
+      //    გუგლის აქტ. ისტორიაში) — თუ ცვლილება მოხდა ნახვის შემდეგ,
+      //    ეს მყიდველის მხრიდან ბოროტ განზრახვაზე მეტყველებს.
+      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS credentials_secret        TEXT`,
+      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS credentials_submitted_at TIMESTAMPTZ`,
+      `ALTER TABLE orders ADD COLUMN IF NOT EXISTS credentials_viewed_at    TIMESTAMPTZ`,
+      // 3) Clean Email Policy — გამყიდველი განცხადების შექმნისას
+      //    ადასტურებს, რომ ანგარიშზე მიბმული email "სუფთაა" (ახალი,
+      //    არა პირადი) და მასზეც წვდომას აწვდის მყიდველს — ეს
+      //    ხელს უშლის სცენარს, როცა მყიდველი აცხადებს პაროლის
+      //    შეცვლას, სინამდვილეში კი უბრალოდ ვერ შედის, რადგან
+      //    "დაბრუნების" email საერთოდ არ გადაცემულა.
+      `ALTER TABLE listings ADD COLUMN IF NOT EXISTS clean_email_confirmed BOOLEAN NOT NULL DEFAULT FALSE`,
     ];
     for (const sql of migrations) {
       try { await client.query(sql); } catch (e) { /* უკვე არსებობს */ }
