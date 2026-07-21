@@ -53,7 +53,12 @@
   --font:'Lexend',sans-serif;--display:'Space Grotesk',sans-serif;--mono:'JetBrains Mono',monospace;
   --r:8px;--r2:14px;
 }
-html{scroll-behavior:smooth}
+/* NOTE: intentionally no global `scroll-behavior:smooth` here — the SPA resets
+   scroll with window.scrollTo(0,0) on every page change (see pg() in the JS),
+   and a global smooth behavior turned that instant reset into a visible
+   animated scroll (the "page jumps from bottom to top" bug). Spots that want
+   smooth motion (pagination, jump-to-error, etc.) already pass
+   behavior:'smooth' explicitly in JS, so they're unaffected. */
 body{
   background:var(--bg);color:var(--text);font-family:var(--font);
   font-size:14px;line-height:1.6;overflow-x:hidden;
@@ -81,8 +86,12 @@ input,select,textarea{font-family:var(--font)}
 .brand-display,.nav-logo{font-family:var(--display)}
 
 /* NAV — premium glass header */
-nav{position:fixed;top:0;left:0;right:0;z-index:200;height:60px;background:linear-gradient(180deg,#090d18c7,#090d18a8);backdrop-filter:blur(22px) saturate(160%);-webkit-backdrop-filter:blur(22px) saturate(160%);border-bottom:1px solid var(--border2);box-shadow:0 1px 0 #ffffff0a inset;display:flex;align-items:center;padding:0 22px;gap:0}
+nav{position:fixed;top:0;left:0;right:0;z-index:200;height:60px;background:linear-gradient(180deg,#090d18b0,#090d1888);backdrop-filter:blur(22px) saturate(160%);-webkit-backdrop-filter:blur(22px) saturate(160%);border-bottom:1px solid var(--border2);box-shadow:0 1px 0 #ffffff0a inset;display:flex;align-items:center;padding:0 22px;gap:0;transition:background .25s ease,box-shadow .25s ease,border-color .25s ease}
 nav::after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:1px;background:linear-gradient(90deg,transparent,#34d39950,#22d3ee50,transparent);pointer-events:none}
+/* premium glass header — deepens slightly once the page is scrolled, so it
+   reads as translucent over the hero and becomes a crisper anchor once
+   content is passing underneath it */
+nav.scrolled{background:linear-gradient(180deg,#090d18e8,#090d18cf);box-shadow:0 12px 30px -14px #000000a0,0 1px 0 #ffffff0a inset;border-bottom-color:var(--border3)}
 .nav-logo{font-size:16px;font-weight:800;letter-spacing:-.5px;margin-right:30px;cursor:pointer;flex-shrink:0;transition:all .2s}
 .nav-logo:hover{opacity:.85}
 .nav-logo em{background:var(--grad-accent);-webkit-background-clip:text;background-clip:text;color:transparent;font-style:normal}
@@ -168,9 +177,9 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 /* SEARCH + MAIN CATEGORIES */
 .sbar{background:none;border-bottom:1px solid var(--border);padding:16px 16px 14px}
 .sbar-inner{display:flex;flex-direction:column;gap:10px}
-.sbox{display:flex;align-items:center;gap:7px;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:0 11px;width:100%;transition:border-color .15s;position:relative}
-.sbox:focus-within{border-color:var(--ad2)}
-.sbox input{flex:1;background:none;border:none;outline:none;color:var(--text);font-size:12px;padding:8px 0}
+.sbox{display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:0 12px;width:100%;height:40px;transition:border-color .15s,box-shadow .15s;position:relative}
+.sbox:focus-within{border-color:var(--ad2);box-shadow:0 0 0 3px #34d39918}
+.sbox input{flex:1;background:none;border:none;outline:none;color:var(--text);font-size:13px;height:100%;padding:0}
 .sbox input::placeholder{color:var(--muted)}
 .lst-cats-row{display:flex;gap:6px;flex-wrap:wrap}
 .fbtn{padding:5px 10px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;font-size:11px;color:var(--muted);cursor:pointer;transition:all .15s;white-space:nowrap;font-weight:500}
@@ -217,7 +226,7 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 
 /* GRID */
 .wrap{max-width:1120px;margin:0 auto;padding:28px 20px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;transition:opacity .18s ease}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;transition:opacity .18s ease;min-height:320px}
 .grid.grid-loading{opacity:.35}
 .lcard{animation:lcardIn .25s ease}
 @keyframes lcardIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
@@ -265,7 +274,8 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 .gtab.on{background:var(--bg4);color:var(--text)}
 
 /* LISTING CARD */
-.lcard{background:var(--card-solid, #14161ce6);border:1px solid var(--glass-border);border-radius:var(--r2);overflow:hidden;cursor:pointer;transition:transform .18s,box-shadow .18s,border-color .18s;position:relative;
+.lcard{background:var(--card-solid, #14161ce6);border:1px solid #ffffff1a;border-radius:var(--r2);overflow:hidden;cursor:pointer;transition:transform .18s,box-shadow .18s,border-color .18s;position:relative;
+  box-shadow:0 6px 20px -16px #000000c0;
   /* სქროლის lag-ის რეალური მიზეზი: backdrop-filter:blur() თითოეულ ბარათზე (20+ ერთდროულად გვერდზე)
      აიძულებდა ბრაუზერს ყოველ scroll-კადრზე ხელახლა გამოეთვალა real-time ბლური ყველასთვის.
      ვცვლით მყარი (მაგრამ ისევ გამჭვირვალე/მინისებრი) ფონით — ვიზუალურად თითქმის იდენტურია,
@@ -324,14 +334,17 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 .lcard-body{padding:13px}
 .lcard-game{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
 .lcard-title{font-size:13px;font-weight:600;line-height:1.3;margin-bottom:7px;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;min-height:calc(1.3em * 2)}
-.lcard-tags{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:9px;min-height:18px}
+.lcard-tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px;min-height:18px}
 .tag{font-size:9px;padding:1px 5px;border-radius:3px;background:var(--bg4);color:var(--muted);border:1px solid var(--border)}
-.lcard-foot{display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border);padding-top:9px}
-.lcard-seller{display:flex;align-items:center;gap:5px}
+.lcard-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;border-top:1px solid var(--border);padding-top:9px}
+.lcard-seller{display:flex;align-items:center;gap:5px;min-width:0;flex:1 1 auto}
+.lcard-seller>.s-ava{flex-shrink:0}
+.lcard-seller>div:last-child{min-width:0;overflow:hidden}
 .s-ava{width:22px;height:22px;border-radius:50%;background:var(--bg4);border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700}
-.s-name{font-size:10px;color:var(--muted)}.s-rat{font-size:9px;color:var(--gold)}
+.s-name{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;max-width:100%}.s-rat{font-size:9px;color:var(--gold)}
 .lcard-price{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--accent)}
 .lcard-price-s{font-size:9px;color:var(--muted);text-align:right}
+.lcard-foot>div:last-child{flex-shrink:0;text-align:right}
 
 /* VIP BANNER */
 .vip-banner{background:linear-gradient(135deg,var(--gd),var(--bg2));border:1px solid var(--gd2);border-radius:var(--r2);padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
@@ -417,13 +430,13 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 .drawer-footer{padding:16px 18px;border-top:1px solid var(--border)}
 
 /* ══════════════════════════ MOBILE BOTTOM NAV (Native App Style) ══════════════════════════ */
-.bnav{display:none;position:fixed;left:0;right:0;bottom:0;height:60px;background:#0d1424ee;backdrop-filter:blur(20px);
-  border-top:1px solid var(--border2);z-index:300;align-items:center;justify-content:space-around;padding:0 6px}
+.bnav{display:none;position:fixed;left:0;right:0;bottom:0;height:56px;background:#0d1424ee;backdrop-filter:blur(20px);
+  border-top:1px solid var(--border2);z-index:300;align-items:center;justify-content:space-around;padding:0 4px}
 .bnav-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--muted);flex:1;height:100%;cursor:pointer}
 .bnav-item span{font-size:9.5px;font-weight:600}
 .bnav-item.on{color:var(--accent)}
-.bnav-add{width:46px;height:46px;border-radius:50%;background:var(--grad-accent);display:flex;align-items:center;justify-content:center;
-  cursor:pointer;flex-shrink:0;margin:0 4px;transform:translateY(-10px);box-shadow:0 6px 18px #34d39945;border:3px solid var(--bg)}
+.bnav-add{width:44px;height:44px;border-radius:50%;background:var(--grad-accent);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;flex-shrink:0;margin:0 4px;transform:translateY(-8px);box-shadow:0 6px 18px -2px #34d39970,0 0 0 5px #34d39916;border:2px solid var(--bg);position:relative;z-index:1}
 
 @media(max-width:800px){
   .nav-links{display:none}
@@ -730,6 +743,13 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 .cl-sec-title:first-child{margin-top:0}
 .cl-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
 @media(min-width:640px){.cl-grid{grid-template-columns:repeat(4,1fr)}}
+/* below 640px: the ~30-game picker becomes one horizontal swipe row instead
+   of a tall multi-row grid — same cards/onclick handlers, just reflowed */
+@media(max-width:639px){
+  .cl-grid{display:flex;overflow-x:auto;gap:10px;margin:0 -16px;padding:2px 16px 10px;scrollbar-width:none;-ms-overflow-style:none}
+  .cl-grid::-webkit-scrollbar{display:none}
+  .cl-grid .cl-cat-card{flex:0 0 auto;width:100px}
+}
 .cl-cat-card{background:var(--card-solid);border:1.5px solid var(--glass-border);border-radius:var(--r2);padding:16px 10px;text-align:center;cursor:pointer;transition:transform .15s,border-color .15s;font-size:26px;
   display:flex;flex-direction:column;align-items:center;gap:6px;min-height:78px;justify-content:center;
   -webkit-tap-highlight-color:transparent}
@@ -886,8 +906,10 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
   .lst-sidebar{position:static;border:none;border-radius:0;background:none;backdrop-filter:none;-webkit-backdrop-filter:none;overflow:visible;max-height:none}
   .lst-shell .lst-content.wrap{padding:28px 20px;max-width:1120px;margin:0 auto}
 
-  /* sticky search + main category bar — follows the user while scrolling */
-  .sbar{position:sticky;top:56px;z-index:90;background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 14px;box-shadow:0 6px 18px -10px #000000a0}
+  /* sticky search + main category bar — follows the user while scrolling.
+     top must match the fixed header's real height (60px, 52px <=480px —
+     see the matching override below) or a gap/overlap appears between them. */
+  .sbar{position:sticky;top:60px;z-index:90;background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 14px 8px;box-shadow:0 6px 18px -10px #000000a0}
   .lst-cats-row{flex-wrap:nowrap;overflow-x:auto;white-space:nowrap;-ms-overflow-style:none;scrollbar-width:none}
   .lst-cats-row::-webkit-scrollbar{display:none}
   .lst-cats-row .fbtn{flex-shrink:0}
@@ -926,7 +948,7 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 
   /* create-listing sticky nav — მოვწიოთ გლობალური მობილური ტაბ-ბარის (.bnav, z-index:300, height:60px)
      ზემოთ, თორემ დაფარავს Submit/Next ღილაკს, რადგან ორივე position:fixed;bottom:0-ზეა */
-  .cl-bottom-nav{bottom:60px}
+  .cl-bottom-nav{bottom:56px}
   .cl-wrap{padding-bottom:180px}
 }
 
@@ -943,6 +965,8 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
   .bal-chip span:first-child{display:none}
   .btn-sm{padding:4px 9px;font-size:10.5px}
   #nav-login-btn{padding:6px 12px;font-size:11.5px}
+  .main{padding-top:52px}
+  .sbar{top:52px}
 
   /* ── HERO ─────────────────────────────────────────── */
   .hero{padding:28px 14px 22px}
@@ -1186,28 +1210,66 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 <style>
 #auth-boot-screen{
   position:fixed;inset:0;z-index:99999;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;
   background:var(--bg);
-  transition:opacity .25s ease;
+  background-image:
+    radial-gradient(ellipse 55% 45% at 50% 28%, #34d39916 0%, transparent 60%),
+    radial-gradient(ellipse 45% 40% at 82% 78%, #22d3ee12 0%, transparent 55%);
+  transition:opacity .4s ease;
 }
+#auth-boot-screen.ab-hide{opacity:0;pointer-events:none}
+
+/* orb — glow halo + spinning gradient ring + static core, echoes the hero's Escrow shield visual */
+#auth-boot-screen .ab-orb{position:relative;width:74px;height:74px;display:flex;align-items:center;justify-content:center}
+#auth-boot-screen .ab-orb-glow{position:absolute;inset:-12px;border-radius:50%;background:radial-gradient(circle,#34d39945,transparent 70%);filter:blur(16px);animation:abGlowPulse 2.2s ease-in-out infinite}
+#auth-boot-screen .ab-orb-ring2{position:absolute;inset:-10px;border-radius:50%;border:1px dashed var(--border3);animation:abRing2Spin 7s linear infinite reverse}
+#auth-boot-screen .ab-orb-ring{
+  position:absolute;inset:0;border-radius:50%;
+  background:conic-gradient(from 0deg,transparent 0%,var(--accent) 28%,var(--cyan) 52%,transparent 74%);
+  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 2px),#000 calc(100% - 2px));
+  mask:radial-gradient(farthest-side,transparent calc(100% - 2px),#000 calc(100% - 2px));
+  animation:abRingSpin 1.3s linear infinite;
+}
+#auth-boot-screen .ab-orb-core{
+  position:relative;z-index:2;width:50px;height:50px;border-radius:50%;
+  background:linear-gradient(160deg,var(--bg2),var(--bg3));
+  border:1px solid var(--glass-border);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 10px 26px -10px #000000a0,inset 0 1px 0 #ffffff12;
+}
+#auth-boot-screen .ab-orb-ico{width:22px;height:22px;color:var(--accent);filter:drop-shadow(0 0 8px #34d39970);animation:abIcoPulse 2.2s ease-in-out infinite}
+
 #auth-boot-screen .ab-logo{
-  font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:-.4px;
+  font-family:var(--display);font-weight:700;font-size:19px;letter-spacing:.1px;
   color:var(--text);
-  animation:ab-pulse 1.6s ease-in-out infinite;
+  opacity:0;transform:translateY(6px);
+  animation:abLogoIn .6s ease .1s forwards;
 }
 #auth-boot-screen .ab-logo em{color:var(--accent);font-style:normal}
-#auth-boot-screen .ab-spinner{
-  width:28px;height:28px;border-radius:50%;
-  border:2px solid var(--border3);border-top-color:var(--accent);
-  animation:ab-spin .8s linear infinite;
-}
-@keyframes ab-pulse{0%,100%{opacity:1}50%{opacity:.45}}
-@keyframes ab-spin{to{transform:rotate(360deg)}}
-#auth-boot-screen.ab-hide{opacity:0;pointer-events:none}
+
+#auth-boot-screen .ab-track{width:110px;height:2px;border-radius:2px;background:var(--border2);overflow:hidden;opacity:0;animation:abLogoIn .6s ease .3s forwards}
+#auth-boot-screen .ab-shimmer{width:36%;height:100%;border-radius:2px;background:var(--grad-accent);animation:abShimmer 1.3s ease-in-out infinite}
+#auth-boot-screen .ab-status{font-size:11px;color:var(--muted2);letter-spacing:.02em;opacity:0;animation:abLogoIn .6s ease .45s forwards}
+
+@keyframes abGlowPulse{0%,100%{opacity:.55;transform:scale(1)}50%{opacity:1;transform:scale(1.12)}}
+@keyframes abRing2Spin{to{transform:rotate(360deg)}}
+@keyframes abRingSpin{to{transform:rotate(360deg)}}
+@keyframes abIcoPulse{0%,100%{opacity:.85;transform:scale(1)}50%{opacity:1;transform:scale(1.08)}}
+@keyframes abLogoIn{to{opacity:1;transform:translateY(0)}}
+@keyframes abShimmer{0%{transform:translateX(-140%)}100%{transform:translateX(390%)}}
 </style>
 <div id="auth-boot-screen">
+  <div class="ab-orb">
+    <div class="ab-orb-glow"></div>
+    <div class="ab-orb-ring2"></div>
+    <div class="ab-orb-ring"></div>
+    <div class="ab-orb-core">
+      <svg class="ab-orb-ico" viewBox="0 0 24 24" fill="none"><path d="M12 2.5 4.5 5.5v6c0 5 3.2 8.6 7.5 10 4.3-1.4 7.5-5 7.5-10v-6Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+    </div>
+  </div>
   <div class="ab-logo">Gamer<em>Bazar</em>.ge</div>
-  <div class="ab-spinner"></div>
+  <div class="ab-track"><div class="ab-shimmer"></div></div>
+  <div class="ab-status" data-i18n="boot_status">იტვირთება...</div>
 </div>
 
 <nav>
@@ -1293,7 +1355,7 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
     <span data-i18n="bnav_catalog">კატალოგი</span>
   </div>
   <div class="bnav-add" onclick="if(currentUser){pg('create-listing')}else{openM('loginModal')}" aria-label="Add listing" data-i18n-aria="nav_add_aria">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#06120d" stroke-width="2.2" stroke-linecap="round"/></svg>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#06120d" stroke-width="2.2" stroke-linecap="round"/></svg>
   </div>
   <div class="bnav-item" data-idx="2" onclick="pg('chat');act(document.querySelectorAll('.nl')[2])">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 4h16v12H8l-4 4V4z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
@@ -2848,6 +2910,7 @@ const I18N = {
     nav_home:'მთავარი', nav_listings:'განცხადებები', nav_chat:'ჩატი', nav_wallet:'საფულე',
     nav_profile:'პროფილი', nav_settings:'პარამეტრები', nav_balance:'ბალანსი', nav_login:'შესვლა',
     nav_menu_aria:'მენიუ', nav_add_aria:'დამატება',
+    boot_status:'იტვირთება...',
     drawer_settings:' პარამეტრები', drawer_terms:'წესები და პირობები', drawer_logout:'გასვლა', drawer_login:'შესვლა',
     bnav_home:'მთავარი', bnav_catalog:'კატალოგი', bnav_chat:'ჩატი', bnav_profile:'პროფილი',
     hero_tag:'ქართული გეიმინგ ბაზარი',
@@ -2918,6 +2981,7 @@ const I18N = {
     nav_home:'Home', nav_listings:'Listings', nav_chat:'Chat', nav_wallet:'Wallet',
     nav_profile:'Profile', nav_settings:'Settings', nav_balance:'Balance', nav_login:'Log In',
     nav_menu_aria:'Menu', nav_add_aria:'Add listing',
+    boot_status:'Loading...',
     drawer_settings:' Settings', drawer_terms:'Terms &amp; Conditions', drawer_logout:'Log Out', drawer_login:'Log In',
     bnav_home:'Home', bnav_catalog:'Catalog', bnav_chat:'Chat', bnav_profile:'Profile',
     hero_tag:"Georgia's Trusted Gaming Marketplace",
@@ -3272,7 +3336,7 @@ function pg(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const el = document.getElementById('page-' + id);
   if (el) el.classList.add('active');
-  window.scrollTo(0, 0);
+  window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   if (id !== 'home') {
     window.history.replaceState({}, '', '#' + id);
   } else {
@@ -6354,7 +6418,7 @@ function clGoToStep(n) {
       if (deskBtn) deskBtn.disabled = !cleanEmailChecked;
     }
   }
-  window.scrollTo(0, 0);
+  window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
 }
 
 function clNext() {
@@ -7108,7 +7172,7 @@ async function openOrderChat(orderId) {
   if (!showPageGuarded('chat')) return;
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-chat')?.classList.add('active');
-  window.scrollTo(0, 0);
+  window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   await loadChatRooms();
   const el = document.querySelector(`.ci[data-order="${orderId}"]`);
   if (el) openChatRoom(el);
@@ -7719,6 +7783,16 @@ setTimeout(() => {
 
 // Loader — ყოველ შემთხვევაში მოვხსნათ
 // loading screen removed
+
+// premium header scroll effect — glass header deepens slightly once the
+// page has scrolled past the very top (see nav.scrolled in <style>)
+(function () {
+  const navEl = document.querySelector('nav');
+  if (!navEl) return;
+  const onScroll = () => navEl.classList.toggle('scrolled', window.scrollY > 8);
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
 </script>
 </body>
 </html>
