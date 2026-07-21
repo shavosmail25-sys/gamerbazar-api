@@ -611,28 +611,35 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 .odot{width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;margin-right:3px}
 .order-pill{display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px 9px;font-size:11px}
 .opill-dot{width:6px;height:6px;border-radius:50%;background:var(--gold)}
-.chat-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:7px}
+.chat-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:7px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .msg{max-width:64%;display:flex;flex-direction:column}
 .msg.me{align-self:flex-end;align-items:flex-end}.msg.u{align-self:flex-start;align-items:flex-start}
-.msg-b{padding:8px 12px;border-radius:12px;font-size:12px;line-height:1.5}
-.msg.me .msg-b{background:var(--accent);color:#08090d;border-radius:12px 12px 3px 12px}
-.msg.u .msg-b{background:var(--bg3);border:1px solid var(--border);border-radius:12px 12px 12px 3px}
+.msg-b{padding:9px 13px;border-radius:18px;font-size:12px;line-height:1.5}
+.msg.me .msg-b{background:var(--accent);color:#08090d;border-radius:18px 18px 4px 18px}
+.msg.u .msg-b{background:var(--bg3);border:1px solid var(--border);border-radius:18px 18px 18px 4px}
 .msg-t{font-size:9px;color:var(--muted);margin-top:2px;padding:0 2px}
 .escrow-pill{background:var(--gd);border:1px solid var(--gd2);border-radius:8px;padding:9px 13px;font-size:11px;color:var(--gold);text-align:center;margin:4px 0}
 
+/* system / review messages inside the thread — a floating card, not a
+   full-bleed strip, so it reads as a distinct event rather than a bubble */
+.msg-system{text-align:center;margin:10px 8px;max-width:calc(100% - 16px)}
+.msg-system-box{display:inline-flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px 14px;font-size:12px;color:var(--muted);max-width:100%}
+
 /* ── Credentials Vault პანელი — ჩატის header-ის ქვემოთ, ANTI-SCAM
-   ფუნქციონალის ვიზუალური ბირთვი ── */
-.chat-creds-panel{padding:9px 16px;border-bottom:1px solid var(--border);background:var(--bg3);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
-.ccp-text{font-size:11.5px;color:var(--muted2);line-height:1.5}
+   ფუნქციონალის ვიზუალური ბირთვი — მინი-card, ეკრანის კიდეებამდე აღარ იჭიმება ── */
+.chat-creds-panel{padding:12px 14px;margin:8px 8px 0;border:1px solid rgba(255,255,255,.1);border-radius:12px;background:var(--bg3);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.ccp-text{font-size:11.5px;color:var(--muted2);line-height:1.5;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
 .ccp-text b{color:var(--text)}
 .ccp-time{font-family:var(--mono);color:var(--gold)}
 
-.chat-in{padding:9px 13px;border-top:1px solid var(--border);background:var(--bg2);flex-shrink:0}
-.chat-in-row{display:flex;gap:7px;align-items:flex-end;background:var(--bg3);border:1px solid var(--border2);border-radius:9px;padding:6px 9px;transition:border-color .15s}
+.chat-in{padding:10px 13px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--border);background:var(--bg2);flex-shrink:0}
+.chat-in-row{display:flex;gap:7px;align-items:flex-end;background:var(--bg3);border:1px solid var(--border2);border-radius:22px;padding:8px 8px 8px 15px;transition:border-color .15s}
 .chat-in-row:focus-within{border-color:var(--ad2)}
-.chat-in-row textarea{flex:1;background:none;border:none;outline:none;color:var(--text);font-size:12px;resize:none;max-height:80px;line-height:1.5;padding:1px 0}
-.send-btn{width:30px;height:30px;border-radius:6px;background:var(--accent);color:#08090d;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;flex-shrink:0}
+.chat-in-row textarea{flex:1;background:none;border:none;outline:none;color:var(--text);font-size:12px;resize:none;max-height:80px;line-height:1.5;padding:4px 0}
+.send-btn{width:34px;height:34px;border-radius:50%;background:var(--accent);color:#08090d;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;flex-shrink:0}
 .send-btn:hover{background:var(--accent2)}
+.ic-spin{animation:icSpin .8s linear infinite;transform-origin:center}
+@keyframes icSpin{to{transform:rotate(360deg)}}
 
 /* PROFILE */
 .prof-wrap{max-width:880px;margin:0 auto;padding:24px 20px}
@@ -936,7 +943,7 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
   .ld-gallery-main{height:240px;font-size:54px}
 
   /* CHAT — mobile-ze sidebar collapse */
-  .chat-layout{grid-template-columns:1fr;position:relative}
+  .chat-layout{grid-template-columns:1fr;position:relative;height:100%}
   .chat-sb{
     position:fixed;left:0;top:56px;bottom:0;width:80vw;max-width:300px;
     z-index:100;transform:translateX(-100%);transition:transform .25s ease;
@@ -945,6 +952,25 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
   .chat-sb.mobile-open{transform:translateX(0)}
   .chat-main{width:100%}
   .chat-mobile-back{display:flex !important}
+
+  /* ── ACTIVE CHAT — native app-like immersive mode ─────────────────
+     Taken out of normal document flow (position:fixed) and pinned to
+     exactly the viewport below the top nav, using 100dvh so iOS Safari's
+     address bar AND the on-screen keyboard resize it correctly instead
+     of the input getting pushed off-screen. `padding:0` beats the
+     shared `.main` padding via specificity, since this element carries
+     both classes. Global footer + bottom tab bar are hidden while a
+     chat is open (see body.chat-immersive below) so the screen reads
+     as a dedicated chat view, not a scrollable web page. */
+  #page-chat.page.active{
+    position:fixed;top:56px;left:0;right:0;bottom:0;
+    height:calc(100dvh - 56px);
+    padding:0;margin:0;
+    z-index:250;
+    overflow:hidden;
+  }
+  body.chat-immersive .bnav,
+  body.chat-immersive .site-footer{display:none}
 
   /* create-listing sticky nav — მოვწიოთ გლობალური მობილური ტაბ-ბარის (.bnav, z-index:300, height:60px)
      ზემოთ, თორემ დაფარავს Submit/Next ღილაკს, რადგან ორივე position:fixed;bottom:0-ზეა */
@@ -1060,6 +1086,7 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
   .form-l{font-size:10.5px}
 
   /* ── CHAT PAGE ────────────────────────────────────── */
+  #page-chat.page.active{top:52px;height:calc(100dvh - 52px)}
   .chat-sb-h{padding:10px 13px;font-size:12.5px}
   .chat-list{font-size:12px}
   .ci{padding:10px 12px;gap:8px}
@@ -1069,10 +1096,12 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
   .chat-h-l gap{gap:7px}
   .chat-msgs{padding:10px 10px;gap:6px}
   .msg{max-width:84%}
-  .msg-b{font-size:12.5px;padding:8px 10px;border-radius:11px}
+  .msg-b{font-size:12.5px;padding:8px 12px;border-radius:16px}
   .msg-t{font-size:9.5px}
-  .chat-in{padding:7px 10px}
-  .chat-in-row{padding:5px 8px;gap:6px}
+  .msg-system-box{font-size:11.5px;padding:9px 12px}
+  .chat-creds-panel{margin:6px 6px 0;padding:10px 12px}
+  .chat-in{padding:8px 10px calc(8px + env(safe-area-inset-bottom))}
+  .chat-in-row{padding:6px 6px 6px 13px;gap:6px}
   .chat-in-row textarea{font-size:13px}
   .send-btn{width:32px;height:32px}
   .order-pill{padding:6px 10px;font-size:10.5px;gap:5px;flex-wrap:wrap}
@@ -2889,6 +2918,8 @@ const ICO = {
   undo:       '<svg class="ic" viewBox="0 0 24 24"><path d="M4 10.5h9a6 6 0 0 1 0 12h-3"/><path d="M8 6 4 10.5 8 15"/></svg>',
   arrowLeft:  '<svg class="ic" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>',
   info:       '<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 8h.01"/></svg>',
+  clock:      '<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3.2 2"/></svg>',
+  loader:     '<svg class="ic ic-spin" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9"/></svg>',
 };
 
 
@@ -3336,6 +3367,9 @@ function pg(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const el = document.getElementById('page-' + id);
   if (el) el.classList.add('active');
+  // active chat should feel like a native app screen — hides the global
+  // footer + bottom tab bar (see body.chat-immersive rules in <style>)
+  document.body.classList.toggle('chat-immersive', id === 'chat');
   window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   if (id !== 'home') {
     window.history.replaceState({}, '', '#' + id);
@@ -5344,7 +5378,7 @@ async function loadChatRooms() {
     return;
   }
 
-  el.innerHTML = '<div style="padding:12px;text-align:center;font-size:11px;color:var(--muted)">⏳ იტვირთება...</div>';
+  el.innerHTML = `<div style="padding:12px;text-align:center;font-size:11px;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px">${ICO.loader} იტვირთება...</div>`;
 
   try {
     // ── "🎧 მხარდაჭერა" ოთახი ყოველთვის არსებობს/იქმნება სიის
@@ -5553,7 +5587,7 @@ function renderCredsPanel(order) {
     }
   } else if (isBuyer) {
     if (!order.has_credentials) {
-      panel.innerHTML = `<div class="ccp-text">⏳ გამყიდველი ჯერ არ გადმოგცემთ ანგარიშის მონაცემებს</div>`;
+      panel.innerHTML = `<div class="ccp-text">${ICO.loader} გამყიდველი ჯერ არ გადმოგცემთ ანგარიშის მონაცემებს</div>`;
     } else if (!viewedAt) {
       panel.innerHTML = `
         <div class="ccp-text">${ICO.lock} გამყიდველმა გადმოგცათ მონაცემები <span class="ccp-time">${submittedAt}</span></div>
@@ -5594,10 +5628,10 @@ function renderCcpDeadlineSlot(order) {
   const isBuyer = order.buyer_id === currentUser.id;
   if (expired) {
     slot.innerHTML = isBuyer
-      ? `<div class="ccp-text" style="color:var(--red)">⏰ Confirm Access-ის ვადა გავიდა — თუ შეხვედი ანგარიშზე, დაადასტურე ახლავე; თუ ვერა, დაუყოვნებლივ გახსენი დავა.</div>`
-      : `<div class="ccp-text" style="color:var(--red)">⏰ მყიდველის Confirm Access ვადა გავიდა.</div>`;
+      ? `<div class="ccp-text" style="color:var(--red)">${ICO.clock} Confirm Access-ის ვადა გავიდა — თუ შეხვედი ანგარიშზე, დაადასტურე ახლავე; თუ ვერა, დაუყოვნებლივ გახსენი დავა.</div>`
+      : `<div class="ccp-text" style="color:var(--red)">${ICO.clock} მყიდველის Confirm Access ვადა გავიდა.</div>`;
   } else {
-    slot.innerHTML = `<div class="ccp-text">⏳ დარჩენილია <span class="ccp-cdown ccp-time" data-deadline="${deadline.toISOString()}">--:--</span> — Confirm Access-ისთვის</div>`;
+    slot.innerHTML = `<div class="ccp-text">${ICO.loader} დარჩენილია <span class="ccp-cdown ccp-time" data-deadline="${deadline.toISOString()}">--:--</span> — Confirm Access-ისთვის</div>`;
     startCredsCountdown();
   }
 }
@@ -5648,7 +5682,7 @@ async function submitCredentialsVault() {
   if (!email || !password) { showToast('შეავსე ორივე ველი', 'err'); return; }
 
   const btn = document.getElementById('creds-submit-btn');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ იგზავნება...'; }
+  if (btn) { btn.disabled = true; btn.innerHTML = `${ICO.loader} იგზავნება...`; }
   try {
     await api(`/api/orders/${orderId}/credentials`, {
       method: 'POST',
@@ -5696,7 +5730,7 @@ async function confirmRevealConsent() {
   }
 
   const btn = document.getElementById('creds-reveal-consent-btn');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳...'; }
+  if (btn) { btn.disabled = true; btn.innerHTML = ICO.loader; }
   try {
     const data = await api(`/api/orders/${orderId}/credentials/reveal`, {
       method: 'POST',
@@ -5730,9 +5764,9 @@ function renderCredsOutDeadline(deadlineIso) {
   const deadline = new Date(deadlineIso);
   const expired  = deadline - Date.now() <= 0;
   slot.style.color = expired ? 'var(--red)' : 'var(--gold)';
-  slot.textContent = expired
-    ? '⏰ Confirm Access-ის ვადა ამოიწურა'
-    : `⏳ Confirm Access-ის ვადა: ${deadline.toLocaleString('ka-GE')}`;
+  slot.innerHTML = expired
+    ? `${ICO.clock} Confirm Access-ის ვადა ამოიწურა`
+    : `${ICO.loader} Confirm Access-ის ვადა: ${deadline.toLocaleString('ka-GE')}`;
   if (btn) btn.style.display = 'inline-block';
 }
 
@@ -5805,7 +5839,7 @@ async function pollMessages(roomId) {
 async function loadMessages(roomId) {
   const msgsEl = document.getElementById('chat-msgs');
   if (!msgsEl) return;
-  msgsEl.innerHTML = '<div style="text-align:center;padding:20px;font-size:11px;color:var(--muted)">⏳ იტვირთება...</div>';
+  msgsEl.innerHTML = `<div style="text-align:center;padding:20px;font-size:11px;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px">${ICO.loader} იტვირთება...</div>`;
 
   try {
     const msgs = await api('/api/chat/rooms/' + roomId + '/messages');
@@ -5839,10 +5873,9 @@ function renderMessageHtml(m) {
   const text = escHtml(m.content).replace(/\n/g, '<br>');
 
   if (m.content_type === 'system' || m.content_type === 'review') {
-    const ico = m.content_type === 'review' ? '' : ' ';
-    return `<div class="msg-system" style="text-align:center;margin:10px auto;max-width:90%">
-      <div style="display:inline-block;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;
-                  padding:8px 14px;font-size:12px;color:var(--muted)">${ico}${text}</div>
+    const ico = m.content_type === 'review' ? ICO.starFill : ICO.info;
+    return `<div class="msg-system">
+      <div class="msg-system-box">${ico}${text}</div>
       <div class="msg-t" style="text-align:center">${time}</div>
     </div>`;
   }
@@ -6013,7 +6046,7 @@ async function executeConfirmOrder() {
   if (!orderId) { showToast('Order ID ვერ მოიძებნა', 'err'); return; }
 
   const btn = document.getElementById('confirm-modal-ok-btn');
-  if (btn) { btn.textContent = '⏳...'; btn.disabled = true; }
+  if (btn) { btn.innerHTML = ICO.loader; btn.disabled = true; }
 
   try {
     await api('/api/orders/' + orderId + '/confirm', { method: 'POST' });
@@ -6068,7 +6101,7 @@ async function executeMarkDelivered() {
   if (!orderId) return;
 
   const btn = document.getElementById('deliver-modal-ok-btn');
-  if (btn) { btn.textContent = '⏳...'; btn.disabled = true; }
+  if (btn) { btn.innerHTML = ICO.loader; btn.disabled = true; }
 
   try {
     await api('/api/orders/' + orderId + '/deliver', { method: 'POST' });
@@ -6107,7 +6140,7 @@ async function executeMarkDelivered() {
   if (!orderId) return;
 
   const btn = document.getElementById('deliver-modal-ok-btn');
-  if (btn) { btn.textContent = '⏳...'; btn.disabled = true; }
+  if (btn) { btn.innerHTML = ICO.loader; btn.disabled = true; }
 
   try {
     await api('/api/orders/' + orderId + '/deliver', { method: 'POST' });
@@ -6179,7 +6212,7 @@ async function submitDispute() {
   if (!disputeFiles.length) { showToast('მინ. 1 სქრინშოტი/ვიდეო საჭიროა', 'err'); return; }
 
   const btn = document.getElementById('dispute-submit-btn');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ იტვირთება...'; }
+  if (btn) { btn.disabled = true; btn.innerHTML = `${ICO.loader} იტვირთება...`; }
   try {
     const fd = new FormData();
     fd.append('order_id', orderId);
@@ -6237,7 +6270,7 @@ async function submitRating() {
   const comment = document.getElementById('rating-comment')?.value?.trim();
   if (!orderId) { closeM('ratingModal'); showToast('Order ID ვერ მოიძებნა', 'err'); return; }
   const btn = document.getElementById('rating-submit-btn');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳...'; }
+  if (btn) { btn.disabled = true; btn.innerHTML = ICO.loader; }
   try {
     await api('/api/reviews', {
       method: 'POST',
