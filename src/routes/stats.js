@@ -31,7 +31,7 @@ router.get('/', async (req, res) => {
       return res.json(cache);
     }
 
-    const [listings, sellers, volume, categories, allCategories] = await Promise.all([
+    const [listings, sellers, volume, categories, allCategories, visitsToday] = await Promise.all([
       // სულ active განცხ.
       db.query("SELECT COUNT(*) AS n FROM listings WHERE status='active'"),
 
@@ -58,6 +58,10 @@ router.get('/', async (req, res) => {
       // მიერ დამატებული ახალი კატეგორიაც ავტ. გამოჩნდება აქ, ძველი
       // hardcoded 6-სვეტიანი obj-ის ნაცვლად (იხ. admin.js /categories) ──
       db.query('SELECT slug FROM categories WHERE is_active=TRUE ORDER BY sort_order ASC'),
+
+      // ── დღევანდელი უნიკ. ვიზიტორები (hero pill + Global Chat header
+      // pill) — იხ. POST /visit ქვემოთ, ჩაწერა xdevice-id-ით ხდება. ──
+      db.query('SELECT COUNT(*) AS n FROM site_visits WHERE visit_date = CURRENT_DATE'),
     ]);
 
     const catMap = {};
@@ -70,6 +74,7 @@ router.get('/', async (req, res) => {
       listings_active: Number(listings.rows[0].n),
       sellers_active:  Number(sellers.rows[0].n),
       volume_gel:      Number(volume.rows[0].total),
+      visitors_today:  Number(visitsToday.rows[0].n),
       categories: categoriesBreakdown,
       cached_at: new Date().toISOString(),
     };
@@ -78,6 +83,37 @@ router.get('/', async (req, res) => {
     res.json(cache);
   } catch (err) {
     console.error('stats error:', err.message);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// POST /api/stats/visit  — დღიური უნიკ. ვიზიტორის დარეგისტრირება
+// (auth არ სჭირდება — სტუმარსაც და ავტორიზებულსაც ერთნაირად ეთვლება).
+// Frontend ერთხელ, გვერდის ჩატვირთვაზე, localStorage-ში დაგენერირებულ
+// device-id-ს (gb_visitor_id) აგზავნის visitor_key-დ. (visit_date,
+// visitor_key) PRIMARY KEY თავისთავად უზრუნველყოფს, რომ ერთი device
+// დღეში მხოლოდ ერთხელ ჩაითვალოს — ON CONFLICT DO NOTHING უვნებელად
+// "იგნორირებს" იმავე დღის განმეორებით request-ებს (page refresh და ა.შ).
+// ══════════════════════════════════════════════════════════════
+router.post('/visit', async (req, res) => {
+  try {
+    const key = String(req.body?.visitor_key || '').trim().slice(0, 64);
+    if (!key) return res.status(400).json({ error: 'missing_visitor_key' });
+
+    await db.query(
+      `INSERT INTO site_visits (visit_date, visitor_key)
+       VALUES (CURRENT_DATE, $1)
+       ON CONFLICT (visit_date, visitor_key) DO NOTHING`,
+      [key]
+    );
+    // ⚠ ეს ცხრილს ცვლის, მაგრამ ცალკე cache invalidation არ სჭირდება —
+    // GET / ისედაც 5წთ-ში ერთხელ ახლდება, ასე რომ ახალი ვიზიტორი
+    // მაქსიმუმ 5წთ დაგვიანებით გამოჩნდება ბეჯზე, რაც სრულიად მისაღებია
+    // ("დღეს საიტზე" counter-ს წამებში სიზუსტე არ სჭირდება).
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('visit log error:', err.message);
     res.status(500).json({ error: 'server_error' });
   }
 });

@@ -470,6 +470,32 @@ async function setupDatabase() {
       //    არასანდოა (რამდენიმე hold-ს იგივე order_id შეიძლება ჰქონდეს).
       `ALTER TABLE transactions ADD COLUMN IF NOT EXISTS hold_id UUID REFERENCES balance_holds(id)`,
       `CREATE INDEX IF NOT EXISTS idx_tx_hold ON transactions(hold_id) WHERE hold_id IS NOT NULL`,
+      // ── GLOBAL CHAT — საიტის ერთი საერთო ჩატი (floating widget,
+      //    ყველა გვერდიდან ხილული). ცალკეა 1:1 chat_rooms/messages
+      //    სისტემისგან — sender-ის ინფო (username/role/is_vip/rating)
+      //    ყოველთვის users+seller_stats JOIN-ით მოდის, ცალკე აქ არაფერი
+      //    ინახება. იხ. src/routes/chat.js GET/POST /global/messages. ──
+      `CREATE TABLE IF NOT EXISTS global_messages (
+        id          UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+        sender_id   UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        content     TEXT        NOT NULL,
+        created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_global_messages_created ON global_messages(created_at DESC)`,
+      // ── SITE VISITS — დღიური უნიკალური ვიზიტორების დათვლა ("N დღეს
+      //    საიტზე" ბეჯისთვის, hero-ზე + Global Chat header-ში). Client
+      //    (frontend) ერთხელ, localStorage-ში დაგენერირებული device-id-ით
+      //    (ავტორიზებულს/სტუმარს ორივეს ერთნაირად) POST-ავს visitor_key-ს
+      //    stats.js-ის POST /api/stats/visit-ზე; (visit_date, visitor_key)
+      //    PK ბუნებრივად უზრუნველყოფს დღეში ერთხელ დათვლას ერთი
+      //    device-სთვის, ON CONFLICT DO NOTHING-ით (იხ. stats.js). ──
+      `CREATE TABLE IF NOT EXISTS site_visits (
+        visit_date  DATE         NOT NULL,
+        visitor_key VARCHAR(64)  NOT NULL,
+        first_seen  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (visit_date, visitor_key)
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_site_visits_date ON site_visits(visit_date)`,
     ];
     for (const sql of migrations) {
       try { await client.query(sql); } catch (e) { /* უკვე არსებობს */ }

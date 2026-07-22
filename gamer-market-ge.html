@@ -519,6 +519,74 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 .support-fab:active{transform:scale(.94)}
 @media (max-width:800px){.support-fab{bottom:78px;right:16px;width:50px;height:50px;font-size:20px}}
 
+/* ══════════════════════════ GLOBAL CHAT WIDGET ══════════════════════════
+   საიტის საერთო ჩატი — floating პანელი დესკტოპზე (ბოლო-მარჯვნივ,
+   support-fab-ის თავზე დაწყობილი), slide-up bottom sheet მობილურზე. */
+.gc-fab{position:fixed;bottom:94px;right:24px;width:52px;height:52px;border-radius:50%;background:var(--grad-accent);color:#06120d;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:601;transition:transform .15s}
+.gc-fab:hover{transform:scale(1.08)}
+.gc-fab:active{transform:scale(.94)}
+.gc-fab svg{width:22px;height:22px;stroke:currentColor;stroke-width:1.7;fill:none}
+.gc-fab-badge{position:absolute;top:-2px;right:-2px;background:var(--red);color:#fff;font-size:9px;font-weight:700;min-width:16px;height:16px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px;border:2px solid var(--bg)}
+@media(max-width:800px){.gc-fab{bottom:138px;right:16px;width:48px;height:48px}}
+
+.gc-backdrop{display:none;position:fixed;inset:0;background:#00000070;z-index:599;opacity:0;pointer-events:none;transition:opacity .2s}
+
+.gc-panel{position:fixed;bottom:164px;right:24px;width:380px;max-width:calc(100vw - 32px);height:520px;max-height:calc(100vh - 200px);
+  background:var(--card-solid);backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);
+  border:1px solid var(--glass-border);border-radius:18px;box-shadow:0 24px 60px -12px #000000a0;
+  display:flex;flex-direction:column;overflow:hidden;z-index:600;
+  opacity:0;transform:translateY(16px) scale(.98);pointer-events:none;transition:opacity .22s ease,transform .22s ease}
+.gc-panel.open{opacity:1;transform:none;pointer-events:all}
+
+.gc-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0;gap:8px}
+.gc-head-l{display:flex;align-items:center;gap:9px;min-width:0}
+.gc-head-t{font-size:13.5px;font-weight:700;white-space:nowrap}
+.gc-live-pill{display:inline-flex;align-items:center;gap:5px;background:var(--glass-bg);border:1px solid var(--border2);border-radius:20px;padding:3px 9px;font-size:10px;color:var(--muted2);font-weight:600;white-space:nowrap}
+.gc-live-dot,.hero-live-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite;flex-shrink:0}
+.gc-close{width:26px;height:26px;border-radius:7px;background:var(--bg3);border:1px solid var(--border2);color:var(--muted2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+.gc-close:hover{color:var(--text);border-color:var(--border3)}
+
+.gc-msgs{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:11px}
+.gc-msg{display:flex;gap:8px;max-width:100%}
+.gc-msg-ava{width:26px;height:26px;border-radius:50%;background:var(--bg4);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--accent);flex-shrink:0;overflow:hidden}
+.gc-msg-ava img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.gc-msg-body{flex:1;min-width:0}
+.gc-msg-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px}
+.gc-msg-name{font-size:11.5px;font-weight:700;color:var(--text)}
+.gc-msg-name.me{color:var(--accent)}
+.gc-role-badge{font-size:9px;padding:1px 6px;border-radius:4px;font-weight:700;letter-spacing:.02em}
+.gc-role-admin{background:var(--pd);color:var(--purple);border:1px solid #b57bee28}
+.gc-role-mod{background:var(--bd);color:var(--blue);border:1px solid #4d9de020}
+.gc-role-vip{background:var(--gd);color:var(--gold);border:1px solid var(--gd2)}
+.gc-rating-pill{display:inline-flex;align-items:center;gap:3px;background:var(--glass-bg);border:1px solid var(--border2);color:var(--muted2);font-size:10px;padding:1px 7px 1px 6px;border-radius:20px;font-family:var(--mono)}
+.gc-rating-pill svg{width:10px;height:10px;flex-shrink:0}
+.gc-msg-text{font-size:12.5px;line-height:1.5;color:var(--text);word-break:break-word;white-space:pre-wrap}
+.gc-msg-time{font-size:9.5px;color:var(--muted);margin-top:2px}
+.gc-system{text-align:center;font-size:11px;color:var(--muted);padding:10px 0;margin:auto}
+
+.gc-input-row{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--border);flex-shrink:0;align-items:flex-end}
+.gc-input{flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:9px 12px;
+  color:var(--text);font-family:var(--font);font-size:16px;resize:none;max-height:80px;line-height:1.4}
+.gc-input:focus{outline:none;border-color:var(--border3)}
+.gc-input::placeholder{color:var(--muted)}
+.gc-input:disabled{opacity:.6;cursor:not-allowed}
+.gc-send{width:38px;height:38px;border-radius:10px;background:var(--grad-accent);color:#06120d;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;transition:opacity .15s;border:none}
+.gc-send:disabled{opacity:.5;cursor:default}
+.gc-send svg{width:17px;height:17px}
+.gc-cooldown-txt{font-size:10px;font-family:var(--mono);font-weight:700}
+
+@media(max-width:800px){
+  .gc-backdrop{display:block}
+  .gc-backdrop.open{opacity:1;pointer-events:all}
+  .gc-panel{left:0;right:0;bottom:0;width:100%;max-width:100%;height:80vh;max-height:80vh;border-radius:20px 20px 0 0;
+    transform:translateY(100%);box-shadow:0 -12px 40px #000000a0}
+  .gc-panel.open{transform:translateY(0)}
+}
+
+/* live visitors — hero trust pill */
+.hero-live-pill{display:inline-flex;align-items:center;gap:6px;background:var(--glass-bg);border:1px solid var(--border2);
+  border-radius:20px;padding:4px 10px 4px 8px;font-size:10.5px;color:var(--muted2);font-weight:600;margin-left:8px;margin-bottom:16px}
+
 .ld-section{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:18px 20px;margin-bottom:16px}
 .ld-section-title{font-size:13px;font-weight:700;margin-bottom:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.04em}
 .ld-desc{font-size:13.5px;line-height:1.7;color:var(--muted2);white-space:pre-wrap}
@@ -1406,6 +1474,9 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
     <div class="hero-inner">
       <div>
         <div class="hero-tag" data-i18n="hero_tag">ქართული გეიმინგ ბაზარი</div>
+        <div class="hero-live-pill" id="hero-live-pill" style="display:none">
+          <span class="hero-live-dot"></span><span id="hero-live-text"></span>
+        </div>
         <h1 data-i18n-html="hero_h1">იყიდე და გაყიდე<br><span class="hl">სათამაშო</span> ექაუნთები</h1>
         <p class="hero-sub" data-i18n="hero_sub">საქართველოს პირველი დაცული მარკეტფლეისი — Escrow, ვერიფიცირებული გამყიდველები, GEL/USD ბილინგი.</p>
         <div class="hero-cta">
@@ -2852,6 +2923,44 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
      "🎧 მხარდაჭერა (Admin)" ოთახს, ნებისმ. გვერდიდან -->
 <button class="support-fab" onclick="openFloatingSupport()" title="მხარდაჭერა"><svg class="ic" viewBox="0 0 24 24"><path d="M4 13v-1a8 8 0 0 1 16 0v1"/><rect x="2.5" y="13" width="4" height="6" rx="1.5"/><rect x="17.5" y="13" width="4" height="6" rx="1.5"/><path d="M20 19v.5a3 3 0 0 1-3 3h-3.5"/></svg></button>
 
+<!-- ══════════════════════ GLOBAL CHAT WIDGET ══════════════════════
+     საიტის ერთი საერთო ჩატი — ყველა ავტორიზებული მომხმარებელი წერს აქ,
+     სტუმარსაც შეუძლია წაკითხვა. დესკტოპზე floating პანელი
+     ბოლო-მარჯვენა კუთხეში (support-fab-ის თავზე დაწყობილი),
+     მობილურზე კი slide-up bottom sheet (~80% სიმაღლე). -->
+<div class="gc-backdrop" id="gcBackdrop" onclick="gcToggle(false)"></div>
+
+<button class="gc-fab" id="gcFab" onclick="gcToggle()" title="გლობალური ჩატი">
+  <svg viewBox="0 0 24 24"><path d="M21 11.5a8 8 0 0 1-8 8H8l-5 3 1.2-4.6A8 8 0 1 1 21 11.5Z" stroke-linejoin="round"/></svg>
+  <span class="gc-fab-badge" id="gcFabBadge" style="display:none">0</span>
+</button>
+
+<div class="gc-panel" id="gcPanel">
+  <div class="gc-head">
+    <div class="gc-head-l">
+      <svg class="ic" viewBox="0 0 24 24" style="color:var(--accent);flex-shrink:0"><path d="M21 11.5a8 8 0 0 1-8 8H8l-5 3 1.2-4.6A8 8 0 1 1 21 11.5Z"/></svg>
+      <div class="gc-head-t">გლობალური ჩატი</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <div class="gc-live-pill" id="gc-live-pill" style="display:none"><span class="gc-live-dot"></span><span id="gc-live-count"></span></div>
+      <div class="gc-close" onclick="gcToggle(false)" title="დახურვა">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M18 6 6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </div>
+    </div>
+  </div>
+  <div class="gc-msgs" id="gc-msgs">
+    <div class="gc-system">იტვირთება...</div>
+  </div>
+  <div class="gc-input-row">
+    <textarea class="gc-input" id="gc-input" rows="1" maxlength="500" placeholder="დაწერე შეტყობინება..."
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();gcSend();}"
+      oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,80)+'px'"></textarea>
+    <button class="gc-send" id="gc-send-btn" onclick="gcSend()">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M4 20l16-8L4 4l3 8-3 8zM7 12h9" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+</div>
+
 <script>
 // ══════════════════════════════════════════════════════════
 // ICON SYSTEM — unified inline SVGs (stroke-width 1.5) used
@@ -3303,6 +3412,7 @@ function updateNavUser() {
     if (drawerUser)      drawerUser.style.display = 'none';
     if (drawerLoginBtn)  drawerLoginBtn.style.display  = 'block';
     if (drawerLogoutBtn) drawerLogoutBtn.style.display = 'none';
+    if (typeof gcRefreshAuthState === 'function') gcRefreshAuthState();
     return;
   }
 
@@ -3361,6 +3471,8 @@ function updateNavUser() {
   if (pl_el) pl_el.style.display = 'block';
   if (wg_el) wg_el.style.display = 'none';
   if (wl_el) wl_el.style.display = 'block';
+
+  if (typeof gcRefreshAuthState === 'function') gcRefreshAuthState();
 }
 
 // ══════════════════════════════════════════════════════════
@@ -7554,6 +7666,32 @@ async function loadHomeStats() {
     setTrustCell('trust-sellers', stats.sellers_active || 0);
     setTrustCell('trust-volume', stats.volume_gel || 0,
       v => v >= 1000 ? '₾' + (v / 1000).toFixed(1) + 'k+' : '₾' + Math.round(v) + '+');
+
+    // ── LIVE VISITORS — hero pill + Global Chat header pill ──────
+    // (0 დროებით არ ჩანს — ცარიელი "0 დღეს საიტზე" ცუდად გამოიყურება
+    // ახალ/დაბალი-ტრაფიკის საიტზე, იგივე "დამალე ცარიელი მდგომარეობა"
+    // პრინციპი, რასაც ზემოთ hero/trust სტატისტიკები მისდევენ.)
+    const visitorsToday = Number(stats.visitors_today) || 0;
+    const heroPill = document.getElementById('hero-live-pill');
+    const heroTxt  = document.getElementById('hero-live-text');
+    if (heroPill && heroTxt) {
+      if (visitorsToday > 0) {
+        heroTxt.textContent = visitorsToday + ' დღეს საიტზე';
+        heroPill.style.display = 'inline-flex';
+      } else {
+        heroPill.style.display = 'none';
+      }
+    }
+    const gcLivePill  = document.getElementById('gc-live-pill');
+    const gcLiveCount = document.getElementById('gc-live-count');
+    if (gcLivePill && gcLiveCount) {
+      if (visitorsToday > 0) {
+        gcLiveCount.textContent = visitorsToday + ' დღეს საიტზე';
+        gcLivePill.style.display = 'inline-flex';
+      } else {
+        gcLivePill.style.display = 'none';
+      }
+    }
   } catch(e) { /* silent */ }
 }
 
@@ -7841,6 +7979,310 @@ setTimeout(() => {
   window.addEventListener('scroll', onScroll, { passive: true });
   onScroll();
 })();
+
+// ══════════════════════════════════════════════════════════════
+// GLOBAL CHAT WIDGET — საიტის ერთი საერთო ჩატი
+// ══════════════════════════════════════════════════════════════
+// მუშაობის პრინციპი:
+//  · ავტორიზებული მომხმარებლისთვის WS კავშირი (room=global) იხსნება
+//    სესიის დაწყებისთანავე (login-ისთანავე) და ცოცხლდება პანელის
+//    გახსნა/დახურვისგან დამოუკიდებლად — ასე გვაქვს (ა) წამებში
+//    ახალი შეტყ.-ის badge დახურული პანელზეც და (ბ) გახსნისას აღარ
+//    სჭირდება ხელახალი handshake.
+//  · სტუმარს (currentUser===null) WS არ ეხსნება (auth სავალდებულოა
+//    ბექენდის /ws/chat-ზე) — პანელის გახსნისას უბრალოდ HTTP
+//    polling-ით კითხულობს ისტორიას (read-only), წერა კი login
+//    მოდალს ხსნის.
+//  · 30-წამიანი slow-mode ორმაგადაა დაცული: client-ის მხარეს ღილაკი/
+//    input იბლოკება ("29წმ" countdown), ბექენდზეც (chat.js) იგივე
+//    ვადა მოწმდება დამოუკიდებლად — client-ის გვერდის ავლა API-ის
+//    პირდაპ. გამოძახებით შედეგს არ მოიტანს.
+const GC_COOLDOWN_MS = 30 * 1000;
+const GC_SEND_ICON = '<svg viewBox="0 0 24 24" fill="none"><path d="M4 20l16-8L4 4l3 8-3 8zM7 12h9" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></svg>';
+
+let gcOpen           = false;
+let gcWs             = null;
+let gcReconnectTimer = null;
+let gcPollTimer      = null;
+let gcCooldownTimer  = null;
+let gcCooldownUntil  = 0;
+let gcUnread         = 0;
+let gcHistoryLoaded  = false;
+let gcLastMsgId      = null;
+
+// ── Panel toggle ────────────────────────────────────────────────
+function gcToggle(force) {
+  const panel    = document.getElementById('gcPanel');
+  const backdrop = document.getElementById('gcBackdrop');
+  const fab      = document.getElementById('gcFab');
+  if (!panel) return;
+
+  gcOpen = (force !== undefined) ? force : !gcOpen;
+  panel.classList.toggle('open', gcOpen);
+  if (backdrop) backdrop.classList.toggle('open', gcOpen);
+  if (fab) fab.style.display = gcOpen ? 'none' : 'flex';
+
+  if (gcOpen) {
+    gcUnread = 0;
+    gcUpdateBadge();
+    if (!gcHistoryLoaded) { gcHistoryLoaded = true; gcLoadHistory(); }
+    if (!currentUser) gcStartPolling(); // ავტორიზებულს WS ისედაც სულ ცოცხალი აქვს
+    setTimeout(() => {
+      const m = document.getElementById('gc-msgs');
+      if (m) m.scrollTop = m.scrollHeight;
+      const inp = document.getElementById('gc-input');
+      if (inp && currentUser && !inp.disabled) inp.focus();
+    }, 60);
+  } else {
+    gcStopPolling();
+  }
+}
+
+function gcUpdateBadge() {
+  const b = document.getElementById('gcFabBadge');
+  if (!b) return;
+  if (gcUnread > 0 && !gcOpen) {
+    b.style.display   = 'flex';
+    b.textContent = gcUnread > 9 ? '9+' : String(gcUnread);
+  } else {
+    b.style.display = 'none';
+  }
+}
+
+// ── History (REST) ──────────────────────────────────────────────
+async function gcLoadHistory() {
+  const msgsEl = document.getElementById('gc-msgs');
+  if (!msgsEl) return;
+  try {
+    const msgs = await api('/api/chat/global/messages?limit=50');
+    gcRenderMessages(msgs);
+    if (msgs && msgs.length) gcLastMsgId = msgs[msgs.length - 1].id;
+  } catch (e) {
+    msgsEl.innerHTML = '<div class="gc-system">ჩატვირთვა ვერ მოხერხდა</div>';
+  }
+}
+
+function gcRenderMessages(msgs) {
+  const msgsEl = document.getElementById('gc-msgs');
+  if (!msgsEl) return;
+  if (!msgs || !msgs.length) {
+    msgsEl.innerHTML = '<div class="gc-system">ჯერ არცერთი შეტყობინება — დაწერე პირველი!</div>';
+    return;
+  }
+  msgsEl.innerHTML = msgs.map(m => gcMessageHtml(m)).join('');
+  msgsEl.scrollTop = msgsEl.scrollHeight;
+}
+
+function gcAppendMessage(m) {
+  const msgsEl = document.getElementById('gc-msgs');
+  if (msgsEl) {
+    const empty = msgsEl.querySelector('.gc-system');
+    if (empty) empty.remove();
+    const div = document.createElement('div');
+    div.innerHTML = gcMessageHtml(m);
+    msgsEl.appendChild(div.firstElementChild);
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+  }
+  gcLastMsgId = m.id;
+  if (!gcOpen) { gcUnread++; gcUpdateBadge(); }
+}
+
+// ── Message rendering (name, role badge, rating pill, text) ─────
+function gcRoleBadge(m) {
+  if (m.role === 'admin')     return '<span class="gc-role-badge gc-role-admin">Admin</span>';
+  if (m.role === 'moderator') return '<span class="gc-role-badge gc-role-mod">Mod</span>';
+  if (m.is_vip)               return '<span class="gc-role-badge gc-role-vip">VIP</span>';
+  return '';
+}
+
+function gcRatingPill(m) {
+  const rating = Number(m.avg_rating) || 0;
+  const label  = rating > 0 ? rating.toFixed(1) : 'ახალი';
+  return '<span class="gc-rating-pill"><svg viewBox="0 0 24 24" fill="#facc15"><path d="M12 2.5 15 9l7 1-5.2 5 1.3 7-6.1-3.4L5.9 22l1.3-7L2 10l7-1Z"/></svg>' + label + '</span>';
+}
+
+function gcMessageHtml(m) {
+  const isMe   = !!(currentUser && m.sender_id === currentUser.id);
+  const name   = escHtml(m.display_name || m.username || 'მომხმარებელი');
+  const time   = new Date(m.created_at || Date.now()).toLocaleTimeString('ka-GE', { hour: '2-digit', minute: '2-digit' });
+  const init   = (m.display_name || m.username || '?').slice(0, 2).toUpperCase();
+  const ava    = m.avatar_url ? ('<img src="' + imgUrl(m.avatar_url) + '">') : init;
+  const text   = escHtml(m.content).replace(/\n/g, '<br>');
+
+  return '<div class="gc-msg">'
+    + '<div class="gc-msg-ava">' + ava + '</div>'
+    + '<div class="gc-msg-body">'
+    +   '<div class="gc-msg-meta">'
+    +     '<span class="gc-msg-name' + (isMe ? ' me' : '') + '">' + name + '</span>'
+    +     gcRoleBadge(m)
+    +     gcRatingPill(m)
+    +   '</div>'
+    +   '<div class="gc-msg-text">' + text + '</div>'
+    +   '<div class="gc-msg-time">' + time + '</div>'
+    + '</div>'
+    + '</div>';
+}
+
+// ── WebSocket (ავტორიზებული მომხმ.) ──────────────────────────────
+function gcConnectWS() {
+  if (!currentUser) return;
+  if (gcWs) { try { gcWs.close(); } catch (e) {} gcWs = null; }
+  clearTimeout(gcReconnectTimer);
+
+  const token = getToken();
+  if (!token) return;
+  const url = WS_URL + '/ws/chat?token=' + token + '&room=global';
+
+  try {
+    gcWs = new WebSocket(url);
+
+    gcWs.onopen = () => { gcStopPolling(); };
+
+    gcWs.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'connected') return;
+        if (data.type === 'slow_mode' && data.retry_after_ms) { gcApplyCooldown(data.retry_after_ms); return; }
+        if (data.type === 'global_message' && data.message) { gcAppendMessage(data.message); }
+      } catch (e) { /* silent */ }
+    };
+
+    gcWs.onclose = (e) => {
+      if (e.code !== 4001 && e.code !== 4003 && currentUser) {
+        gcReconnectTimer = setTimeout(gcConnectWS, 3000);
+      }
+    };
+
+    gcWs.onerror = () => { /* onclose მოყვება, reconnect იქ ხდება */ };
+  } catch (e) { /* silent */ }
+}
+
+function gcDisconnectWS() {
+  clearTimeout(gcReconnectTimer);
+  if (gcWs) { try { gcWs.close(); } catch (e) {} gcWs = null; }
+}
+
+// ── HTTP polling — მხოლოდ სტუმარს, პანელი ღიაა სანამ ეს გაშვებულია ──
+function gcStartPolling() {
+  gcStopPolling();
+  gcPollTimer = setInterval(async () => {
+    try {
+      const msgs = await api('/api/chat/global/messages?limit=15');
+      if (!msgs || !msgs.length) return;
+      const idx = gcLastMsgId ? msgs.findIndex(x => x.id === gcLastMsgId) : -1;
+      const toAppend = idx >= 0 ? msgs.slice(idx + 1) : (gcLastMsgId ? [] : msgs);
+      toAppend.forEach(gcAppendMessage);
+    } catch (e) { /* silent */ }
+  }, 7000);
+}
+function gcStopPolling() {
+  clearInterval(gcPollTimer);
+  gcPollTimer = null;
+}
+
+// ── Slow-mode / cooldown UI (input + send ღილაკზე countdown) ────
+function gcApplyCooldown(ms) {
+  gcCooldownUntil = Date.now() + ms;
+  gcUpdateCooldownUI();
+}
+
+function gcUpdateCooldownUI() {
+  const btn = document.getElementById('gc-send-btn');
+  const inp = document.getElementById('gc-input');
+  if (!btn || !inp) return;
+  clearInterval(gcCooldownTimer);
+
+  const tick = () => {
+    const left = Math.ceil((gcCooldownUntil - Date.now()) / 1000);
+    if (left > 0) {
+      btn.disabled = true;
+      inp.disabled = true;
+      inp.placeholder = 'დაელოდეთ...';
+      btn.innerHTML = '<span class="gc-cooldown-txt">' + left + 'წმ</span>';
+    } else {
+      clearInterval(gcCooldownTimer);
+      btn.disabled = false;
+      inp.disabled = false;
+      inp.placeholder = 'დაწერე შეტყობინება...';
+      btn.innerHTML = GC_SEND_ICON;
+    }
+  };
+  tick();
+  gcCooldownTimer = setInterval(tick, 1000);
+}
+
+// ── Send ──────────────────────────────────────────────────────────
+async function gcSend() {
+  if (!currentUser) { gcToggle(false); openM('loginModal'); return; }
+  if (Date.now() < gcCooldownUntil) return;
+
+  const inp = document.getElementById('gc-input');
+  if (!inp) return;
+  const content = inp.value.trim();
+  if (!content) return;
+
+  inp.value = '';
+  inp.style.height = 'auto';
+  gcApplyCooldown(GC_COOLDOWN_MS); // optimistური, დაუყოვნებელი client-side ჩაკეტვა
+
+  if (gcWs && gcWs.readyState === WebSocket.OPEN) {
+    gcWs.send(JSON.stringify({ content }));
+  } else {
+    try {
+      const msg = await api('/api/chat/global/messages', { method: 'POST', body: JSON.stringify({ content }) });
+      gcAppendMessage(msg);
+    } catch (e) {
+      if (e && e.error === 'slow_mode' && e.retry_after_ms) {
+        gcApplyCooldown(e.retry_after_ms);
+      } else {
+        showToast('შეტყობინება ვერ გაიგზავნა', 'err');
+      }
+      inp.value = content;
+    }
+  }
+}
+
+// ── Auth state → connect/disconnect WS + input enabled/disabled ──
+// (updateNavUser()-იდან გამოიძახება ყოველ login/logout-ზე)
+function gcRefreshAuthState() {
+  const inp = document.getElementById('gc-input');
+  const btn = document.getElementById('gc-send-btn');
+  if (currentUser) {
+    gcConnectWS();
+    if (Date.now() >= gcCooldownUntil) {
+      if (inp) { inp.disabled = false; inp.placeholder = 'დაწერე შეტყობინება...'; }
+      if (btn) btn.disabled = false;
+    }
+  } else {
+    gcDisconnectWS();
+    if (inp) { inp.disabled = true; inp.placeholder = 'შესვლა გჭირდებათ წერისთვის'; }
+    if (btn) btn.disabled = true;
+  }
+}
+
+// ── Daily visitors ping — ერთხელ სესიაზე, ანონიმური device-id-ით ──
+function gcGetVisitorId() {
+  try {
+    let id = localStorage.getItem('gb_visitor_id');
+    if (!id) {
+      id = (window.crypto && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : ('v-' + Date.now() + '-' + Math.random().toString(36).slice(2));
+      localStorage.setItem('gb_visitor_id', id);
+    }
+    return id;
+  } catch (e) { return 'v-' + Date.now(); }
+}
+async function gcLogVisit() {
+  try {
+    await fetch(API_URL + '/api/stats/visit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ visitor_key: gcGetVisitorId() }),
+    });
+  } catch (e) { /* არაკრიტიკული — silent */ }
+}
+gcLogVisit();
 </script>
 </body>
 </html>

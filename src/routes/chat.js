@@ -169,6 +169,96 @@ router.post('/rooms/:id/messages', requireAuth, async (req, res) => {
   }
 });
 
+// ══════════════════════════════════════════════════════════════
+// GLOBAL CHAT — ერთი საერთო ოთახი, ხილული საიტის ყველა გვერდიდან
+// (frontend: gamer-market-ge.html-ის floating widget). ცალკეა
+// chat_rooms/messages-ის 1:1 სისტემისგან — საკუთარი global_messages
+// ცხრილი აქვს (იხ. setup.js migrations), auth მხოლოდ წერაზეა
+// სავალდებულო, კითხვა სტუმარსაც შეუძლია.
+// ══════════════════════════════════════════════════════════════
+
+// 30-წამიანი slow-mode — server-side დაცვა. Client-ის countdown
+// მხოლოდ UX-ისთვისაა; აქაც ცალკე მოწმდება, თორემ პირდაპ. API
+// გამოძახებით client-ის ვადის გვერდის ავლა იქნებოდა შესაძლებელი.
+// In-memory Map-ია (არა DB) განზრახ — მსუბუქი, high-frequency
+// შემოწმებაა და დაკარგვა restart-ზე უვნებელია (უარეს შემთხვევაში
+// ვინმეს უბრალოდ ერთი დამატებითი შეტყ. გაეშვება).
+const GLOBAL_CHAT_COOLDOWN_MS = 30 * 1000;
+const GLOBAL_CHAT_MAX_LEN     = 500;
+const lastGlobalMsgAt = new Map(); // userId → ბოლო შეტყ.-ის timestamp
+
+// მოწონებული "sender" ინფოს JOIN — ერთხელ დაწერილი, სამივე ადგილას
+// (GET history, POST fallback, WS handler) გამოსაყენებელი.
+async function fetchGlobalSender(userId) {
+  const { rows } = await db.query(`
+    SELECT u.username, u.display_name, u.avatar_url, u.role,
+      (u.is_vip AND u.vip_expires_at IS NOT NULL AND u.vip_expires_at > NOW()) AS is_vip,
+      COALESCE(ss.avg_rating, 0)   AS avg_rating,
+      COALESCE(ss.review_count, 0) AS review_count
+    FROM users u
+    LEFT JOIN seller_stats ss ON ss.seller_id = u.id
+    WHERE u.id=$1
+  `, [userId]);
+  return rows[0] || {};
+}
+
+// ══════════════════════════════════════════════════════════════
+// GET /api/chat/global/messages  — საჯარო ისტორია (auth არ სჭირდება)
+// ══════════════════════════════════════════════════════════════
+router.get('/global/messages', async (req, res) => {
+  try {
+    const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 100);
+    const { rows } = await db.query(`
+      SELECT
+        m.id, m.sender_id, m.content, m.created_at,
+        u.username, u.display_name, u.avatar_url, u.role,
+        (u.is_vip AND u.vip_expires_at IS NOT NULL AND u.vip_expires_at > NOW()) AS is_vip,
+        COALESCE(ss.avg_rating, 0)   AS avg_rating,
+        COALESCE(ss.review_count, 0) AS review_count
+      FROM global_messages m
+      JOIN users u ON u.id = m.sender_id
+      LEFT JOIN seller_stats ss ON ss.seller_id = u.id
+      ORDER BY m.created_at DESC
+      LIMIT $1
+    `, [limit]);
+    res.json(rows.reverse());
+  } catch (err) {
+    console.error('global chat history error:', err.message);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// POST /api/chat/global/messages  — HTTP fallback (WS-ის გარდა)
+// ══════════════════════════════════════════════════════════════
+router.post('/global/messages', requireAuth, async (req, res) => {
+  try {
+    const raw = (req.body.content || '').trim();
+    if (!raw) return res.status(400).json({ error: 'empty_message' });
+    if (raw.length > GLOBAL_CHAT_MAX_LEN) return res.status(400).json({ error: 'too_long' });
+
+    const last    = lastGlobalMsgAt.get(req.user.id) || 0;
+    const elapsed = Date.now() - last;
+    if (elapsed < GLOBAL_CHAT_COOLDOWN_MS) {
+      return res.status(429).json({ error: 'slow_mode', retry_after_ms: GLOBAL_CHAT_COOLDOWN_MS - elapsed });
+    }
+    lastGlobalMsgAt.set(req.user.id, Date.now());
+
+    const { rows } = await db.query(
+      'INSERT INTO global_messages(sender_id,content) VALUES($1,$2) RETURNING *',
+      [req.user.id, raw]
+    );
+    const sender   = await fetchGlobalSender(req.user.id);
+    const enriched = { ...rows[0], ...sender };
+
+    broadcastGlobalMessage(enriched);
+    res.status(201).json(enriched);
+  } catch (err) {
+    console.error('global chat send error:', err.message);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
 module.exports = router;
 
 // ══════════════════════════════════════════════════════════════
@@ -227,14 +317,19 @@ function setupWebSocket(server) {
       ws.close(4001, 'unauthorized'); return;
     }
 
-    // ოთახში წვდომის შემოწ.
-    try {
-      const { rows } = await db.query(
-        'SELECT id FROM chat_rooms WHERE id=$1 AND (participant_a=$2 OR participant_b=$2)',
-        [roomId, userId]
-      );
-      if (!rows.length) { ws.close(4003, 'forbidden'); return; }
-    } catch { ws.close(4000, 'error'); return; }
+    // ოთახში წვდომის შემოწ. — 'global' არის საიტის საერთო ჩატის
+    // სპეც. pseudo-room ID (იხ. GLOBAL CHAT სექცია ზემოთ): მასზე
+    // ნებისმ. ავტორიზებულ მომხმარებელს აქვს წვდომა, chat_rooms-ში
+    // საერთოდ არ არსებობს, ამიტომ 1:1 ოთახის owner-შემოწმებას ვტოვებთ.
+    if (roomId !== 'global') {
+      try {
+        const { rows } = await db.query(
+          'SELECT id FROM chat_rooms WHERE id=$1 AND (participant_a=$2 OR participant_b=$2)',
+          [roomId, userId]
+        );
+        if (!rows.length) { ws.close(4003, 'forbidden'); return; }
+      } catch { ws.close(4000, 'error'); return; }
+    }
 
     // ოთახში დამ.
     if (!rooms.has(roomId)) rooms.set(roomId, new Set());
@@ -245,6 +340,31 @@ function setupWebSocket(server) {
       try {
         const { content } = JSON.parse(raw.toString());
         if (!content?.trim()) return;
+
+        // ── GLOBAL CHAT — ცალკე დამუშავება: cooldown, global_messages
+        // ცხრილი, ბრადქასთი მთელ 'global' ოთახზე. push/1:1 ლოგიკას
+        // საერთოდ არ ეხება. ──
+        if (roomId === 'global') {
+          const trimmed = content.trim().slice(0, GLOBAL_CHAT_MAX_LEN);
+
+          const last    = lastGlobalMsgAt.get(userId) || 0;
+          const elapsed = Date.now() - last;
+          if (elapsed < GLOBAL_CHAT_COOLDOWN_MS) {
+            ws.send(JSON.stringify({ type: 'slow_mode', retry_after_ms: GLOBAL_CHAT_COOLDOWN_MS - elapsed }));
+            return;
+          }
+          lastGlobalMsgAt.set(userId, Date.now());
+
+          const { rows } = await db.query(
+            'INSERT INTO global_messages(sender_id,content) VALUES($1,$2) RETURNING *',
+            [userId, trimmed]
+          );
+          const sender   = await fetchGlobalSender(userId);
+          const enriched = { ...rows[0], ...sender };
+
+          broadcastGlobalMessage(enriched);
+          return;
+        }
 
         // DB-ში შენ.
         const { rows } = await db.query(
@@ -308,6 +428,18 @@ function broadcastEventToRoom(roomId, event) {
   const conns = rooms.get(roomId);
   if (!conns || !conns.size) return;
   const payload = JSON.stringify({ type: 'order_status', ...event });
+  conns.forEach(c => { if (c.ws.readyState === 1) c.ws.send(payload); });
+}
+
+// გლობალურ ჩატში ('global' pseudo-room) ახალი შეტყ.-ის ბრადქასთი —
+// payload-ში სრული enriched ობიექტია (username/role/is_vip/avg_rating
+// და მისთ.), განსხვავებით broadcastMessageToRoom-ის მოჭრილი ფორმისგან,
+// რადგან frontend-ს widget-ში ბეჯების/რეიტინგის დასარენდერებლად სწორედ
+// ეს დამატებითი ველები სჭირდება რეალურ დროშიც (არა მხოლოდ history GET-ზე).
+function broadcastGlobalMessage(messageRow) {
+  const conns = rooms.get('global');
+  if (!conns || !conns.size) return;
+  const payload = JSON.stringify({ type: 'global_message', message: messageRow });
   conns.forEach(c => { if (c.ws.readyState === 1) c.ws.send(payload); });
 }
 
@@ -397,5 +529,6 @@ async function sendAdminNotice(sellerId, content) {
 module.exports.setupWebSocket         = setupWebSocket;
 module.exports.broadcastMessageToRoom = broadcastMessageToRoom;
 module.exports.broadcastEventToRoom   = broadcastEventToRoom;
+module.exports.broadcastGlobalMessage = broadcastGlobalMessage;
 module.exports.getOrCreateAdminRoom   = getOrCreateAdminRoom;
 module.exports.sendAdminNotice        = sendAdminNotice;
