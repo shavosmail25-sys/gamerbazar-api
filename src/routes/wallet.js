@@ -42,10 +42,97 @@ router.use((req, res, next) => {
 });
 
 // ══════════════════════════════════════════════════════════════
+// 48-HOUR ESCROW HOLD RELEASE — ბაგის შესწორება
+//
+// ბაგი იყო: hold_until-ის გასვლის შემდეგ balance_holds row უბრალოდ
+// "ხდებოდა due", მაგრამ არაფერი ამოწმებდა/ამოქმედებდა მას — ბალანსი
+// (hold_balance_gel → balance_gel) არ გადადიოდა და transaction-ის
+// status-იც 'pending'-ზე რჩებოდა, მიუხედავად იმისა, რომ description
+// უკვე "გათავისუფლდა" ამბობდა.
+//
+// ფიქსი — ერთი ატომური claim ორივე ტრიგერისთვის (report-ში მოთხოვნილი):
+//   1) `UPDATE balance_holds SET released=TRUE ... WHERE released=FALSE
+//      AND hold_until<=NOW() RETURNING *` ერთდროულად ასრულებს ვადის
+//      შემოწმებასაც (now() >= release_at) და "claim"-საც — ორ პარალელურ
+//      გამოძახებას (page-render + cron, ან ორი ერთდროული cron tick)
+//      ფიზიკურად არ შეუძლია ერთი და იგივე row-ის ორჯერ დაბრუნება, რაც
+//      პირდაპირ პასუხობს Safety Check-ს (#3) — დამატებითი is_released
+//      flag საჭირო აღარაა, released=FALSE/TRUE სვეტი თავადვეა ეს flag.
+//   2) claim-ილი თითო hold-ზე: ბალანსის რეალური, ატომური გადატანა —
+//      hold_balance_gel-იდან აკლდება, balance_gel-ს ემატება (იგივე
+//      db.transaction-ში, ისე რომ ან ორივე მოხდეს, ან არცერთი).
+//   3) ასოცირებული transactions row 'completed'-ზე გადადის hold_id-ით
+//      (ცალსახა FK — არა type/description-ის ცნობით, რაც არასანდო
+//      იქნებოდა). თუ ასეთი row არ არსებობს (hold_id-migration-მდელი
+//      ძველი hold), იქმნება ახალი, უკვე დასრულებული 'escrow_release'
+//      ჩანაწერი — ისტორია არასდროს რჩება "შუა გზაზე".
+//
+// ორი ტრიგერი, ორივე ერთდროულად აქტიური:
+//   a) "function call on page render" — ქვემოთ, GET /balance-ში,
+//      მოთხოვნის user-ის საკუთარი due hold-ები თავისუფლდება page
+//      load-ზევე, პასუხის დათვლამდე.
+//   b) cron — ფუნქცია ცალკეა export-ული (userId არგუმენტის გარეშე
+//      გამოძახებული ამუშავებს ყველა due hold-ს, ყველა user-ისთვის).
+//      ჩასმა არსებულ hourly cron loop-ში (იხ. users.js-ის კომენტარი —
+//      "cron ყოველ საათში ასუფთავებს ვადაგასულ VIP-ებს", იმავე loop-ს):
+//        const { releaseDueBalanceHolds } = require('./routes/wallet');
+//        await releaseDueBalanceHolds();
+//      ეს უზრუნველყოფს გათავისუფლებას მაშინაც, როცა seller საერთოდ
+//      არ შედის საიტზე page-render ტრიგერის გასააქტიურებლად.
+// ══════════════════════════════════════════════════════════════
+async function releaseDueBalanceHolds(userId = null) {
+  const releasedIds = [];
+  await db.transaction(async (client) => {
+    const { rows: due } = await client.query(
+      `UPDATE balance_holds
+          SET released=TRUE, released_at=NOW()
+        WHERE released=FALSE AND hold_until<=NOW()
+          ${userId ? 'AND user_id=$1' : ''}
+        RETURNING id, user_id, order_id, amount_gel`,
+      userId ? [userId] : []
+    );
+    if (!due.length) return;
+
+    for (const hold of due) {
+      // ბალანსის რეალური გადატანა — hold-იდან აქტიურ, ხელმისაწვდომ balance_gel-ში
+      await client.query(
+        `UPDATE users SET hold_balance_gel = hold_balance_gel - $1,
+                           balance_gel      = balance_gel + $1
+         WHERE id=$2`,
+        [hold.amount_gel, hold.user_id]
+      );
+
+      // ასოცირებული transaction row-ის სტატუსი → 'completed' (hold_id-ით, ცალსახად)
+      const { rowCount } = await client.query(
+        `UPDATE transactions SET status='completed' WHERE hold_id=$1 AND status!='completed'`,
+        [hold.id]
+      );
+
+      // fallback — hold_id-migration-მდელი ძველი hold-ებისთვის, რომლებსაც
+      // დაკავშირებული transaction row არ ჰყავთ
+      if (rowCount === 0) {
+        await client.query(
+          `INSERT INTO transactions(user_id,order_id,hold_id,type,amount_gel,status,description)
+           VALUES($1,$2,$3,'escrow_release',$4,'completed','48სთ hold გათავისუფლდა — თანხა ხელმისაწვდომია')`,
+          [hold.user_id, hold.order_id, hold.id, hold.amount_gel]
+        );
+      }
+
+      releasedIds.push(hold.id);
+    }
+  });
+  return releasedIds;
+}
+
+// ══════════════════════════════════════════════════════════════
 // GET /api/wallet/balance
 // ══════════════════════════════════════════════════════════════
 router.get('/balance', requireAuth, async (req, res) => {
   try {
+    // page-render ტრიგერი — ამ user-ის ვადაგასული hold-ები (თუ არსებობს)
+    // აქვე თავისუფლდება, ბალანსის დათვლამდე, რომ პასუხი უკვე გათავისუფლებულს ასახავდეს.
+    await releaseDueBalanceHolds(req.user.id);
+
     const { rows } = await db.query(
       'SELECT balance_gel, balance_usd, escrow_hold_gel, hold_balance_gel FROM users WHERE id=$1',
       [req.user.id]
@@ -360,3 +447,6 @@ router.post('/withdraw', requireAuth, async (req, res) => {
 });
 
 module.exports = router;
+// cron entry point — იხ. releaseDueBalanceHolds-ის თავზე კომენტარი
+// ჩასასმელად, არსებულ hourly cron loop-ში
+module.exports.releaseDueBalanceHolds = releaseDueBalanceHolds;

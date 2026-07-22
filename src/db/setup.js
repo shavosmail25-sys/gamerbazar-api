@@ -464,6 +464,12 @@ async function setupDatabase() {
       //    შეცვლას, სინამდვილეში კი უბრალოდ ვერ შედის, რადგან
       //    "დაბრუნების" email საერთოდ არ გადაცემულა.
       `ALTER TABLE listings ADD COLUMN IF NOT EXISTS clean_email_confirmed BOOLEAN NOT NULL DEFAULT FALSE`,
+      // 4) 48სთ ESCROW HOLD RELEASE — ცალსახა კავშირი transaction-სა და
+      //    მის balance_holds ჩანაწერს შორის. ამის გარეშე release job-ს
+      //    მოუწევდა transaction-ის ტიპზე/აღწერაზე "მიხვედრა", რაც
+      //    არასანდოა (რამდენიმე hold-ს იგივე order_id შეიძლება ჰქონდეს).
+      `ALTER TABLE transactions ADD COLUMN IF NOT EXISTS hold_id UUID REFERENCES balance_holds(id)`,
+      `CREATE INDEX IF NOT EXISTS idx_tx_hold ON transactions(hold_id) WHERE hold_id IS NOT NULL`,
     ];
     for (const sql of migrations) {
       try { await client.query(sql); } catch (e) { /* უკვე არსებობს */ }
