@@ -107,6 +107,9 @@ router.post('/', requireAuth, upload.array('evidence', 5), async (req, res) => {
             RETURNING *
           `, [roomRows[0].id, req.user.id]);
           chat.broadcastMessageToRoom(roomRows[0].id, msgRows[0]);
+          chat.broadcastEventToRoom(roomRows[0].id, {
+            event: 'disputed', status: 'disputed', order_status: 'disputed', order_id,
+          });
         }
 
         for (const recipient of recipients) {
@@ -357,6 +360,26 @@ router.put('/:id/resolve', requireAuth, requireAdmin, async (req, res) => {
             body: `${listing.title} — ${resolution === 'release' ? 'თანხა გამყ-ს' : 'თანხა მყიდ-ს'}`,
             url: `/?order=${order.id}`,
             tag: `dispute-${dispute.id}-resolved`,
+          });
+        }
+
+        // ჩატში სისტ. შეტყობინება + რეალურ დროში სტატუსის განახლება,
+        // რომ ორივე მხარის ღია ჩატი მყისიერად აჩვენოს საბოლოო შედეგი
+        const { rows: roomRows } = await db.query('SELECT id FROM chat_rooms WHERE order_id=$1', [order.id]);
+        if (roomRows.length) {
+          const outcomeText = resolution === 'release'
+            ? 'თანხა გადაირიცხა გამყიდველზე'
+            : 'თანხა დაუბრუნდა მყიდველს';
+          const { rows: msgRows } = await db.query(`
+            INSERT INTO messages(room_id, sender_id, content, content_type)
+            VALUES($1, $2, $3, 'system')
+            RETURNING *
+          `, [roomRows[0].id, req.user.id, `🛡️ დავა გადაწყდა — ${outcomeText}.`]);
+          chat.broadcastMessageToRoom(roomRows[0].id, msgRows[0]);
+          chat.broadcastEventToRoom(roomRows[0].id, {
+            event: 'dispute_resolved',
+            order_status: resolution === 'release' ? 'completed' : 'cancelled',
+            order_id: order.id,
           });
         }
       } catch (e) { console.error('dispute resolve notify error:', e.message); }

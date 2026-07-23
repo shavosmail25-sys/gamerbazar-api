@@ -1843,6 +1843,7 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
           <div>
             <div style="font-size:13px;font-weight:600" id="chat-partner-name" style="color:var(--muted)">აირჩიე საუბარი</div>
             <div style="font-size:10px;color:var(--muted)" id="chat-order-info">მარცხნივ ოთახი აირჩიე</div>
+            <div id="chat-status-badge" style="display:none;font-size:10px;font-weight:600;margin-top:2px"></div>
           </div>
         </div>
         <div id="chat-escrow-pill" style="display:none">
@@ -5607,51 +5608,12 @@ async function openChatRoom(el) {
   if (infoEl)  infoEl.textContent  = isSupportRoom ? 'ადმინისტრაცია · 24/7' : `ორდ. · ₾${Number(amount).toFixed(2)}`;
   if (avaEl)   avaEl.textContent   = isSupportRoom ? '' : (partner||'?').slice(0,2).toUpperCase();
 
-  // escrow pill
-  const pillEl     = document.getElementById('chat-escrow-pill');
-  const pillText   = document.getElementById('chat-pill-text');
-  const deliverBtn = document.getElementById('chat-deliver-btn');
-  const confirmBtn = document.getElementById('chat-confirm-btn');
-  const disputeBtn = document.getElementById('chat-dispute-btn');
-  const credsPanel = document.getElementById('chat-creds-panel');
-
   // ── ორდერის სრული დეტალის ერთხელ fetch — escrow pill-ისთვისაც და
   // Credentials Vault პანელისთვისაც ვიყენებთ იმავე მოთხოვნას (აღარ
   // ვცდილობთ ორჯერ დაძახებას). Support ოთახზე ორდერი საერთოდ არ არსებობს. ──
   const order = (!isSupportRoom && orderId) ? await api('/api/orders/' + orderId).catch(() => null) : null;
 
-  if (pillEl) {
-    if (order) {
-      window._chatOrderAmount = order.seller_receives || order.amount_gel;
-      const isBuyer    = order.buyer_id  === currentUser.id;
-      const isSeller   = order.seller_id === currentUser.id;
-      const status     = order.status;
-      const isDisputed = status === 'disputed';
-      const escrowSt   = order.escrow_status;
-
-      // pill ჩვენება — escrow held ან delivered სტატუსზე
-      const shouldShow = escrowSt === 'held' && !['completed','cancelled'].includes(status);
-      pillEl.style.display = shouldShow ? 'block' : 'none';
-      if (pillText) pillText.textContent = `Escrow · ₾${Number(amount).toFixed(2)}`;
-
-      // გამყიდველს: "გადავეცი" — მხოლოდ active-ზე
-      if (deliverBtn) deliverBtn.style.display =
-        (isSeller && status === 'active' && escrowSt === 'held' && !isDisputed) ? 'inline-block' : 'none';
-
-      // მყიდველს: "დადასტ." — მხოლოდ delivered-ზე
-      if (confirmBtn) confirmBtn.style.display =
-        (isBuyer && status === 'delivered' && escrowSt === 'held' && !isDisputed) ? 'inline-block' : 'none';
-
-      // "დავა" — delivered-ზე ორივეს
-      if (disputeBtn) disputeBtn.style.display =
-        ((isBuyer || isSeller) && status === 'delivered' && escrowSt === 'held' && !isDisputed) ? 'inline-block' : 'none';
-    } else {
-      pillEl.style.display = 'none';
-      if (deliverBtn) deliverBtn.style.display = 'none';
-      if (confirmBtn) confirmBtn.style.display = 'none';
-      if (disputeBtn) disputeBtn.style.display = 'none';
-    }
-  }
+  renderChatOrderHeader(order, amount);
 
   // ── Credentials Vault პანელი — escrow pill-ისგან დამოუკიდებლად,
   // რომ დავის (disputed) დროსაც კი ჩანდეს ევიდენციის დროშტამპები. ──
@@ -5669,6 +5631,84 @@ async function openChatRoom(el) {
 
   // mobile-ze — sidebar daiketa, main chat chandes
   hideChatSidebarMobile();
+}
+
+// ── Escrow pill + status badge + action ღილაკების (გადავეცი/დადასტ./
+// დავა) დახატვა order ობიექტიდან. გატანილია openChatRoom-იდან ცალკე
+// ფუნქციად, რომ იგივე ლოგიკა ხელახლა გამოვიყენოთ WS-ის საშუალებით
+// მიღებულ რეალურ დროის სტატუსის ცვლილებებზეც (იხ. connectWS-ის
+// onmessage 'order_status' დამუშავება) — ასე პასიური მხარეც (ვინც
+// action არ დააჭირა, უბრალოდ ჩატშია ღია) მყისიერად ხედავს განახლებას,
+// გვერდის გადატვირთვის გარეშე. ──
+function renderChatOrderHeader(order, amount) {
+  const pillEl      = document.getElementById('chat-escrow-pill');
+  const pillText    = document.getElementById('chat-pill-text');
+  const deliverBtn  = document.getElementById('chat-deliver-btn');
+  const confirmBtn  = document.getElementById('chat-confirm-btn');
+  const disputeBtn  = document.getElementById('chat-dispute-btn');
+  const statusBadge = document.getElementById('chat-status-badge');
+  if (!pillEl) return;
+
+  const STATUS_LABEL = {
+    active: 'აქტ. Escrow', delivered: 'გადაცემულია',
+    completed: 'დასრულდა', cancelled: 'გაუქმდა', disputed: 'დავა',
+  };
+  const STATUS_COLOR = {
+    active: 'var(--gold)', delivered: '#22c55e',
+    completed: 'var(--accent)', cancelled: 'var(--red)', disputed: 'var(--red)',
+  };
+
+  if (order) {
+    window._chatOrderAmount = order.seller_receives || order.amount_gel;
+    const isBuyer    = order.buyer_id  === currentUser.id;
+    const isSeller   = order.seller_id === currentUser.id;
+    const status     = order.status;
+    const isDisputed = status === 'disputed';
+    const escrowSt   = order.escrow_status;
+
+    // pill ჩვენება — escrow held ან delivered სტატუსზე
+    const shouldShow = escrowSt === 'held' && !['completed','cancelled'].includes(status);
+    pillEl.style.display = shouldShow ? 'block' : 'none';
+    if (pillText) pillText.textContent = `Escrow · ₾${Number(amount).toFixed(2)}`;
+
+    // გამყიდველს: "გადავეცი" — მხოლოდ active-ზე
+    if (deliverBtn) deliverBtn.style.display =
+      (isSeller && status === 'active' && escrowSt === 'held' && !isDisputed) ? 'inline-block' : 'none';
+
+    // მყიდველს: "დადასტ." — მხოლოდ delivered-ზე
+    if (confirmBtn) confirmBtn.style.display =
+      (isBuyer && status === 'delivered' && escrowSt === 'held' && !isDisputed) ? 'inline-block' : 'none';
+
+    // ── "დავა" — active-ზეც და delivered-ზეც, ორივე მხარისთვის (ადრე
+    // მხოლოდ delivered-ზე ჩნდებოდა, რის გამოც ღილაკი "დაკარგული"
+    // გამოიყურებოდა შეკვეთის დასაწყისში — mid-transaction დავის
+    // საჭიროება (მაგ. გამყიდველი აღარ პასუხობს) ხომ სწორედ მანამდე
+    // ჩნდება, სანამ "გადავეცი" საერთოდ დაჭერილი იქნება). ──
+    if (disputeBtn) disputeBtn.style.display =
+      ((isBuyer || isSeller) && ['active','delivered'].includes(status) && escrowSt === 'held' && !isDisputed) ? 'inline-block' : 'none';
+
+    // ── სტატუსის ბეჯი header-ში — ყოველთვის ასახავს order-ის
+    // ზუსტ, მიმდინარე სტატუსს (ადრე ეს ელემენტი საერთოდ არ არსებობდა
+    // DOM-ში და მხოლოდ action-ის დასრულების შემდეგ ცალკე მოვლენებით
+    // ივსებოდა — ღია ჩატის გვერდზე რომ დაბრუნებულიყავი, ან სხვა
+    // მხარეს რომ ეხილა ცვლილება, ბეჯი უბრალოდ არაფერს არ აჩვენებდა). ──
+    if (statusBadge) {
+      const label = STATUS_LABEL[status];
+      if (label) {
+        statusBadge.textContent = label;
+        statusBadge.style.color = STATUS_COLOR[status] || 'var(--muted)';
+        statusBadge.style.display = 'block';
+      } else {
+        statusBadge.style.display = 'none';
+      }
+    }
+  } else {
+    pillEl.style.display = 'none';
+    if (deliverBtn) deliverBtn.style.display = 'none';
+    if (confirmBtn) confirmBtn.style.display = 'none';
+    if (disputeBtn) disputeBtn.style.display = 'none';
+    if (statusBadge) statusBadge.style.display = 'none';
+  }
 }
 
 // ══════════════════════════════════════════════════════════
@@ -5869,7 +5909,10 @@ async function confirmRevealConsent() {
     document.getElementById('creds-out-password').value = data.password;
     const viewedAt = data.viewed_at ? new Date(data.viewed_at).toLocaleString('ka-GE') : '';
     document.getElementById('creds-out-viewed-at').textContent = viewedAt ? `ნანახია: ${viewedAt}` : '';
-    renderCredsOutDeadline(data.access_confirm_deadline);
+    // ── status/escrow_status ახლა /reveal პასუხშივე მოდის — საჭიროა,
+    // რომ ქვემოთ სწორად გადავწყვიტოთ, უნდა ჩანდეს თუ არა Confirm
+    // Access ღილაკი (იხ. renderCredsOutDeadline-ის კომენტარი). ──
+    renderCredsOutDeadline(data.access_confirm_deadline, data.status, data.escrow_status);
     openM('credsRevealModal');
 
     // panel-ის განახლება — timestamp/countdown რომ დაუყოვნებლივ გამოჩნდეს
@@ -5883,10 +5926,45 @@ async function confirmRevealConsent() {
 }
 
 // ── reveal მოდალის შიგნით Confirm-Access ვადის/ღილაკის ჩვენება ──
-function renderCredsOutDeadline(deadlineIso) {
+//
+// ⚠️ BUGFIX: access_confirm_deadline ერთხელ დაწესებული ვადაა (პირველ
+// ნახვაზე) და შემდეგომ სამუდამოდ რჩება orders რიგში, თუნდაც
+// შეკვეთა უკვე დადასტურდეს/დასრულდეს. ადრე ეს ფუნქცია მხოლოდ
+// deadlineIso-ს არსებობას ამოწმებდა და ყოველთვის აჩვენებდა "წვდომის
+// დადასტ." ღილაკს — რის გამოც "ხელახლა ნახვა" უკვე დასრულებულ
+// შეკვეთაზეც კვლავ ხსნიდა "Confirm Receipt" (გადახდის გათავისუფ.)
+// მოდალს, თუნდაც წვდომა უკვე დადასტურებული/დასრულებული ყოფილიყო.
+//
+// ახლა status/escrowStatus გადმოცემულია — ღილაკი ჩნდება მხოლოდ მაშინ,
+// როცა შეკვეთა ჯერ კიდევ რეალურად actionable-ია (იგივე პირობა, რასაც
+// renderConfirmAccessBtnHtml/renderChatOrderHeader იყენებენ). სხვა
+// შემთხვევაში უბრალო ინფორმაციული ტექსტი ჩანს "დახურვა" ღილაკით. ──
+function renderCredsOutDeadline(deadlineIso, status, escrowStatus) {
   const slot = document.getElementById('creds-out-deadline');
   const btn  = document.getElementById('creds-out-confirm-btn');
   if (!slot) return;
+
+  const canConfirm = ['active', 'delivered'].includes(status) && escrowStatus === 'held';
+
+  if (!canConfirm) {
+    // შეკვეთა უკვე დადასტურებული/დასრულებული/გაუქმებული/დავადებულია —
+    // Confirm Access ღილაკი აღარასდროს უნდა გამოჩნდეს ხელახლა ნახვაზე.
+    if (btn) btn.style.display = 'none';
+    if (status === 'completed') {
+      slot.style.color = 'var(--accent)';
+      slot.innerHTML = `${ICO.checkCircle} წვდომა უკვე დადასტურებულია — შეკვეთა დასრულებულია`;
+    } else if (status === 'disputed') {
+      slot.style.color = 'var(--red)';
+      slot.innerHTML = `${ICO.info} ამ შეკვეთაზე დავაა გახსნილი`;
+    } else if (status === 'cancelled') {
+      slot.style.color = 'var(--muted)';
+      slot.innerHTML = '';
+    } else {
+      slot.textContent = '';
+    }
+    return;
+  }
+
   if (!deadlineIso) { slot.textContent = ''; if (btn) btn.style.display = 'none'; return; }
   const deadline = new Date(deadlineIso);
   const expired  = deadline - Date.now() <= 0;
@@ -6074,6 +6152,20 @@ function connectWS(roomId) {
             if (ldStatus) { ldStatus.textContent = 'გაყიდულია'; ldStatus.style.color = '#60a5fa'; }
             if (ldBuyBtn) { ldBuyBtn.style.display = 'none'; }
           }
+          // ── ღიად მდგარი Escrow ჩატის რეალურ დროში განახლება —
+          // ნებისმ. ორდერის სტატუსის ცვლილებაზე (delivered/
+          // credentials_submitted/confirmed/disputed/dispute_resolved)
+          // ვანახლებთ header-ს (badge+ღილაკები) და Vault პანელს, თუ
+          // ეს არის ამჟამად ღია ორდერი — ასე პასიური მხარეც (ვინც
+          // action არ შეასრულა, უბრალოდ ჩატშია) მყისიერად ხედავს
+          // ცვლილებას, გვერდის გადატვირთვის გარეშე. ──
+          if (msg.order_id && String(msg.order_id) === String(currentOrderId)) {
+            api('/api/orders/' + msg.order_id).then(o => {
+              renderChatOrderHeader(o, o.seller_receives || o.amount_gel);
+              renderCredsPanel(o);
+            }).catch(() => {});
+            loadChatRooms();
+          }
           return;
         }
         // mxolod mimdi. otaxis SHetyvobineba
@@ -6221,39 +6313,6 @@ function markDelivered(orderId) {
   if (!orderId) return;
   window._pendingDeliverOrderId = orderId;
   openM('deliverModal');
-}
-
-async function executeMarkDelivered() {
-  const orderId = window._pendingDeliverOrderId || currentOrderId;
-  if (!orderId) return;
-
-  const btn = document.getElementById('deliver-modal-ok-btn');
-  if (btn) { btn.innerHTML = ICO.loader; btn.disabled = true; }
-
-  try {
-    await api('/api/orders/' + orderId + '/deliver', { method: 'POST' });
-    closeM('deliverModal');
-    showToast('გადაცემა დადასტ.! მყიდველს 48სთ ეძლევა შესამოწმებლად', 'ok');
-
-    // chat panel განახლება
-    const deliverBtn  = document.getElementById('chat-deliver-btn');
-    const statusBadge = document.getElementById('chat-status-badge');
-    if (deliverBtn) deliverBtn.style.display = 'none';
-    if (statusBadge) { statusBadge.textContent = 'გადაცემულია'; statusBadge.style.color = '#22c55e'; statusBadge.style.display = 'block'; }
-
-    refreshOrderViews();
-    loadChatRooms();
-
-    // chat panel-ი განახლება სწორი სტატუსებით
-    if (currentRoomId) {
-      const activeRoom = document.querySelector('.ci.on');
-      if (activeRoom) setTimeout(() => openChatRoom(activeRoom), 500);
-    }
-  } catch(e) {
-    showToast(e.message || 'შეცდომა — სცადე კვლავ', 'err');
-  } finally {
-    if (btn) { btn.textContent = 'დიახ, გადავეცი'; btn.disabled = false; }
-  }
 }
 
 // legacy aliases
@@ -6941,24 +7000,6 @@ async function loadMyOrders() {
   } catch(e) {
     el.innerHTML = '<div class="empty"><div class="empty-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M10.6 3.9 2.4 18a1.8 1.8 0 0 0 1.6 2.7h16a1.8 1.8 0 0 0 1.6-2.7L13.4 3.9a1.8 1.8 0 0 0-2.8 0Z"/><path d="M12 9.5v4"/><path d="M12 17h.01"/></svg></div><div class="empty-t">ჩატვირთვა ვერ მოხდა</div></div>';
   }
-}
-
-async function confirmOrder(orderId, amount) {
-  if (!confirm('დაადასტ. რომ მიიღე? ₾' + amount + ' გამყიდველს ჩაერიცხება.')) return;
-  try {
-    await api('/api/orders/' + orderId + '/confirm', { method: 'POST' });
-    showToast('დადასტ.! ₾' + Number(amount).toFixed(2) + ' გამყ. ჩაერიცხა', 'ok');
-    refreshOrderViews();
-    loadCurrentUser();
-    // rating modal
-    setTimeout(() => openM('ratingModal'), 600);
-  } catch(e) { showToast(e.message || 'შეცდომა', 'err'); }
-}
-
-async function openDisputeFor(orderId) {
-  const modal = document.getElementById('disputeModal');
-  if (modal) modal.dataset.orderId = orderId;
-  openM('disputeModal');
 }
 
 // ── ორივე ორდერების view-ის განახლება (profile-ის mini-list + history page) ──

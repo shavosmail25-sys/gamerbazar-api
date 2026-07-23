@@ -128,7 +128,7 @@ router.post('/', requireAuth, async (req, res) => {
 
     res.status(201).json(order);
 
-    // შეტყობ. გამყიდველს
+    // შეტყობ. გამყიდველს + მყიდველს
     (async () => {
       try {
         const { rows: sellerRows } = await db.query(
@@ -143,6 +143,14 @@ router.post('/', requireAuth, async (req, res) => {
           url: `/?order=${order.id}`,
           tag: `order-${order.id}`,
         });
+
+        // ── მყიდველს — შენაძენის დადასტ. ელ-ფოსტა (ტრანზაქციის დეტალებით) ──
+        const { rows: buyerRows } = await db.query(
+          'SELECT id, email, notif_email FROM users WHERE id=$1', [req.user.id]
+        );
+        if (buyerRows.length) {
+          await mailer.sendPurchaseConfirmationEmail(buyerRows[0], order, listing);
+        }
       } catch (e) { console.error('order notify error:', e.message); }
     })();
   } catch (err) {
@@ -202,6 +210,12 @@ router.post('/:id/deliver', requireAuth, async (req, res) => {
           `, [roomRows[0].id, order.seller_id,
               `✅ გამყიდველმა ნივთი/მონაცემები გადასცა. თქვენ გაქვთ 48 საათი შეამოწმოთ და დაადასტუროთ (ვადა: ${deadline.toLocaleString('ka-GE')}). თუ პრობლემაა — გახსენით დავა.`]);
           chat.broadcastMessageToRoom(roomRows[0].id, msgRows[0]);
+          // ── რეალურ დროში სტატუსის ცვლილება — ორივე მხარის ღია ჩატში
+          // (status badge, deliver/confirm/dispute ღილაკები) მყისიერად
+          // განახლდეს, გვერდის განახლების გარეშე. ──
+          chat.broadcastEventToRoom(roomRows[0].id, {
+            event: 'delivered', status: 'delivered', order_id: order.id,
+          });
         }
 
         if (buyerRows.length) {
@@ -489,6 +503,13 @@ router.post('/:id/credentials/reveal', requireAuth, async (req, res) => {
       reveal_ack_at: revealAckAt,
       access_confirm_deadline: confirmDeadline,
       first_view: isFirstView,
+      // ── ᲛᲜᲘᲨᲕᲜᲔᲚᲝᲕᲐᲜᲘ: order-ის მიმდინარე სტატუსი — frontend-ს ეს
+      // სჭირდება, რომ "ხელახლა ნახვის" მოდალში Confirm Access ღილაკი
+      // აღარ აჩვენოს, თუ შეკვეთა უკვე დადასტურებული/დასრულებულია
+      // (წინააღმდეგ შემთხვევაში ძველი access_confirm_deadline
+      // მუდმივად "ცოცხალი" დარჩება და confirmModal-ს ისევ გახსნის). ──
+      status: order.status,
+      escrow_status: order.escrow_status,
     });
 
     // ── მხოლოდ პირველ ნახვაზე ვაქვეყნებთ ჩატში ზუსტ დროს + push
@@ -624,8 +645,10 @@ router.post('/:id/confirm', requireAuth, async (req, res) => {
           `, [roomId, req.user.id]);
           chat.broadcastMessageToRoom(roomId, msgRows[0]);
           // listing-ი მყისიერად "sold"-ად აღინიშნება ორივე მხარის ღია გვერდებზე
+          // (status: listing-ის სტატუსია, order_status — order-ის, ჩატის
+          // header-ს ეს ცალკე სჭირდება, რომ ღილაკები/badge სწორად განაახლოს)
           chat.broadcastEventToRoom(roomId, {
-            event: 'confirmed', status: 'sold',
+            event: 'confirmed', status: 'sold', order_status: 'completed',
             order_id: order.id, listing_id: order.listing_id,
           });
         }

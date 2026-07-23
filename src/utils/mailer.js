@@ -109,6 +109,27 @@ async function sendOrderCreatedEmail(seller, order, listing) {
   });
 }
 
+// ── ᲛᲧᲘᲓᲕᲔᲚᲘᲡ ᲧᲘᲓᲕᲘᲡ ᲓᲐᲓᲐᲡᲢᲣᲠᲔᲑᲐ — იგზავნება შეკვეთის შექმნისთანავე
+// (Escrow-ში გაყინვის მომენტში), პარალელურად გამყიდველის sendOrderCreatedEmail-თან.
+// მყიდველს უჩვენებს გადახდილ თანხას და პირდაპირ ბმულს Escrow ჩატზე.
+async function sendPurchaseConfirmationEmail(buyer, order, listing) {
+  if (!buyer.notif_email || !buyer.email) return;
+  return sendMail({
+    to: buyer.email,
+    subject: `🎮 შენაძენი დადასტ. — ${listing.title}`,
+    html: wrap(
+      'შენაძენი წარმატებით შესრულდა',
+      `თქვენ შეიძინეთ <b>${listing.title}</b>.<br><br>
+       <div style="font-size:24px;font-weight:800;color:#fff;text-align:center;background:#0d0f17;border-radius:10px;padding:14px 0;margin:10px 0">
+         ₾${Number(order.amount_gel).toFixed(2)}
+       </div>
+       თანხა დაცულია Escrow-ში, სანამ გამყიდველი ნივთს/მონაცემებს არ გადმოგცემთ. გადადით Escrow ჩატში, რომ
+       გამყიდველს დაუკავშირდეთ და შეკვეთის დასრულება მიჰყვეთ.`,
+      'Escrow ჩატის გახსნა', `${FRONTEND}/?order=${order.id}`
+    ),
+  });
+}
+
 async function sendOrderConfirmedEmail(seller, order, listing) {
   if (!seller.notif_email || !seller.email) return;
   return sendMail({
@@ -366,6 +387,7 @@ module.exports = {
   sendMail,
   sendOtpEmail,
   sendOrderCreatedEmail,
+  sendPurchaseConfirmationEmail,
   sendOrderConfirmedEmail,
   sendOrderCancelledEmail,
   sendOrderExpiredEmail,
