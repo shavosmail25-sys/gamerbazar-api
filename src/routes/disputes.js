@@ -291,11 +291,21 @@ router.put('/:id/resolve', requireAuth, requireAdmin, async (req, res) => {
       order = o[0];
 
       // ── Idempotency შემოწმება: თუ დავა უკვე აღარ არის 'open', ან
-      // შესაბამისი order-ი უკვე აღარაა escrow_status='held' — ეს
+      // შესაბამისი order-ი უკვე აღარაა escrow_status='disputed' — ეს
       // ნიშნავს, რომ დავა უკვე გადაწყვეტილია (ამ request-ის წინა
       // გაშვებით, ან პარალელური request-ით, რომელმაც ლოკი უფრო ადრე
       // დაიპყრო). ფულის მოძრაობას აღარ ვიმეორებთ — ვაბრუნებთ 409-ს.
-      if (dispute.status !== 'open' || order.escrow_status !== 'held') {
+      //
+      // ⚠️ BUGFIX: აქ ადრე 'held' იყო შედარებული, არა 'disputed'.
+      // მაგრამ POST /api/disputes (დავის გახსნა, იხ. ზემოთ ~78-ე ხაზი)
+      // ორდერს ყოველთვის escrow_status='disputed'-ზე გადაჰყავს — ანუ
+      // იმ მომენტში, როცა საერთოდ არსებობს გადასაწყვეტი დავა, escrow
+      // status აღარასდროს არის 'held'. ძველი შემოწმება ამიტომ
+      // ყოველთვის true იყო — absolutely ყველა resolve მცდელობა (თუნდაც
+      // პირველი, არასდროს-გადაწყვეტილ დავაზე) 409 already_resolved-ს
+      // აბრუნებდა. სწორი შედარებაა 'disputed'-თან — ეს არის ორდერის
+      // მდგომარეობა გახსნილი, ჯერ არ-გადაწყვეტილი დავისას.
+      if (dispute.status !== 'open' || order.escrow_status !== 'disputed') {
         alreadyResolved = true;
         return;
       }
