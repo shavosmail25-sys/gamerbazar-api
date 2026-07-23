@@ -243,18 +243,50 @@ router.get('/:id', requireAuth, async (req, res) => {
 // მხოლოდ admin-ს შეუძლია დავის დახურვა და თანხის მოძრაობა.
 // ══════════════════════════════════════════════════════════════
 router.put('/:id/resolve', requireAuth, requireAdmin, async (req, res) => {
+  // dispute/order ცვლადები ტრანზაქციის outer scope-ში გამოგვაქვს, რადგან
+  // resolve-ის შემდეგ email/push შეტყობინებების ბლოკს (ქვემოთ, async IIFE)
+  // იგივე მონაცემები სჭირდება — ეს ახლა ტრანზაქციაში FOR UPDATE-ით
+  // locked-ად წაკითხული მდგომარეობაა, აღარ არის ცალკე pre-transaction
+  // SELECT (რომელიც race/replay ხარვეზის წყარო იყო).
+  let dispute = null;
+  let order   = null;
+  let alreadyResolved = false;
+
   try {
     const { resolution, admin_note } = req.body;
     if (!['release','refund'].includes(resolution))
       return res.status(400).json({ error: 'resolution must be release or refund' });
 
-    const { rows: d } = await db.query('SELECT * FROM disputes WHERE id=$1', [req.params.id]);
-    if (!d.length) return res.status(404).json({ error: 'not_found' });
-
-    const { rows: o } = await db.query('SELECT * FROM orders WHERE id=$1', [d[0].order_id]);
-    const order = o[0];
-
     await db.transaction(async (client) => {
+      // ── Race/replay დაცვა 1/2: dispute row-ს ვკეტავთ FOR UPDATE-ით
+      // ტრანზაქციის დასაწყისშივე. თუ ორი request (admin-ის ორმაგი
+      // დაჭერა, browser-ის retry, ორი admin-ის თანადროული resolve,
+      // ან ხელით replay) იმავე dispute id-ზე თითქმის ერთდროულად მოვა,
+      // მეორე ამ lock-ს დაელოდება პირველის commit/rollback-მდე და
+      // აღარ წაიკითხავს stale (ჯერ კიდევ "open") სტატუსს.
+      const { rows: d } = await client.query(
+        'SELECT * FROM disputes WHERE id=$1 FOR UPDATE', [req.params.id]
+      );
+      if (!d.length) return; // dispute დარჩება null → outer scope-ში 404
+      dispute = d[0];
+
+      // ── Race/replay დაცვა 2/2: იგივე ლოკი order row-ზეც — escrow_status
+      // ცვლილება ხომ order-ს ეხება, არა მხოლოდ dispute-ს.
+      const { rows: o } = await client.query(
+        'SELECT * FROM orders WHERE id=$1 FOR UPDATE', [dispute.order_id]
+      );
+      order = o[0];
+
+      // ── Idempotency შემოწმება: თუ დავა უკვე აღარ არის 'open', ან
+      // შესაბამისი order-ი უკვე აღარაა escrow_status='held' — ეს
+      // ნიშნავს, რომ დავა უკვე გადაწყვეტილია (ამ request-ის წინა
+      // გაშვებით, ან პარალელური request-ით, რომელმაც ლოკი უფრო ადრე
+      // დაიპყრო). ფულის მოძრაობას აღარ ვიმეორებთ — ვაბრუნებთ 409-ს.
+      if (dispute.status !== 'open' || order.escrow_status !== 'held') {
+        alreadyResolved = true;
+        return;
+      }
+
       if (resolution === 'release') {
         // გამყიდველს + 48სთ hold (იგივე წესი, რაც ჩვეულ confirm-ზე)
         const fee = Number(order.amount_gel) - Number(order.seller_receives);
@@ -301,6 +333,9 @@ router.put('/:id/resolve', requireAuth, requireAdmin, async (req, res) => {
       `, [resolution, admin_note || '', req.user.id, req.params.id]);
     });
 
+    if (!dispute) return res.status(404).json({ error: 'not_found' });
+    if (alreadyResolved) return res.status(409).json({ error: 'already_resolved' });
+
     res.json({ ok: true, resolution });
 
     // შეტყობ. — მყიდველი + გამყიდველი
@@ -308,7 +343,7 @@ router.put('/:id/resolve', requireAuth, requireAdmin, async (req, res) => {
       try {
         const { rows: listingRows } = await db.query('SELECT title FROM listings WHERE id=$1', [order.listing_id]);
         const listing = listingRows[0] || { title: 'განცხადება' };
-        const dispute = { ...d[0], resolution, admin_note: admin_note || '' };
+        const disputeForEmail = { ...dispute, resolution, admin_note: admin_note || '' };
 
         const { rows: parties } = await db.query(
           'SELECT id, email, notif_email FROM users WHERE id=$1 OR id=$2',
@@ -316,7 +351,7 @@ router.put('/:id/resolve', requireAuth, requireAdmin, async (req, res) => {
         );
 
         for (const recipient of parties) {
-          await mailer.sendDisputeResolvedEmail(recipient, dispute, order, listing, resolution);
+          await mailer.sendDisputeResolvedEmail(recipient, disputeForEmail, order, listing, resolution);
           await push.sendToUser(recipient.id, {
             title: '🛡️ დავა გადაწყდა',
             body: `${listing.title} — ${resolution === 'release' ? 'თანხა გამყ-ს' : 'თანხა მყიდ-ს'}`,

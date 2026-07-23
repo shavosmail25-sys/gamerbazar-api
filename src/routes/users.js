@@ -134,13 +134,21 @@ router.post('/me/vip', requireAuth, async (req, res) => {
     }
     const price = VIP_PACKAGES[duration_days];
 
+    // ── ⚠️ ბალანსის საკმარისობის შემოწმება ("balance_gel < price")
+    // აქედან განზრახ ამოღებულია — ეს აქ, ტრანზაქციის გარეთ ცალკე
+    // SELECT-ით ხდებოდა და სწორედ ეს იყო race condition-ის წყარო:
+    // ორ თითქმის ერთდროულ request-ს შორის ორივეს შეეძლო წაეკითხა
+    // ჯერ კიდევ არ-შემცირებული ბალანსი და ორივეს გაევლო ეს შემოწმება,
+    // სანამ არცერთს ჯერ არ ჩაეჭრა თანხა. ბალანსის რეალური
+    // შემოწმება+ჩამოჭრა ახლა ერთ ატომურ UPDATE-ად არის გაერთიანებული
+    // ქვემოთ, ტრანზაქციის შიგნით (იხ. "UPDATE users ... WHERE
+    // balance_gel >= $1"). is_vip/vip_expires_at კი აქვე გვჭირდება
+    // მხოლოდ stacking-ის დღეების გამოსათვლელად — ეს ფულთან
+    // დაკავშირებული არაა, ამიტომ საკმარისია ჩვეულებრივი SELECT.
     const { rows: u } = await db.query(
-      'SELECT balance_gel, is_vip, vip_expires_at FROM users WHERE id=$1', [req.user.id]
+      'SELECT is_vip, vip_expires_at FROM users WHERE id=$1', [req.user.id]
     );
     if (!u.length) return res.status(404).json({ error: 'user_not_found' });
-    if (Number(u[0].balance_gel) < price) {
-      return res.status(402).json({ error: 'insufficient_balance', needed: price });
-    }
 
     const now        = new Date();
     const durationMs = duration_days * 86400000;
@@ -154,40 +162,62 @@ router.post('/me/vip', requireAuth, async (req, res) => {
     const newExpiry = new Date(baseTime + durationMs);
 
     // ატომური ოპ.
-    await db.transaction(async (client) => {
-      await client.query(
-        'UPDATE users SET balance_gel = balance_gel - $1 WHERE id=$2',
-        [price, req.user.id]
-      );
-      await client.query(
-        'UPDATE users SET is_vip=TRUE, vip_expires_at=$1 WHERE id=$2',
-        [newExpiry, req.user.id]
-      );
+    try {
+      await db.transaction(async (client) => {
+        // ── Race condition-ის გასწორება: ბალანსის შემოწმება და ჩამოჭრა
+        // ერთ ატომურ UPDATE-ში ვაერთიანებთ (WHERE balance_gel >= $1).
+        // PostgreSQL ამ UPDATE-ის შესრულებისას ავტომატურად კეტავს
+        // მწკრივს — თუ ორი პარალელური request თითქმის ერთდროულად
+        // მოვა, მეორე პირველის commit/rollback-მდე დაელოდება და
+        // ბალანსს უკვე განახლებულს დაინახავს. თუ ბალანსი არასაკმარისია,
+        // 0 row ბრუნდება — ამ შემთხვევაში ტრანზაქციას ვწყვეტთ
+        // (throw) ფულის დანარჩენი მოძრაობის (is_vip/listings sync/
+        // ledger fee) გარეშე.
+        const { rows: charged } = await client.query(
+          `UPDATE users SET balance_gel = balance_gel - $1
+           WHERE id=$2 AND balance_gel >= $1
+           RETURNING balance_gel`,
+          [price, req.user.id]
+        );
+        if (!charged.length) {
+          throw new Error('__insufficient_balance__');
+        }
 
-      // ── სინქრონიზაცია listings-თან: ბეჯი ეკუთვნის ანგარიშს, არა
-      // ერთ კონკრეტულ ლისტინგს — ამ გამყიდველის ყველა აქტიური/
-      // მოლოდინის განცხადება იმავე VIP ვადაზე გადადის ერთბაშად.
-      await client.query(
-        `UPDATE listings SET is_vip=TRUE, vip_expires_at=$1
-         WHERE seller_id=$2 AND status IN ('active','pending')`,
-        [newExpiry, req.user.id]
-      );
+        await client.query(
+          'UPDATE users SET is_vip=TRUE, vip_expires_at=$1 WHERE id=$2',
+          [newExpiry, req.user.id]
+        );
 
-      await client.query(
-        `INSERT INTO transactions(user_id,type,amount_gel,gross_amount_gel,net_amount_gel,commission_fee_gel,description)
-         VALUES($1,'vip_purchase',$2,$3,0,$3,$4)`,
-        [req.user.id, -price, price, `VIP ${duration_days} დღიანი პაკეტი`]
-      );
-      // listing_id აღარ არსებობს ამ ყიდვაზე — vip_purchases.listing_id
-      // ახლა NULL-ადი სვეტია (იხ. setup.js მიგრაცია).
-      await client.query(
-        'INSERT INTO vip_purchases(user_id,duration_days,price_gel,expires_at) VALUES($1,$2,$3,$4)',
-        [req.user.id, duration_days, price, newExpiry]
-      );
+        // ── სინქრონიზაცია listings-თან: ბეჯი ეკუთვნის ანგარიშს, არა
+        // ერთ კონკრეტულ ლისტინგს — ამ გამყიდველის ყველა აქტიური/
+        // მოლოდინის განცხადება იმავე VIP ვადაზე გადადის ერთბაშად.
+        await client.query(
+          `UPDATE listings SET is_vip=TRUE, vip_expires_at=$1
+           WHERE seller_id=$2 AND status IN ('active','pending')`,
+          [newExpiry, req.user.id]
+        );
 
-      // VIP საკომისიო — პლატფორმის შემოსავალი, platform_stats.admin_earnings_gel-ს ემატება.
-      await ledger.recordPlatformFee(client, price);
-    });
+        await client.query(
+          `INSERT INTO transactions(user_id,type,amount_gel,gross_amount_gel,net_amount_gel,commission_fee_gel,description)
+           VALUES($1,'vip_purchase',$2,$3,0,$3,$4)`,
+          [req.user.id, -price, price, `VIP ${duration_days} დღიანი პაკეტი`]
+        );
+        // listing_id აღარ არსებობს ამ ყიდვაზე — vip_purchases.listing_id
+        // ახლა NULL-ადი სვეტია (იხ. setup.js მიგრაცია).
+        await client.query(
+          'INSERT INTO vip_purchases(user_id,duration_days,price_gel,expires_at) VALUES($1,$2,$3,$4)',
+          [req.user.id, duration_days, price, newExpiry]
+        );
+
+        // VIP საკომისიო — პლატფორმის შემოსავალი, platform_stats.admin_earnings_gel-ს ემატება.
+        await ledger.recordPlatformFee(client, price);
+      });
+    } catch (txErr) {
+      if (txErr.message === '__insufficient_balance__') {
+        return res.status(402).json({ error: 'insufficient_balance', needed: price });
+      }
+      throw txErr; // სხვა შეცდომები გარე catch-ში 500-ით მუშავდება
+    }
 
     res.json({
       ok: true,
