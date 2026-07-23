@@ -83,6 +83,12 @@ router.get('/disputes', async (req, res) => {
     const { rows } = await db.query(`
       SELECT d.*,
         o.amount_gel, o.status AS order_status, o.escrow_status,
+        -- ── ⚠️ ფასის ბაგის გასწორება: Watchtower-ის დავების სიაში
+        -- საჩვენებელი "თანხა" აქამდე o.amount_gel-იდან მოდიოდა, რაც
+        -- ისტორიულ/გადათვლილ მნიშვნელობებზე არასწორ ჯამებს იძლეოდა
+        -- (მაგ. ₾18.88 ნაცვლად ₾10.00-ის ნაცვლად). ახლა პირდაპირ
+        -- listings.price_gel-იდან ვიღებთ ზუსტ, უცვლელ ორიგინალურ ფასს.
+        l.price_gel AS listing_price_gel,
         l.title AS listing_title, l.game,
         ob.username AS buyer_username, ob.id AS buyer_id,
         os.username AS seller_username, os.id AS seller_id,
@@ -107,6 +113,17 @@ router.get('/disputes', async (req, res) => {
 
 // ══════════════════════════════════════════════════════════════
 // PUT /api/admin/disputes/:id/resolve  — დავის გადაწყვეტა
+//
+// ⚠️ DEPRECATED — ჩანაცვლებულია disputes.js-ის PUT /api/disputes/:id/resolve
+// route-ით, რომელიც dispute/order row-ebს FOR UPDATE-ით კეტავს
+// ტრანზაქციაში (race/double-resolve დაცვა) და ატომურად ამოწმებს
+// idempotency-ს — აქ ეს დაცვა არ არსებობს (SELECT და შემდგომი UPDATE
+// ცალკეა, ისევე როგორც resolution-ის ხელახლა-გაშვების შემთხვევაში
+// ფულის ორმაგად დარიცხვის რისკი რჩება). ადმინის პანელი (admin.html)
+// ამიერიდან აღარ იძახებს ამ route-ს — გადავიდა /api/disputes/:id/resolve-ზე.
+// ეს ძველი route კოდში დარჩა მხოლოდ უკუთავსებადობისთვის (შემთხვევით
+// გარე დამოკიდებულების შემთხვევაში), მაგრამ ახალი ინტეგრაციებისთვის
+// არ უნდა იქნას გამოყენებული — გამოიყენე disputes.js-ის ვერსია.
 // ══════════════════════════════════════════════════════════════
 router.put('/disputes/:id/resolve', async (req, res) => {
   try {

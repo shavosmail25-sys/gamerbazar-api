@@ -160,6 +160,14 @@ router.get('/', requireAuth, requireModerator, async (req, res) => {
         o.video_proof_agreed, o.credentials_submitted_at, o.credentials_viewed_at,
         o.credentials_reveal_ack_at, o.access_confirm_deadline,
         (o.credentials_secret IS NOT NULL) AS has_credentials,
+        -- ── ⚠️ ფასის ბაგის გასწორება: დავების სიაში/დეტალებში ადმინისთვის
+        -- საჩვენებელი "თანხა" ახლა პირდაპირ listings.price_gel-იდან მოდის
+        -- (l.price_gel), და არა o.amount_gel-იდან. o.amount_gel ისევ
+        -- ბრუნდება ცალკე ველად (ზემოთ) — ის resolve-ის ფინანსური
+        -- ლოგიკისთვისაა საჭირო და არ იცვლება — მაგრამ ადმინის UI-ში
+        -- ჩვენებისთვის listing_price_gel გამოიყენება, რომ თავიდან
+        -- ავირიდოთ ისტორიული/incorrect summed მნიშვნელობები.
+        l.price_gel AS listing_price_gel,
         l.title AS listing_title, l.game,
         ob.username AS buyer_username, ob.id AS buyer_id,
         os.username AS seller_username, os.id AS seller_id,
@@ -189,10 +197,12 @@ router.get('/:id', requireAuth, async (req, res) => {
   try {
     const { rows } = await db.query(`
       SELECT d.*,
-        o.buyer_id, o.seller_id, o.amount_gel, o.listing_id,
+        o.buyer_id, o.seller_id, o.amount_gel, o.listing_id, o.status AS order_status, o.escrow_status,
         o.video_proof_agreed, o.credentials_submitted_at, o.credentials_viewed_at,
         o.credentials_reveal_ack_at, o.access_confirm_deadline,
         (o.credentials_secret IS NOT NULL) AS has_credentials,
+        -- ── ⚠️ იგივე ფასის გასწორება, რაც სიის route-ში (იხ. GET / ზემოთ) ──
+        l.price_gel AS listing_price_gel,
         ob.username AS buyer_username,
         os.username AS seller_username,
         l.title AS listing_title, l.game

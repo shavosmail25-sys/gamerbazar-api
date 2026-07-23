@@ -219,6 +219,30 @@ input,select,textarea{font-family:var(--sans)}
 .modal-info b{color:var(--text);font-family:var(--sans)}
 .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
 
+/* ════════════════════════ DISPUTE DETAILS (unified) ════════════════════════ */
+.dd-modal{max-width:1180px;width:100%;padding:0;display:flex;flex-direction:column;max-height:88vh}
+.dd-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid var(--line);flex-shrink:0}
+.dd-head h3{font-size:14.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dd-head-close{width:28px;height:28px;border-radius:7px;background:var(--raised);color:var(--dim);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;transition:all .12s}
+.dd-head-close:hover{color:var(--text);border-color:var(--line2)}
+.dd-body{display:grid;grid-template-columns:270px 1fr 290px;flex:1;overflow:hidden;min-height:0}
+.dd-col{overflow-y:auto;padding:18px 20px}
+.dd-col+.dd-col{border-left:1px solid var(--line)}
+.dd-col-chat{background:var(--panel2);display:flex;flex-direction:column}
+.dd-label{font-family:var(--mono);font-size:9.5px;color:var(--dim2);text-transform:uppercase;letter-spacing:.08em;margin:16px 0 6px}
+.dd-label:first-child{margin-top:0}
+.dd-gallery{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}
+.dd-gallery a{display:block;border-radius:8px;overflow:hidden;border:1px solid var(--line);aspect-ratio:1/1;background:var(--ink);transition:border-color .15s}
+.dd-gallery a:hover{border-color:var(--signal-line)}
+.dd-gallery img,.dd-gallery video{width:100%;height:100%;object-fit:cover;display:block}
+.dd-chat{display:flex;flex-direction:column;gap:10px;flex:1}
+@media(max-width:900px){
+  .dd-modal{max-width:96vw}
+  .dd-body{grid-template-columns:1fr;overflow-y:auto}
+  .dd-col{overflow-y:visible}
+  .dd-col+.dd-col{border-left:none;border-top:1px solid var(--line)}
+}
+
 /* ═══════════════════ GLASSMORPHISM REASON MODAL ═══════════════════ */
 /* გამოიყენება: განცხადების მოხსნა/უარყოფა — მიზეზის სავალდებულო შეყვანა */
 .glass-modal-bg{
@@ -550,28 +574,6 @@ input,select,textarea{font-family:var(--sans)}
 </div>
 
 <!-- ══════════════════════════ MODALS ══════════════════════════ -->
-<div class="modal-bg" id="resolveModal">
-  <div class="modal">
-    <div class="modal-head"><div class="dot"></div><h3>დავის გადაწყვეტა</h3></div>
-    <div class="modal-info" id="resolve-info"></div>
-    <div class="field">
-      <label>Resolution</label>
-      <select id="resolve-decision">
-        <option value="release">RELEASE — თანხა გამყიდველზე</option>
-        <option value="refund">REFUND — თანხა მყიდველზე</option>
-      </select>
-    </div>
-    <div class="field">
-      <label>Admin Note (optional)</label>
-      <textarea id="resolve-note" rows="3" placeholder="მაგ: ორივე მხარესთან საუბრის შემდეგ..."></textarea>
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal('resolveModal')">გაუქმება</button>
-      <button class="btn btn-signal" id="resolve-confirm-btn" onclick="confirmResolve()">დადასტურება</button>
-    </div>
-  </div>
-</div>
-
 <div class="modal-bg" id="banModal">
   <div class="modal">
     <div class="modal-head"><div class="dot"></div><h3 id="ban-title">მომხმარებლის დაბლოკვა</h3></div>
@@ -627,13 +629,19 @@ input,select,textarea{font-family:var(--sans)}
 
 <div class="toast-wrap" id="toastWrap"></div>
 
-<!-- DISPUTE CHAT LOG -->
-<div class="modal-bg" id="disputeChatModal">
-  <div class="modal" style="max-width:520px">
-    <div class="modal-head"><div class="dot"></div><h3 id="dispute-chat-title">ჩატის ისტორია</h3></div>
-    <div class="sup-msgs" id="dispute-chat-body" style="max-height:60vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px;margin-bottom:12px"></div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal('disputeChatModal')">დახურვა</button>
+<!-- DISPUTE DETAILS — unified evidence + chat + resolution view -->
+<div class="modal-bg" id="disputeDetailModal">
+  <div class="modal dd-modal">
+    <div class="dd-head">
+      <div style="display:flex;align-items:center;gap:9px;min-width:0">
+        <div class="dot" style="width:7px;height:7px;border-radius:50%;background:var(--signal);flex-shrink:0"></div>
+        <h3 id="dd-title">დავის დეტალები</h3>
+        <span class="tag" id="dd-status-tag"></span>
+      </div>
+      <button class="dd-head-close" onclick="closeModal('disputeDetailModal')">✕</button>
+    </div>
+    <div class="dd-body" id="dd-body">
+      <div class="loading" style="grid-column:1/-1">სკანირება</div>
     </div>
   </div>
 </div>
@@ -1035,13 +1043,15 @@ async function loadDisputes() {
       list.innerHTML = '<div class="empty"><div class="empty-ico">✓</div><div class="empty-t">დავები არ მოიძებნა</div></div>';
       return;
     }
+    // ── ⚠️ ფასი: d.listing_price_gel (listings.price_gel-იდან, ზუსტი
+    // ორიგინალი ფასი) — d.amount_gel აღარ გამოიყენება ჩვენებისთვის ──
     list.innerHTML = disputesData.map(d => `
       <div class="row">
         <div class="row-main">
           <div class="row-title">${esc(d.listing_title)} <span class="tag ${d.status === 'open' ? 'tag-crit' : 'tag-ok'}">${d.status === 'open' ? 'OPEN' : 'RESOLVED'}</span></div>
           <div class="row-meta">
-            <span><b>თანხა</b> ${fmtMoney(d.amount_gel)}</span>
-            <span><b>მიზეზი</b> ${esc(d.reason)}</span>
+            <span><b>თანხა</b> ${fmtMoney(d.listing_price_gel)}</span>
+            <span><b>მიზეზი</b> ${esc(ddReasonLabel(d.reason))}</span>
             <span><b>გახსნა</b> ${esc(d.opened_by_username)}</span>
             <span><b>თარიღი</b> ${fmtDate(d.created_at)}</span>
           </div>
@@ -1053,8 +1063,7 @@ async function loadDisputes() {
           ${d.status === 'resolved' ? `<div class="row-resolved-note">✓ ${d.resolution === 'release' ? 'RELEASE → გამყიდველზე' : 'REFUND → მყიდველზე'}${d.admin_note ? ' — ' + esc(d.admin_note) : ''}</div>` : ''}
         </div>
         <div class="row-actions">
-          <button class="btn btn-ghost" onclick="openDisputeChat('${d.id}')">💬 ჩატის ნახვა</button>
-          ${d.status === 'open' ? `<button class="btn btn-signal" onclick="openResolveModal('${d.id}')">გადაწყვეტა</button>` : ''}
+          <button class="btn btn-signal" onclick="openDisputeDetail('${d.id}')">დეტალები →</button>
         </div>
       </div>
     `).join('');
@@ -1063,68 +1072,176 @@ async function loadDisputes() {
   }
 }
 
-// ── დავის სრული ბაიერ-სელერის ჩატის ისტორია — GET /api/disputes/:id
-// (disputes.js) უკვე აბრუნებს chat_messages-ს moderator/admin-ისთვის,
-// ცალკე ახალი backend endpoint არ იყო საჭირო. ──
-async function openDisputeChat(disputeId) {
-  const d = disputesData.find(x => x.id === disputeId);
-  const body = document.getElementById('dispute-chat-body');
-  document.getElementById('dispute-chat-title').textContent = d ? `${esc(d.listing_title)} — ჩატის ისტორია` : 'ჩატის ისტორია';
-  body.innerHTML = '<div class="loading">სკანირება</div>';
-  document.getElementById('disputeChatModal').classList.add('show');
+// ══════════════════════════════════════════════════════════
+// UNIFIED DISPUTE DETAILS — ერთი დიდი მოდალი, სადაც ერთდროულად
+// ჩანს: (1) დეტალები + evidence გალერეა, (2) მყიდველი↔გამყიდველის
+// სრული ჩატის ისტორია (ტექსტი + inline სურათები/ვიდეო), და
+// (3) გადაწყვეტის პანელი — ყველა გვერდიგვერდ, ცალ-ცალკე პატარა
+// მოდალების ნაცვლად, რომ ადმინს ერთი გადახედვით შეეძლოს სამართლიანი
+// გადაწყვეტილების მიღება. მონაცემი მოდის GET /api/disputes/:id-დან
+// (disputes.js), რომელიც უკვე აბრუნებს chat_messages + evidence_urls +
+// listing_price_gel-ს ერთად, ცალკე დამატებითი backend endpoint არ
+// იყო საჭირო. ──
+// ══════════════════════════════════════════════════════════
+
+const DD_REASON_LABELS = {
+  not_received:            'პროდუქტი არ მივიდა',
+  not_as_described:        'არ შეესაბ. აღწერას',
+  scam:                    'თაღლითობა',
+  password_not_working:    'პაროლი არ მუშაობს',
+  account_not_transferred: 'ექაუნთი არ გადმოეცა',
+  other:                   'სხვა მიზეზი',
+};
+function ddReasonLabel(reason) { return DD_REASON_LABELS[reason] || reason || '—'; }
+
+// URL-ის მედია-ტიპის ამოცნობა გაფართოებით (evidence_urls-ისთვის და
+// ჩატის შეტყ.-ებში ჩასმული პირდაპ. სურათის/ვიდეოს ბმულებისთვის)
+function ddMediaKind(url) {
+  if (!url) return null;
+  if (/\.(jpe?g|png|webp|gif)(\?|$)/i.test(url)) return 'image';
+  if (/\.(mp4|webm|mov|quicktime)(\?|$)/i.test(url)) return 'video';
+  return null;
+}
+
+function ddRenderEvidence(urls) {
+  if (!urls || !urls.length) {
+    return '<div class="empty" style="padding:22px 6px"><div class="empty-ico">📷</div><div class="empty-t">მტკიცებულება არ აქვს</div></div>';
+  }
+  return `<div class="dd-gallery">${urls.map(url => {
+    const kind  = ddMediaKind(url) || 'image';
+    const media = kind === 'video'
+      ? `<video src="${esc(url)}" muted playsinline></video>`
+      : `<img src="${esc(url)}" loading="lazy" alt="მტკიცებულება">`;
+    return `<a href="${esc(url)}" target="_blank" rel="noopener" title="დააჭირე გასადიდებლად">${media}</a>`;
+  }).join('')}</div>`;
+}
+
+// ჩატის ერთი შეტყობინების რენდერი — თუ content_type სისტემურია/
+// შეფასებაა, ცენტრში საინფორმაციო ბუშტად ჩანს; თუ content თავად
+// პირდაპ. სურათის/ვიდეოს URL-ია (მომავალში chat-ში მედიის
+// მხარდაჭერის შემთხვევაშიც), inline-ად რენდერდება enlarge-ის
+// ბმულით — წინააღმდეგ შემთხვევაში ჩვეულებრივი ტექსტია.
+function ddRenderChatMessage(m, buyerId) {
+  const isBuyer = m.sender_id === buyerId;
+  const time = m.created_at ? new Date(m.created_at).toLocaleString('ka-GE', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+
+  if (m.content_type === 'system' || m.content_type === 'review') {
+    return `<div style="align-self:center;max-width:92%;text-align:center;font-size:10.5px;color:var(--dim);background:var(--raised);border:1px solid var(--line);border-radius:8px;padding:7px 11px">
+      ${esc(m.content)}<div class="sup-msg-t" style="margin-top:3px">${time}</div>
+    </div>`;
+  }
+
+  const isUrl  = /^https?:\/\//i.test((m.content || '').trim());
+  const kind   = isUrl ? ddMediaKind(m.content.trim()) : null;
+  const body   = kind === 'image'
+    ? `<a href="${esc(m.content.trim())}" target="_blank" rel="noopener"><img src="${esc(m.content.trim())}" style="max-width:210px;width:100%;border-radius:8px;display:block" loading="lazy"></a>`
+    : kind === 'video'
+      ? `<video src="${esc(m.content.trim())}" controls style="max-width:210px;width:100%;border-radius:8px;display:block"></video>`
+      : escHtmlDD(m.content).replace(/\n/g, '<br>');
+
+  return `<div class="sup-msg ${isBuyer ? 'them' : 'me'}">
+    <div style="font-size:9.5px;font-weight:700;color:var(--dim);margin-bottom:3px">${esc(m.sender_username)} ${isBuyer ? '(მყიდველი)' : '(გამყიდველი)'}</div>
+    ${body}<div class="sup-msg-t">${time}</div>
+  </div>`;
+}
+function escHtmlDD(str) { return esc(str); }
+
+let ddCurrent = null;
+
+async function openDisputeDetail(disputeId) {
+  const modal = document.getElementById('disputeDetailModal');
+  document.getElementById('dd-title').textContent = 'დავის დეტალები';
+  document.getElementById('dd-status-tag').textContent = '';
+  document.getElementById('dd-body').innerHTML = '<div class="loading" style="grid-column:1/-1">სკანირება</div>';
+  modal.classList.add('show');
   try {
-    const detail = await api(`/api/disputes/${disputeId}`);
-    const messages = detail.chat_messages || [];
-    if (!messages.length) {
-      body.innerHTML = '<div class="sup-empty"><div class="empty-t">ამ შეკვეთაზე ჩატის ისტორია არ მოიძებნა</div></div>';
-      return;
-    }
-    body.innerHTML = messages.map(m => {
-      const isBuyer = m.sender_id === detail.buyer_id;
-      const time = m.created_at ? new Date(m.created_at).toLocaleString('ka-GE', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
-      return `<div class="sup-msg ${isBuyer ? 'them' : 'me'}">
-        <div style="font-size:9.5px;font-weight:700;color:var(--dim);margin-bottom:3px">${esc(m.sender_username)} ${isBuyer ? '(მყიდველი)' : '(გამყიდველი)'}</div>
-        ${esc(m.content)}<div class="sup-msg-t">${time}</div>
-      </div>`;
-    }).join('');
+    const d = await api(`/api/disputes/${disputeId}`);
+    ddCurrent = d;
+    renderDisputeDetail(d);
   } catch (e) {
-    body.innerHTML = '<div class="empty"><div class="empty-ico">⚠</div><div class="empty-t">ჩატვირთვის შეცდომა</div></div>';
+    document.getElementById('dd-body').innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="empty-ico">⚠</div><div class="empty-t">ჩატვირთვის შეცდომა</div></div>';
   }
 }
 
-let resolveTargetId = null;
-function openResolveModal(disputeId) {
-  const d = disputesData.find(x => x.id === disputeId);
-  if (!d) return;
-  resolveTargetId = disputeId;
-  document.getElementById('resolve-info').innerHTML = `
-    <b>${esc(d.listing_title)}</b> — ${fmtMoney(d.amount_gel)}<br>
-    BUYER: ${esc(d.buyer_username)} · SELLER: ${esc(d.seller_username)}<br>
-    REASON: ${esc(d.reason)}<br>${esc(d.description)}
+function renderDisputeDetail(d) {
+  document.getElementById('dd-title').textContent = d.listing_title || 'დავის დეტალები';
+  const tag = document.getElementById('dd-status-tag');
+  tag.className   = 'tag ' + (d.status === 'open' ? 'tag-crit' : 'tag-ok');
+  tag.textContent = d.status === 'open' ? 'OPEN' : 'RESOLVED';
+
+  const messages = d.chat_messages || [];
+  const chatHtml = messages.length
+    ? messages.map(m => ddRenderChatMessage(m, d.buyer_id)).join('')
+    : '<div class="sup-empty" style="margin:auto"><div class="empty-t">ამ შეკვეთაზე ჩატის ისტორია არ მოიძებნა</div></div>';
+
+  const resolvePanel = d.status === 'open' ? `
+    <div class="field">
+      <label>Resolution</label>
+      <select id="dd-resolve-decision">
+        <option value="release">RELEASE — თანხა გამყიდველზე</option>
+        <option value="refund">REFUND — თანხა მყიდველზე</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Admin Note (optional)</label>
+      <textarea id="dd-resolve-note" rows="5" placeholder="მაგ: ორივე მხარესთან საუბრის შემდეგ..."></textarea>
+    </div>
+    <button class="btn btn-signal" id="dd-resolve-btn" style="width:100%" onclick="confirmDisputeResolve('${d.id}')">დადასტურება</button>
+  ` : `
+    <div class="modal-info" style="font-family:var(--sans)">
+      <div style="margin-bottom:7px"><b>გადაწყვეტილება:</b> ${d.resolution === 'release' ? 'RELEASE → გამყიდველზე' : 'REFUND → მყიდველზე'}</div>
+      ${d.admin_note ? `<div style="margin-bottom:7px"><b>შენიშვნა:</b> ${esc(d.admin_note)}</div>` : ''}
+      <div><b>გადაწყდა:</b> ${fmtDate(d.resolved_at)}</div>
+    </div>
   `;
-  document.getElementById('resolve-decision').value = 'release';
-  document.getElementById('resolve-note').value = '';
-  document.getElementById('resolveModal').classList.add('show');
+
+  document.getElementById('dd-body').innerHTML = `
+    <div class="dd-col">
+      <div class="dd-label">თანხა</div>
+      <div style="font-family:var(--mono);font-size:21px;font-weight:700">${fmtMoney(d.listing_price_gel)}</div>
+      <div class="dd-label">მიზეზი</div>
+      <div style="font-size:12.5px">${esc(ddReasonLabel(d.reason))}</div>
+      <div class="dd-label">აღწერა</div>
+      <div style="font-size:12px;color:var(--dim);line-height:1.6;white-space:pre-wrap">${esc(d.description || '—')}</div>
+      <div class="dd-label">მყიდველი → გამყიდველი</div>
+      <div style="font-size:12px">${esc(d.buyer_username)} <span style="color:var(--dim2)">→</span> ${esc(d.seller_username)}</div>
+      <div class="dd-label">მტკიცებულება</div>
+      ${ddRenderEvidence(d.evidence_urls)}
+    </div>
+    <div class="dd-col dd-col-chat">
+      <div class="dd-label" style="margin-top:0">ჩატის ისტორია</div>
+      <div class="dd-chat">${chatHtml}</div>
+    </div>
+    <div class="dd-col">
+      <div class="dd-label" style="margin-top:0">გადაწყვეტა</div>
+      ${resolvePanel}
+    </div>
+  `;
 }
 
-async function confirmResolve() {
-  const resolution = document.getElementById('resolve-decision').value;
-  const admin_note = document.getElementById('resolve-note').value.trim();
-  const btn = document.getElementById('resolve-confirm-btn');
+// ⚠️ Resolve ახლა /api/disputes/:id/resolve (disputes.js) მიდის —
+// არა ძველ /api/admin/disputes/:id/resolve-ზე. disputes.js-ის ვერსია
+// dispute/order row-ebს FOR UPDATE-ით კეტავს ტრანზაქციაში, რაც
+// race condition-ს (ორმაგი დაჭერა/paralel resolve) გამორიცხავს —
+// admin.js-ის ძველი route ამ დაცვას მოკლებული იყო (იხ. admin.js-ის
+// კომენტარი შესაბამის route-ზე).
+async function confirmDisputeResolve(disputeId) {
+  const resolution = document.getElementById('dd-resolve-decision').value;
+  const admin_note = document.getElementById('dd-resolve-note').value.trim();
+  const btn = document.getElementById('dd-resolve-btn');
   btn.disabled = true; btn.textContent = 'მუშავდება...';
   try {
-    await api(`/api/admin/disputes/${resolveTargetId}/resolve`, {
+    await api(`/api/disputes/${disputeId}/resolve`, {
       method: 'PUT',
       body: JSON.stringify({ resolution, admin_note }),
     });
     showToast('დავა გადაწყდა', 'ok');
-    closeModal('resolveModal');
+    closeModal('disputeDetailModal');
     loadDisputes();
     loadDisputesPill();
     loadOverview();
   } catch (e) {
     showToast(e.error === 'already_resolved' ? 'ეს დავა უკვე გადაწყვეტილია' : 'შეცდომა გადაწყვეტისას', 'err');
-  } finally {
     btn.disabled = false; btn.textContent = 'დადასტურება';
   }
 }
