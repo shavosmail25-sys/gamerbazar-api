@@ -260,6 +260,33 @@ router.get('/me', requireAuth, async (req, res) => {
 });
 
 // ══════════════════════════════════════════════════════════════
+// GET /api/orders/disputes/active-count  — მიმდინარე (open) დავების
+// რაოდენობა მომხმარებლისთვის (buyer ან seller მხარეს), Profile
+// გვერდის "დავა" სტატისტიკური ბარათისთვის. წინათ ეს რიცხვი frontend-ში
+// უბრალოდ 0-ზე იყო hardcode-ილი (იხ. loadMyProfile() → set('prof-disputes', 0)) —
+// ახლა რეალურად ითვლება disputes+orders JOIN-ით.
+// ⚠️ ეს route "/:id"-ზე ადრეა განსაზღვრული, თუმცა Express-ი "/:id" პატერნს
+// მხოლოდ ერთ სეგმენტს უსატყვისებს — ორსეგმენტიანი "/disputes/active-count"
+// მასზე საერთოდ ვერ დაემთხვევა, ასე რომ თანმიმდევრობა აქ დაცვის
+// მიზნით კი არა, უბრალოდ ლოგიკური დაჯგუფებისთვისაა (disputes-ჩართული
+// route-ები ერთად).
+// ══════════════════════════════════════════════════════════════
+router.get('/disputes/active-count', requireAuth, async (req, res) => {
+  try {
+    const { rows } = await db.query(`
+      SELECT COUNT(*) AS n
+      FROM disputes d
+      JOIN orders o ON o.id = d.order_id
+      WHERE (o.buyer_id=$1 OR o.seller_id=$1) AND d.status='open'
+    `, [req.user.id]);
+    res.json({ count: Number(rows[0].n) });
+  } catch (err) {
+    console.error('active disputes count error:', err.message);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
 // GET /api/orders/history  — სრული ისტ. + ფილტრი + pagination
 // ══════════════════════════════════════════════════════════════
 router.get('/history', requireAuth, async (req, res) => {

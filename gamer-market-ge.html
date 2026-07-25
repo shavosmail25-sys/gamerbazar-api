@@ -764,6 +764,86 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 .rv-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
 .rv-u{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600}
 .rv-stars{color:var(--gold);font-size:11px}.rv-txt{font-size:12px;color:var(--muted2);line-height:1.6}.rv-date{font-size:9px;color:var(--muted);margin-top:2px}
+.rv-ava{width:28px;height:28px;border-radius:50%;object-fit:cover;background:var(--bg4);flex-shrink:0}
+
+/* ── PROFILE REDESIGN — Cover Banner ─────────────────────────────
+   ნეგატიური margin-bottom (-46px) ატანს .prof-card-ს ბანერს ცოტათი
+   ზემოდან, ისე რომ ავატარი ვიზუალურად "აწვება" ბანერის ქვედა კიდეს
+   (გავრცელებული სოც. ქსელების პროფილის პატერნი). თუ cover_url არ
+   არსებობს, ჩნდება ნაგულ. gaming-თემატური გრადიენტი (linear-gradient
+   ქვემოთ) — ჩვეულებრივი <div>-ია, სურათის გარეშეც კარგად გამოიყურება. */
+.prof-cover{
+  position:relative;height:132px;border-radius:var(--r2);margin-bottom:-46px;
+  overflow:hidden;background:linear-gradient(120deg,#0d3b2e,#0e2f42 45%,#1c1240 100%);
+  border:1px solid var(--border);
+}
+.prof-cover img{width:100%;height:100%;object-fit:cover;display:block}
+.prof-cover::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,#0b1121cc 100%);pointer-events:none}
+.prof-cover-edit{
+  position:absolute;top:10px;right:10px;z-index:2;display:flex;align-items:center;gap:5px;
+  background:#00000070;backdrop-filter:blur(6px);border:1px solid #ffffff26;color:#fff;
+  font-size:10.5px;font-weight:600;padding:6px 11px;border-radius:20px;cursor:pointer;transition:background .15s;
+}
+.prof-cover-edit:hover{background:#000000a0}
+.prof-cover-edit svg{width:13px;height:13px}
+.prof-card{position:relative;z-index:1}
+.status-dot{position:absolute;bottom:1px;right:1px;width:14px;height:14px;border-radius:50%;background:var(--muted);border:2.5px solid var(--bg2);z-index:2;transition:background .2s}
+.status-dot.online{background:#4ade80;box-shadow:0 0 0 2px #4ade8030}
+
+/* ── PROFILE REDESIGN — Icon Stat Cards (replaces plain .prof-statbar
+   numbers-only row with four small metric cards, each with its own
+   icon + accent color, matching the rest of the site's card language) */
+.prof-stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.pstat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px 8px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px}
+.pstat-ico{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:var(--ad);color:var(--accent);flex-shrink:0}
+.pstat-ico svg{width:15px;height:15px}
+.pstat-card.gold .pstat-ico{background:var(--gd);color:var(--gold)}
+.pstat-card.blue .pstat-ico{background:var(--bd);color:var(--blue)}
+.pstat-card.red .pstat-ico{background:var(--rd);color:var(--red)}
+.prof-stats-grid .pstat-v{font-size:17px}
+.prof-stats-grid .pstat-l{font-size:9.5px;color:var(--muted);letter-spacing:.02em}
+
+/* ── PROFILE REDESIGN — "ჩემი განცხადებები"/"გაყიდული" ბარათები —
+   სურათის მინიატურა + კატეგორიის ტეგი + ნახვების მრიცხველი + ხატულა-
+   ღილაკები (ძველი plain-text ღილაკების ნაცვლად), იმავე ვიზუალურ
+   ენაზე, რაც მთავარი საიტის .lcard-ს აქვს. */
+.mlist-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.mlist-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;display:flex;flex-direction:column;transition:border-color .15s}
+.mlist-card:hover{border-color:var(--border3)}
+.mlist-img{position:relative;aspect-ratio:16/10;background:var(--bg3);overflow:hidden}
+.mlist-img img{width:100%;height:100%;object-fit:cover;display:block}
+.mlist-img-empty{width:100%;height:100%;display:flex;align-items:center;justify-content:center;opacity:.3}
+.mlist-img-empty svg{width:26px;height:26px}
+.mlist-status-badge{position:absolute;top:7px;left:7px;font-size:9px;font-weight:700;padding:3px 8px;border-radius:20px;backdrop-filter:blur(4px);background:#00000070;color:#fff}
+.mlist-views{position:absolute;top:7px;right:7px;display:flex;align-items:center;gap:3px;font-size:9.5px;font-weight:600;color:#fff;background:#00000070;padding:3px 7px;border-radius:20px}
+.mlist-views svg{width:11px;height:11px}
+.mlist-body{padding:11px 12px;display:flex;flex-direction:column;gap:6px;flex:1}
+.mlist-cat{display:inline-flex;align-items:center;gap:4px;font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.mlist-title{font-size:12.5px;font-weight:600;line-height:1.35;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;min-height:calc(1.35em*2)}
+.mlist-price-row{display:flex;align-items:baseline;gap:6px}
+.mlist-price{font-family:var(--mono);font-weight:700;font-size:14px;color:var(--gold)}
+.mlist-price-old{font-family:var(--mono);font-size:11px;color:var(--muted);text-decoration:line-through}
+.mlist-acts{display:flex;gap:6px;margin-top:auto;padding-top:8px;border-top:1px solid var(--border)}
+.mlist-ibtn{width:26px;height:26px;border-radius:7px;background:var(--bg3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted2);transition:all .15s;flex-shrink:0}
+.mlist-ibtn svg{width:13px;height:13px}
+.mlist-ibtn:hover{color:var(--text);border-color:var(--border3)}
+.mlist-ibtn.danger:hover{color:var(--red);border-color:#e05d5d50;background:var(--rd)}
+.mlist-ibtn.gold{color:var(--gold);background:var(--gd);border-color:var(--gd2)}
+
+/* ── EDIT LISTING MODAL — image manager thumbnails, status toggle, char counter ── */
+.eml-imgs{display:flex;flex-wrap:wrap;gap:8px}
+.eml-img{position:relative;width:60px;height:60px;border-radius:8px;overflow:hidden;border:1px solid var(--border2);flex-shrink:0}
+.eml-img img{width:100%;height:100%;object-fit:cover;display:block}
+.eml-img-rm{position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:50%;background:#000000a8;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.eml-img-rm svg{width:8px;height:8px}
+.eml-img-add{width:60px;height:60px;border-radius:8px;border:1.5px dashed var(--border3);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);flex-shrink:0;transition:all .15s}
+.eml-img-add:hover{border-color:var(--accent);color:var(--accent)}
+.eml-img-add svg{width:18px;height:18px}
+.eml-counter{font-size:9.5px;color:var(--muted);text-align:right;margin-top:3px}
+.eml-status-row{display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px 12px}
+.eml-status-label{font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px}
+.eml-status-note{font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.5}
+select.form-i{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'><path d='m6 9 6 6 6-6'/></svg>");background-repeat:no-repeat;background-position:right 10px center;background-size:14px;padding-right:30px}
 
 /* ORDER HISTORY */
 .oh-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}
@@ -1147,6 +1227,10 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
   .prof-bs{justify-content:center;flex-wrap:wrap;gap:5px}
   .prof-tabs{overflow-x:auto;padding-bottom:2px}
   .ptab{white-space:nowrap;flex-shrink:0;padding:7px 13px;font-size:12px}
+  .prof-cover{height:96px;margin-bottom:-40px}
+  .prof-stats-grid{grid-template-columns:repeat(2,1fr);gap:8px}
+  .pstat-card{padding:11px 6px}
+  .mlist-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:9px}
 
   /* ── EDIT PROFILE ─────────────────────────────────── */
   .edit-section{padding:13px 12px;border-radius:10px}
@@ -1933,9 +2017,22 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
       </div>
     </div>
     <div id="profile-logged" style="display:none">
+      <!-- COVER BANNER — cover_url თუ ატვირთულია, ჩანს ის; თუარა, CSS-ის
+           default გრადიენტი (.prof-cover) ჩანს ცარიელი <div>-ითაც. ატვირთვა
+           POST /api/users/me/cover-ზე ხდება (იხ. uploadCoverBanner()). -->
+      <div class="prof-cover" id="prof-cover">
+        <div class="prof-cover-edit" onclick="document.getElementById('cover-file').click()">
+          <svg class="ic" viewBox="0 0 24 24"><path d="M4 8.5h3l1.5-2h7L17 8.5h3a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5H4A1.5 1.5 0 0 1 2.5 19v-9A1.5 1.5 0 0 1 4 8.5Z"/><circle cx="12" cy="14" r="3.5"/></svg>
+          ბანერი
+        </div>
+        <input type="file" id="cover-file" accept="image/*" style="display:none" onchange="uploadCoverBanner(this)">
+      </div>
       <div class="prof-card">
         <div class="prof-av-wrap">
           <div class="prof-av" id="prof-ava-display">?</div>
+          <!-- ონლაინ სტატუსის ინდიკატორი — currentUser.is_online-ს ავსებს
+               loadMyProfile(), თუ ეს ველი /api/auth/me-დან მოვა. -->
+          <div class="status-dot" id="prof-status-dot" title="სტატუსი"></div>
           <div class="prof-av-edit" onclick="pg('edit');act(document.querySelectorAll('.nl')[5])"><svg class="ic" viewBox="0 0 24 24"><path d="M12.5 5.5 18 11l-9 9H4.5v-4.5Z"/><path d="m16 4 4 4"/></svg></div>
         </div>
         <div class="prof-inf">
@@ -1949,15 +2046,28 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
         <button class="btn btn-g btn-sm" onclick="doLogout()"><svg class="ic" viewBox="0 0 24 24"><path d="M9 21H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3"/><path d="M16 17l5-5-5-5M21 12H9"/></svg> გასვლა</button>
       </div>
 
-      <!-- STATS DASHBOARD — კომპაქტური, ჰორიზონტალური ზოლი ჰედერის
-           ქვემოთ. VIP-ისა და რეფერალის დიდი ბლოკები აქედან გატანილია
-           პროფილის → პარამეტრები გვერდზე (page-edit), რომ მთავარი
-           ხედი განცხადებებზე იყოს ორიენტირებული — იხ. იქ. -->
-      <div class="prof-statbar">
-        <div><div class="pstat-v" id="prof-sales">0</div><div class="pstat-l">გაყიდვა</div></div>
-        <div><div class="pstat-v" style="color:var(--gold)" id="prof-rating">—</div><div class="pstat-l">რეიტინგი</div></div>
-        <div><div class="pstat-v" id="prof-reviews-count">0</div><div class="pstat-l">შეფასება</div></div>
-        <div><div class="pstat-v" id="prof-disputes">0</div><div class="pstat-l">დავა</div></div>
+      <!-- STATS DASHBOARD — ოთხი ხატულა-ბარათი (გაყიდვა/რეიტინგი/
+           შეფასება/დავა), ჰედერის ქვემოთ. VIP-ისა და რეფერალის დიდი
+           ბლოკები აქედან გატანილია პროფილის → პარამეტრები გვერდზე
+           (page-edit), რომ მთავარი ხედი განცხადებებზე იყოს
+           ორიენტირებული — იხ. იქ. -->
+      <div class="prof-stats-grid">
+        <div class="pstat-card">
+          <div class="pstat-ico"><svg class="ic" viewBox="0 0 24 24"><circle cx="9" cy="20.5" r="1.3"/><circle cx="18" cy="20.5" r="1.3"/><path d="M2.5 3h2l2.4 12.2a2 2 0 0 0 2 1.6h8.4a2 2 0 0 0 2-1.6L21 7.5H6"/></svg></div>
+          <div class="pstat-v" id="prof-sales">0</div><div class="pstat-l">გაყიდვა</div>
+        </div>
+        <div class="pstat-card gold">
+          <div class="pstat-ico"><svg class="ic ic-fill" viewBox="0 0 24 24"><path d="M12 2.5 15 9l7 1-5.2 5 1.3 7-6.1-3.4L5.9 22l1.3-7L2 10l7-1Z"/></svg></div>
+          <div class="pstat-v" id="prof-rating">—</div><div class="pstat-l">რეიტინგი</div>
+        </div>
+        <div class="pstat-card blue">
+          <div class="pstat-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M21 11.5a8 8 0 0 1-8 8H8l-5 3 1.2-4.6A8 8 0 1 1 21 11.5Z"/></svg></div>
+          <div class="pstat-v" id="prof-reviews-count">0</div><div class="pstat-l">შეფასება</div>
+        </div>
+        <div class="pstat-card red">
+          <div class="pstat-ico"><svg class="ic" viewBox="0 0 24 24"><path d="M5 21V4"/><path d="M5 4.5c1.6-1 4-1 6 0s4.4 1 6 0v9c-1.6 1-4 1-6 0s-4.4-1-6 0Z"/></svg></div>
+          <div class="pstat-v" id="prof-disputes">0</div><div class="pstat-l">დავა</div>
+        </div>
       </div>
 
       <div class="prof-tabs">
@@ -2711,24 +2821,75 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
   </div>
 </div>
 
-<!-- ── Edit Listing Modal -->
+<!-- ── Edit Listing Modal ── Upgraded: image manager, active/paused
+     toggle, category+subcategory dropdowns, char counters (2025 redesign) -->
 <div class="modal-bg" id="editListingModal" onclick="if(event.target===this)closeM('editListingModal')">
-  <div class="modal" style="max-width:420px">
+  <div class="modal" style="max-width:460px">
     <div class="modal-title" style="display:flex;align-items:center;gap:8px"><svg class="ic" viewBox="0 0 24 24"><path d="M12.5 5.5 18 11l-9 9H4.5v-4.5Z"/><path d="m16 4 4 4"/></svg> განცხადების რედაქტირება</div>
     <input type="hidden" id="edit-listing-id">
     <input type="hidden" id="edit-listing-orig-price">
-    <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px">
+    <input type="hidden" id="edit-listing-status">
+    <div style="display:flex;flex-direction:column;gap:14px;margin-top:12px">
+
+      <!-- Status: Active / Paused toggle (uses existing delist/relist endpoints).
+           Rejected listings show a dedicated resubmit-to-moderation panel instead. -->
       <div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">სათაური</div>
-        <input class="inp" id="edit-listing-title" placeholder="სათაური" style="width:100%;box-sizing:border-box">
+        <div class="eml-status-row" id="eml-status-toggle-block">
+          <div class="eml-status-label" id="eml-status-text"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 5-5"/></svg> აქტიური</div>
+          <div class="toggle on" id="eml-status-toggle" onclick="toggleEditListingStatus()"></div>
+        </div>
+        <div class="eml-status-row" id="eml-status-rejected-block" style="display:none;flex-direction:column;align-items:flex-start;gap:8px">
+          <div class="eml-status-label" style="color:var(--red)"><svg class="ic" viewBox="0 0 24 24"><path d="M10.6 3.9 2.4 18a1.8 1.8 0 0 0 1.6 2.7h16a1.8 1.8 0 0 0 1.6-2.7L13.4 3.9a1.8 1.8 0 0 0-2.8 0Z"/><path d="M12 9.5v4"/><path d="M12 17h.01"/></svg> უარყოფილია მოდერაციის მიერ</div>
+          <div style="font-size:11px;color:var(--muted2)" id="eml-rejection-reason"></div>
+          <button class="btn btn-a btn-sm" onclick="resubmitRejectedListing()"><svg class="ic" viewBox="0 0 24 24"><path d="M20 12a8 8 0 0 1-14.9 4M4 12a8 8 0 0 1 14.9-4"/><path d="M4 17v-3.5H7.5M20 7v3.5H16.5"/></svg> ხელახლა გაგზავნა მოდერაციაზე</button>
+        </div>
+        <div class="eml-status-note" id="eml-status-note"></div>
       </div>
+
+      <!-- Images: preview existing photos, remove them, or attach new ones -->
       <div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">აღწერა</div>
-        <textarea class="inp" id="edit-listing-desc" rows="3" placeholder="აღწერა" style="width:100%;box-sizing:border-box;resize:vertical"></textarea>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-size:11px;color:var(--muted)">ფოტოები</span>
+          <span class="eml-counter" id="eml-img-count" style="margin-top:0">0/5</span>
+        </div>
+        <div class="eml-imgs" id="eml-imgs-list"></div>
+        <input type="file" id="eml-img-file" accept="image/*" multiple style="display:none" onchange="addEditListingImages(this)">
       </div>
+
+      <!-- Category & Subcategory -->
+      <div class="form-row">
+        <div class="form-g" style="margin-bottom:0">
+          <label class="form-l">კატეგორია</label>
+          <select class="form-i" id="edit-listing-category" onchange="onEditListingCategoryChange()"></select>
+        </div>
+        <div class="form-g" style="margin-bottom:0">
+          <label class="form-l">თამაში / სერვისი</label>
+          <select class="form-i" id="edit-listing-game"></select>
+        </div>
+      </div>
+
+      <!-- Title -->
+      <div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span style="font-size:11px;color:var(--muted)">სათაური</span>
+          <span class="eml-counter" id="eml-title-counter" style="margin-top:0">0/200</span>
+        </div>
+        <input class="form-i" id="edit-listing-title" maxlength="200" placeholder="სათაური" oninput="updateEditListingCounters()">
+      </div>
+
+      <!-- Description -->
+      <div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span style="font-size:11px;color:var(--muted)">აღწერა</span>
+          <span class="eml-counter" id="eml-desc-counter" style="margin-top:0">0</span>
+        </div>
+        <textarea class="form-i" id="edit-listing-desc" rows="3" placeholder="აღწერა" style="resize:vertical" oninput="updateEditListingCounters()"></textarea>
+      </div>
+
+      <!-- Price -->
       <div>
         <div style="font-size:11px;color:var(--muted);margin-bottom:4px">ფასი (₾)</div>
-        <input class="inp" id="edit-listing-price" type="number" min="5" step="0.01" placeholder="0.00" style="width:100%;box-sizing:border-box" oninput="updatePriceHint()">
+        <input class="form-i" id="edit-listing-price" type="number" min="5" step="0.01" placeholder="0.00" oninput="updatePriceHint()">
         <div id="edit-listing-price-hint" style="font-size:10px;margin-top:4px"></div>
         <div style="font-size:10.5px;color:var(--red);margin-top:6px;line-height:1.5"><svg class="ic" viewBox="0 0 24 24"><path d="M10.6 3.9 2.4 18a1.8 1.8 0 0 0 1.6 2.7h16a1.8 1.8 0 0 0 1.6-2.7L13.4 3.9a1.8 1.8 0 0 0-2.8 0Z"/><path d="M12 9.5v4"/><path d="M12 17h.01"/></svg> მიუთითეთ ზუსტი ფასი. საიტზე მოქმედებს Escrow სისტემა და მყიდველს შეეძლება პირდაპირ ამ ფასად შეიძინოს თქვენი ნივთი.</div>
       </div>
@@ -3054,6 +3215,8 @@ const ICO = {
   info:       '<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 8h.01"/></svg>',
   clock:      '<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3.2 2"/></svg>',
   loader:     '<svg class="ic ic-spin" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9"/></svg>',
+  pause:      '<svg class="ic" viewBox="0 0 24 24"><rect x="6" y="4.5" width="4" height="15" rx="1"/><rect x="14" y="4.5" width="4" height="15" rx="1"/></svg>',
+  play:       '<svg class="ic" viewBox="0 0 24 24"><path d="M7 4.5v15l13-7.5Z"/></svg>',
 };
 
 
@@ -3930,7 +4093,35 @@ async function loadMyProfile() {
   set('prof-sales',         currentUser.completed_orders || 0);
   set('prof-rating',        currentUser.avg_rating > 0 ? Number(currentUser.avg_rating).toFixed(1) : '—');
   set('prof-reviews-count', currentUser.review_count || 0);
-  set('prof-disputes',      0);
+
+  // "დავა" ბარათი — წინათ ეს რიცხვი უბრალოდ 0-ზე იყო hardcode-ილი; ახლა
+  // რეალურად ითვლება ცალკე, მსუბუქი endpoint-იდან (იხ. GET
+  // /api/orders/disputes/active-count, orders.js). ცალკეა დანარჩენი
+  // სინქრონული set()-ებისგან, რადგან ეს ცალკე ქსელური მოთხოვნაა.
+  api('/api/orders/disputes/active-count')
+    .then(d => set('prof-disputes', d.count || 0))
+    .catch(() => set('prof-disputes', '—'));
+
+  // ── COVER BANNER — cover_url თუ ატვირთულია, სურათი ჩნდება; თუარა,
+  // .prof-cover CSS-ის default გრადიენტი უცვლელად რჩება (ცარიელი <div>). ──
+  const coverEl = document.getElementById('prof-cover');
+  if (coverEl) {
+    let coverImg = coverEl.querySelector('img');
+    if (currentUser.cover_url) {
+      if (!coverImg) { coverImg = document.createElement('img'); coverEl.insertBefore(coverImg, coverEl.firstChild); }
+      coverImg.src = imgUrl(currentUser.cover_url);
+    } else if (coverImg) {
+      coverImg.remove();
+    }
+  }
+
+  // ── ონლაინ სტატუსის წერტილი — currentUser.is_online ველი /api/auth/me-დან
+  // მოდის (თუ ბექენდი მას აბრუნებს — იხ. users.js GET /:id-ის იგივე
+  // გამოთვლა საჯარო პროფილისთვის). თუ ეს ველი ჯერ არ არსებობს
+  // /api/auth/me-ის პასუხში, წერტილი უბრალოდ "offline" ნაცრისფერი დარჩება —
+  // უვნებელია, არაფერს არ ტეხს. ──
+  const statusDot = document.getElementById('prof-status-dot');
+  if (statusDot) statusDot.classList.toggle('online', !!currentUser.is_online);
 
   // edit გვ. — რეალური მონაცემები
   const editName    = document.getElementById('edit-name');
@@ -4102,62 +4293,114 @@ function maybeShowReferralPromo() {
   }, 1500);
 }
 
+// სურათის ჩატვირთვის შეცდომაზე "ჩემი განცხადებები" ბარათებზე — named
+// ფუნქციაა (და არა inline SVG სტრინგი onerror-ში), რომ SVG-ის შიდა
+// ორმაგი ბრჭყალები (viewBox="...") არ დაარღვიოს HTML ატრიბუტი. ──
+function handleMListImgError(imgEl) {
+  imgEl.onerror = null;
+  const holder = document.createElement('div');
+  holder.className = 'mlist-img-empty';
+  holder.innerHTML = ICO.image;
+  imgEl.replaceWith(holder);
+}
+
+// ── categories cache — სახელი/ხატულა (name_ka/icon) ტეგისთვის ჩემი
+// განცხადებების ბარათებზე და Edit Listing Modal-ის dropdown-ისთვის.
+// ერთხელ იტვირთება და ინახება მეხსიერებაში მთელი სესიის განმავლობაში. ──
+let CATEGORIES_CACHE = null;
+async function getCategoriesCached() {
+  if (CATEGORIES_CACHE) return CATEGORIES_CACHE;
+  try { CATEGORIES_CACHE = await api('/api/listings/categories'); }
+  catch (e) { CATEGORIES_CACHE = []; }
+  return CATEGORIES_CACHE;
+}
+
 async function loadMyListings(filter) {
   if (!currentUser) return;
   filter = filter || 'active';
   const isSold = filter === 'sold';
   const gridId = isSold ? 'prof-grid-sold' : 'prof-grid';
   try {
-    const data = await api(
-      '/api/listings?seller_id=' + encodeURIComponent(currentUser.id) +
-      '&include_sold=true&include_pending=true&include_inactive=true&limit=50'
-    );
+    const [data, cats] = await Promise.all([
+      api(
+        '/api/listings?seller_id=' + encodeURIComponent(currentUser.id) +
+        '&include_sold=true&include_pending=true&include_inactive=true&limit=50'
+      ),
+      getCategoriesCached(),
+    ]);
     const grid = document.getElementById(gridId);
     if (!grid) return;
+    const catMap = {};
+    (cats || []).forEach(c => { catMap[c.slug] = c; });
     const statusBadges = {
-      active:   '<span style="color:#4ade80;font-size:10px;font-weight:600">● აქტიური</span>',
-      pending:  '<span style="color:#f59e0b;font-size:10px;font-weight:600">⏳ მოდ. მოლოდინში</span>',
-      inactive: '<span style="color:var(--muted);font-size:10px;font-weight:600">○ გაყვანილია</span>',
-      sold:     '<span style="color:#60a5fa;font-size:10px;font-weight:600">გაყიდულია</span>',
-      blocked:  '<span style="color:#ef4444;font-size:10px;font-weight:600">დაბლოკილია</span>',
+      active:   { txt: '● აქტიური',           bg: '#4ade8025', col: '#4ade80' },
+      pending:  { txt: '⏳ მოდერაციაში',        bg: '#f59e0b25', col: '#f59e0b' },
+      inactive: { txt: '○ პაუზაზეა',           bg: '#ffffff20', col: '#c9ced8' },
+      rejected: { txt: '✕ უარყოფილია',         bg: '#ff5f6d25', col: '#ff5f6d' },
+      sold:     { txt: '✓ გაყიდულია',          bg: '#60a5fa25', col: '#60a5fa' },
+      blocked:  { txt: '⛔ დაბლოკილია',         bg: '#ff5f6d25', col: '#ff5f6d' },
     };
+    // Edit modal ახლა 'rejected' სტატუსსაც უჭერს მხარს — resubmit-to-
+    // moderation ნაკადით (იხ. openEditListingModal → eml-status-rejected-block)
+    const EDITABLE_STATUSES = ['active', 'inactive', 'pending', 'rejected'];
     let listings = (data.listings || []).filter(l => isSold ? l.status === 'sold' : l.status !== 'sold');
     if (listings.length) {
-      grid.innerHTML = listings.map(l => {
-        const badge = statusBadges[l.status] || '';
+      grid.innerHTML = `<div class="mlist-grid">` + listings.map(l => {
+        const st = statusBadges[l.status] || { txt: l.status, bg: '#ffffff20', col: 'var(--muted)' };
+        const cat = catMap[l.category];
         const discount = l.original_price && Number(l.original_price) > Number(l.price_gel);
-        const priceHtml = discount
-          ? `<span style="text-decoration:line-through;color:var(--muted);font-size:11px">&#x20BE;${Number(l.original_price).toFixed(2)}</span> <span style="color:#22c55e;font-weight:700;font-family:var(--mono)">&#x20BE;${Number(l.price_gel).toFixed(2)}</span>`
-          : `<span style="color:var(--gold);font-weight:700;font-family:var(--mono)">&#x20BE;${Number(l.price_gel).toFixed(2)}</span>`;
+        const hasPhoto = l.images && l.images.length > 0;
+        const imgBlock = hasPhoto
+          ? `<img src="${imgUrl(l.images[0])}" alt="${esc(l.title)}" loading="lazy" onerror="handleMListImgError(this)">`
+          : `<div class="mlist-img-empty">${ICO.image}</div>`;
+
         const btns = [];
-        if (!isSold && ['active','inactive','pending'].includes(l.status))
-          btns.push(`<button onclick="openEditListingModal('${l.id}')" style="font-size:10px;padding:3px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--fg);cursor:pointer">&#x270F;&#xFE0F; რედ.</button>`);
+        if (!isSold && EDITABLE_STATUSES.includes(l.status))
+          btns.push(`<div class="mlist-ibtn" title="რედაქტირება" onclick="openEditListingModal('${l.id}')">${ICO.edit}</div>`);
         // VIP ახლა ანგარიშის (account-level) სტატუსია — თუ ეს კონკრეტული
-        // განცხადება უკვე VIP-ია, ის იმიტომ, რომ მთელი ანგარიში VIP-ია
-        // (POST /api/listings ავტ. აყენებს), ამიტომ per-listing ღილაკი
-        // საჭირო აღარაა. თუ არა — ვთავაზობთ ანგარიშის VIP-ის ყიდვას.
-        if (!isSold && !l.is_vip && ['active','inactive','pending'].includes(l.status))
-          btns.push(`<button onclick="openVipPicker()" style="font-size:10px;padding:3px 8px;background:var(--gd);border:1px solid var(--gd2);border-radius:6px;color:var(--gold);cursor:pointer">&#x2B50; VIP</button>`);
+        // განცხადება უკვე VIP-ია, ის იმიტომ, რომ მთელი ანგარიში VIP-ია.
+        if (!isSold && !l.is_vip && ['active', 'inactive', 'pending'].includes(l.status))
+          btns.push(`<div class="mlist-ibtn gold" title="გახდი VIP" onclick="openVipPicker()">${ICO.starFill}</div>`);
         if (!isSold && (l.status === 'active' || l.status === 'pending'))
-          btns.push(`<button onclick="delistListing('${l.id}')" style="font-size:10px;padding:3px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--muted);cursor:pointer">&#x1F4E4; აღება</button>`);
+          btns.push(`<div class="mlist-ibtn" title="პაუზა" onclick="delistListing('${l.id}')">${ICO.pause}</div>`);
         if (!isSold && l.status === 'inactive')
-          btns.push(`<button onclick="relistListing('${l.id}')" style="font-size:10px;padding:3px 8px;background:var(--accent);border:none;border-radius:6px;color:#fff;cursor:pointer">&#x1F504; ხელახლა</button>`);
-        return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:6px">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
-            <div style="font-size:12px;font-weight:600;line-height:1.4;flex:1">${esc(l.title)}</div>
-            ${badge}
+          btns.push(`<div class="mlist-ibtn" title="ხელახლა გააქტიურება" onclick="relistListing('${l.id}')">${ICO.play}</div>`);
+        if (!isSold && l.status !== 'sold')
+          btns.push(`<div class="mlist-ibtn danger" title="წაშლა" onclick="deleteListing('${l.id}')">${ICO.trash}</div>`);
+
+        return `<div class="mlist-card">
+          <div class="mlist-img">
+            ${imgBlock}
+            <div class="mlist-status-badge" style="background:${st.bg};color:${st.col}">${st.txt}</div>
+            <div class="mlist-views">${ICO.eye} ${Number(l.views_count || 0)}</div>
           </div>
-          <div style="font-size:11px;color:var(--muted)">${esc(l.game)} &middot; ${esc(l.listing_type)}</div>
-          <div>${priceHtml}</div>
-          ${btns.length ? `<div style="display:flex;gap:6px;margin-top:2px">${btns.join('')}</div>` : ''}
+          <div class="mlist-body">
+            <div class="mlist-cat">${cat ? (cat.icon || '') + ' ' + esc(cat.name_ka) : esc(l.category)} &middot; ${esc(l.game)}</div>
+            <div class="mlist-title">${esc(l.title)}</div>
+            <div class="mlist-price-row">
+              ${discount ? `<span class="mlist-price-old">&#x20BE;${Number(l.original_price).toFixed(2)}</span>` : ''}
+              <span class="mlist-price">&#x20BE;${Number(l.price_gel).toFixed(2)}</span>
+            </div>
+            ${btns.length ? `<div class="mlist-acts">${btns.join('')}</div>` : ''}
+          </div>
         </div>`;
-      }).join('');
+      }).join('') + `</div>`;
     } else {
       grid.innerHTML = isSold
         ? '<div class="empty"><div class="empty-ico">&#x2705;</div><div class="empty-t">გაყიდული განცხ. ჯერ არ არის</div></div>'
         : '<div class="empty"><div class="empty-ico">&#x1F4E6;</div><div class="empty-t">განცხადებები ჯერ არ გაქვს</div></div>';
     }
   } catch (e) { console.error('loadMyListings:', e); }
+}
+
+// წაშლა (soft delete — DELETE /api/listings/:id)
+async function deleteListing(id) {
+  if (!confirm('სამუდამოდ გსურთ ამ განცხადების წაშლა?')) return;
+  try {
+    await api('/api/listings/' + id, { method: 'DELETE' });
+    showToast('განცხადება წაიშალა', 'ok');
+    loadMyListings('active');
+  } catch (e) { showToast(e?.message || e?.error || 'შეცდომა', 'err'); }
 }
 
 // ══════════════════════════════════════════════════════════
@@ -4233,6 +4476,11 @@ async function relistListing(id) {
   } catch(e) { showToast(e.message || 'შეცდომა', 'err'); }
 }
 
+// ── Edit Listing Modal-ის მთელი state ერთ ადგილას — ხატულების/
+// dropdown-ების render-ს ეს array სჭირდება ხელახლა API-ს გარეშეც
+// (მაგ. ფოტოს წაშლის შემდეგ ლოკალურად რენდერი). ──
+let editListingImages = [];
+
 async function openEditListingModal(id) {
   try {
     const l = await api('/api/listings/' + id);
@@ -4242,6 +4490,16 @@ async function openEditListingModal(id) {
     document.getElementById('edit-listing-desc').value       = l.description || '';
     document.getElementById('edit-listing-price').value      = Number(l.price_gel).toFixed(2);
     updatePriceHint();
+    updateEditListingCounters();
+
+    editListingImages = Array.isArray(l.images) ? [...l.images] : [];
+    renderEditListingImagesUI();
+
+    renderEditListingStatusUI(l.status, l.rejection_reason);
+
+    await populateEditListingCategorySelect(l.category);
+    populateEditListingGameSelect(l.category, l.game);
+
     openM('editListingModal');
   } catch(e) { showToast('ჩვ. ვერ მოხდა', 'err'); }
 }
@@ -4258,15 +4516,203 @@ function updatePriceHint() {
   else hint.textContent = '';
 }
 
+// სათაურის/აღწერის სიმბოლოების მთვლელი — DB-ში title VARCHAR(200)-ია,
+// ამიტომ maxlength=200 რეალურ შეზღუდვას ასახავს; description TEXT-ია
+// (ლიმიტის გარეშე), აქ მთვლელი მხოლოდ ორიენტირია, არა hard limit.
+function updateEditListingCounters() {
+  const title = document.getElementById('edit-listing-title');
+  const desc  = document.getElementById('edit-listing-desc');
+  const titleC = document.getElementById('eml-title-counter');
+  const descC  = document.getElementById('eml-desc-counter');
+  if (title && titleC) titleC.textContent = title.value.length + '/200';
+  if (desc && descC) descC.textContent = desc.value.length + ' სიმბოლო';
+}
+
+// ── სტატუსის ბლოკის რენდერი — Active/Paused toggle ან Rejected+resubmit
+// პანელი, სტატუსის მიხედვით (იხ. კომენტარი HTML-ში, editListingModal). ──
+function renderEditListingStatusUI(status, rejectionReason) {
+  document.getElementById('edit-listing-status').value = status;
+  const toggleBlock   = document.getElementById('eml-status-toggle-block');
+  const rejectedBlock = document.getElementById('eml-status-rejected-block');
+  const toggleEl      = document.getElementById('eml-status-toggle');
+  const textEl        = document.getElementById('eml-status-text');
+  const noteEl         = document.getElementById('eml-status-note');
+  if (!toggleBlock || !rejectedBlock) return;
+
+  if (status === 'rejected') {
+    toggleBlock.style.display = 'none';
+    rejectedBlock.style.display = 'flex';
+    const reasonEl = document.getElementById('eml-rejection-reason');
+    if (reasonEl) reasonEl.textContent = rejectionReason || '—';
+    if (noteEl) noteEl.textContent = '';
+    return;
+  }
+  toggleBlock.style.display = 'flex';
+  rejectedBlock.style.display = 'none';
+
+  const isOn = status === 'active' || status === 'pending';
+  toggleEl.classList.toggle('on', isOn);
+  if (status === 'pending') {
+    textEl.innerHTML = `${ICO.clock} მოდერაციის მოლოდინში`;
+    noteEl.textContent = 'ჯერ მოდერაციას არ გაუვლია — დამტკიცების შემდეგ გამოჩნდება საიტზე.';
+  } else if (status === 'active') {
+    textEl.innerHTML = `${ICO.checkCircle} აქტიური`;
+    noteEl.textContent = 'ხილულია საიტზე ყველასთვის.';
+  } else {
+    textEl.innerHTML = `${ICO.pause} პაუზაზეა`;
+    noteEl.textContent = 'დამალულია საიტიდან. ხელახლა ჩართვისას ისევ მოდერაციაზე გავა.';
+  }
+}
+
+// Active ⇄ Paused — არსებულ /delist და /relist endpoint-ებს იყენებს
+// (არა PUT-ის status ველს, რომელიც უსაფრთხოების მიზეზით non-privileged
+// მომხმარებლისთვის დაბლოკილია — იხ. listings.js PUT /:id კომენტარი).
+async function toggleEditListingStatus() {
+  const id     = document.getElementById('edit-listing-id')?.value;
+  const status = document.getElementById('edit-listing-status')?.value;
+  const toggleEl = document.getElementById('eml-status-toggle');
+  if (!id || !toggleEl) return;
+  const turningOff = status === 'active' || status === 'pending';
+  toggleEl.style.pointerEvents = 'none';
+  try {
+    if (turningOff) {
+      await api('/api/listings/' + id + '/delist', { method: 'POST' });
+      renderEditListingStatusUI('inactive', '');
+      showToast('განცხადება დაპაუზდა', 'ok');
+    } else {
+      await api('/api/listings/' + id + '/relist', { method: 'POST' });
+      renderEditListingStatusUI('pending', '');
+      showToast('⏳ ხელახლა გაიგზავნა მოდერაციაზე', 'ok');
+    }
+    loadMyListings('active');
+  } catch (e) {
+    showToast(e?.message || e?.error || 'შეცდომა', 'err');
+  } finally {
+    toggleEl.style.pointerEvents = '';
+  }
+}
+
+// უარყოფილი განცხადების ხელახლა მოდერაციაზე გაგზავნა (rejected → pending).
+// PUT /:id-ს მკაცრად ვამოწმებთ ამ ერთი, უსაფრთხო შემთხვევისთვის ღიაა
+// non-privileged მომხმარებლისთვისაც — იხ. listings.js.
+async function resubmitRejectedListing() {
+  const id = document.getElementById('edit-listing-id')?.value;
+  if (!id) return;
+  try {
+    await api('/api/listings/' + id, { method: 'PUT', body: JSON.stringify({ status: 'pending' }) });
+    closeM('editListingModal');
+    showToast('⏳ ხელახლა გაიგზავნა მოდერაციაზე', 'ok');
+    loadMyListings('active');
+  } catch (e) { showToast(e?.message || e?.error || 'შეცდომა', 'err'); }
+}
+
+// ── სურათების მენეჯერი — არსებული ფოტოების პრევიუ + წაშლა + ახლის
+// დამატება, პირდაპირ POST/DELETE /api/listings/:id/images-ზე. ──
+function renderEditListingImagesUI() {
+  const wrap = document.getElementById('eml-imgs-list');
+  const countEl = document.getElementById('eml-img-count');
+  if (!wrap) return;
+  if (countEl) countEl.textContent = editListingImages.length + '/5';
+  let html = editListingImages.map(url => `
+    <div class="eml-img">
+      <img src="${imgUrl(url)}" alt="">
+      <div class="eml-img-rm" onclick="removeEditListingImage('${url.replace(/'/g, "\\'")}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></div>
+    </div>
+  `).join('');
+  if (editListingImages.length < 5) {
+    html += `<div class="eml-img-add" onclick="document.getElementById('eml-img-file').click()">${ICO.plus}</div>`;
+  }
+  wrap.innerHTML = html;
+}
+
+async function removeEditListingImage(url) {
+  const id = document.getElementById('edit-listing-id')?.value;
+  if (!id) return;
+  if (editListingImages.length <= 2) {
+    showToast('აქტიურ/მოლოდინში მყოფ განცხადებას მინიმუმ 2 ფოტო სჭირდება', 'err');
+    return;
+  }
+  try {
+    const data = await api('/api/listings/' + id + '/images', { method: 'DELETE', body: JSON.stringify({ url }) });
+    editListingImages = data.images || editListingImages.filter(u => u !== url);
+    renderEditListingImagesUI();
+    showToast('ფოტო წაიშალა', 'ok');
+  } catch (e) {
+    showToast(e?.message || e?.error || 'ფოტოს წაშლა ვერ მოხერხდა', 'err');
+  }
+}
+
+async function addEditListingImages(input) {
+  const id = document.getElementById('edit-listing-id')?.value;
+  const files = input.files;
+  if (!id || !files || !files.length) return;
+  const remaining = 5 - editListingImages.length;
+  if (remaining <= 0) { showToast('მაქსიმუმ 5 ფოტო', 'err'); input.value = ''; return; }
+  const fd = new FormData();
+  Array.from(files).slice(0, remaining).forEach(f => fd.append('images', f));
+  try {
+    const res = await fetch(API_URL + '/api/listings/' + id + '/images', {
+      method: 'POST', headers: { Authorization: 'Bearer ' + getToken() }, body: fd
+    });
+    const data = await res.json();
+    if (!res.ok) throw data;
+    editListingImages = data.images || editListingImages;
+    renderEditListingImagesUI();
+    showToast('ფოტო აიტვირთა', 'ok');
+  } catch (e) {
+    showToast(e?.message || e?.error || 'ატვირთვა ვერ მოხერხდა', 'err');
+  } finally {
+    input.value = '';
+  }
+}
+
+// ── Category & Subcategory dropdown-ები — SUBCATEGORIES მუდმივას
+// (იხ. ზემოთ, ერთხელ უკვე გამოცხადებულია) იმავე მონაცემებს იყენებს,
+// რასაც create-listing wizard-ის cl-cat-card ბადეც და listing-ის
+// გვერდის ფილტრებიც (renderSubcats). ──
+async function populateEditListingCategorySelect(selected) {
+  const sel = document.getElementById('edit-listing-category');
+  if (!sel) return;
+  const cats = await getCategoriesCached();
+  sel.innerHTML = (cats || []).map(c =>
+    `<option value="${c.slug}"${c.slug === selected ? ' selected' : ''}>${c.icon ? c.icon + ' ' : ''}${esc(c.name_ka)}</option>`
+  ).join('');
+}
+
+function populateEditListingGameSelect(cat, selectedGame) {
+  const sel = document.getElementById('edit-listing-game');
+  if (!sel) return;
+  const list = SUBCATEGORIES[cat] || [];
+  const options = list.map(s => `<option value="${esc(s.name)}">${esc(s.name)}</option>`);
+  // თუ არსებული `game` მნიშვნელობა SUBCATEGORIES-ის სიაში არ არის
+  // (მაგ. ისტორიული თავისუფალი ტექსტი) — დამატებით ვამატებთ ცალკე
+  // option-ად თავში, რომ არჩევანი არ დაიკარგოს/არ შეიცვალოს ჩუმად.
+  if (selectedGame && !list.some(s => s.name.toLowerCase() === String(selectedGame).toLowerCase())) {
+    options.unshift(`<option value="${esc(selectedGame)}">${esc(selectedGame)}</option>`);
+  }
+  sel.innerHTML = options.join('');
+  if (selectedGame) sel.value = selectedGame;
+}
+
+function onEditListingCategoryChange() {
+  const cat = document.getElementById('edit-listing-category')?.value;
+  populateEditListingGameSelect(cat, null);
+}
+
 async function saveListingEdit() {
-  const id    = document.getElementById('edit-listing-id')?.value;
-  const title = document.getElementById('edit-listing-title')?.value?.trim();
-  const desc  = document.getElementById('edit-listing-desc')?.value?.trim();
-  const price = document.getElementById('edit-listing-price')?.value;
+  const id       = document.getElementById('edit-listing-id')?.value;
+  const title    = document.getElementById('edit-listing-title')?.value?.trim();
+  const desc     = document.getElementById('edit-listing-desc')?.value?.trim();
+  const price    = document.getElementById('edit-listing-price')?.value;
+  const category = document.getElementById('edit-listing-category')?.value;
+  const game     = document.getElementById('edit-listing-game')?.value;
   if (!title) { showToast('სათაური სავალდებულოა', 'err'); return; }
   if (!price || Number(price) < 5) { showToast('მინიმალური ფასია ₾5', 'err'); return; }
   try {
-    await api('/api/listings/' + id, { method: 'PUT', body: JSON.stringify({ title, description: desc, price_gel: Number(price) }) });
+    await api('/api/listings/' + id, {
+      method: 'PUT',
+      body: JSON.stringify({ title, description: desc, price_gel: Number(price), category, game })
+    });
     closeM('editListingModal');
     showToast('განახლდა!', 'ok');
     loadMyListings('active');
@@ -4275,6 +4721,8 @@ async function saveListingEdit() {
     // { message: ... } — e.message ამიტომ ყოველთვის undefined იყო.
     const msg = e?.error === 'invalid_price'
       ? (e.message || 'მინიმალური ფასია ₾5')
+      : e?.error === 'invalid_category' ? 'კატეგორია არასწორია'
+      : e?.error === 'invalid_game' ? 'თამაში/სერვისი ცარიელი ვერ იქნება'
       : (e?.message || e?.error || 'შეცდომა');
     showToast(msg, 'err');
   }
@@ -4331,9 +4779,37 @@ async function previewAva(input) {
   } catch (e) { showToast('ატვირთვა ვერ მოხდა', 'err'); }
 }
 
-// ══════════════════════════════════════════════════════════
-// WALLET
-// ══════════════════════════════════════════════════════════
+// ქავერ ბანერის ატვირთვა — იგივე მიდგომა, რაც ავატარს აქვს ზემოთ
+// (ლოკალური optimistic პრევიუ FileReader-ით + POST Cloudinary-ში).
+async function uploadCoverBanner(input) {
+  const file = input.files[0]; if (!file) return;
+  if (!currentUser) { showToast('ჯერ შედი სისტემაში', 'err'); return; }
+  const r = new FileReader();
+  r.onload = e => {
+    const cover = document.getElementById('prof-cover');
+    if (!cover) return;
+    let img = cover.querySelector('img');
+    if (!img) { img = document.createElement('img'); cover.insertBefore(img, cover.firstChild); }
+    img.src = e.target.result;
+  };
+  r.readAsDataURL(file);
+  try {
+    const fd = new FormData(); fd.append('cover', file);
+    const res = await fetch(API_URL + '/api/users/me/cover', {
+      method: 'POST', headers: { Authorization: 'Bearer ' + getToken() }, body: fd
+    });
+    const data = await res.json();
+    if (!res.ok) throw data;
+    if (data.cover_url) {
+      currentUser.cover_url = data.cover_url;
+      showToast('ბანერი განახლდა!', 'ok');
+    }
+  } catch (e) {
+    showToast(e?.message || e?.error || 'ატვირთვა ვერ მოხდა', 'err');
+  } finally {
+    input.value = '';
+  }
+}
 async function loadWallet() {
   if (!currentUser) { updateNavUser(); return; }
   try {
@@ -4831,7 +5307,12 @@ async function loadSellerReviewsForListing(sellerId) {
   const list = document.getElementById('ld-reviews-list');
   if (!sellerId) { section.style.display = 'none'; return; }
   try {
-    const reviews = await api('/api/reviews/seller/' + sellerId);
+    // ── იგივე, ერთი სანდო წყარო, რასაც loadMyReviews()/openSellerProfile()
+    // იყენებენ (users.js GET /:id → .reviews) — იხ. კომენტარი
+    // loadMyReviews()-ში იმაზე, თუ რატომ არ ვეყრდნობით ცალკე
+    // '/api/reviews/seller/:id' endpoint-ს. ──
+    const profile = await api('/api/users/' + sellerId);
+    const reviews = profile.reviews || [];
     if (!reviews.length) { section.style.display = 'none'; return; }
     section.style.display = 'block';
     list.innerHTML = reviews.slice(0, 5).map(r => `
@@ -4934,10 +5415,10 @@ async function openSellerProfile() {
   openM('sellerModal');
 
   try {
-    const [profile, reviews] = await Promise.all([
-      api('/api/users/' + sellerId),
-      api('/api/reviews/seller/' + sellerId)
-    ]);
+    // profile.reviews უკვე შედის ერთ პასუხში (users.js GET /:id) — ცალკე
+    // request "/api/reviews/seller/:id"-ზე აღარ სჭირდება.
+    const profile = await api('/api/users/' + sellerId);
+    const reviews = profile.reviews || [];
 
     document.getElementById('sm-name').innerHTML      = esc(profile.display_name || profile.username) + verifiedBadge(profile.is_verified_seller);
     document.getElementById('sm-handle').textContent  = '@' + profile.username;
@@ -6952,29 +7433,48 @@ function ptab(btn, id) {
   if (id === 'pr') loadMyReviews();
 }
 
+// ══════════════════════════════════════════════════════════
+// ⚠️ REVIEWS BUG FIX (Profile → "შეფასებები" ტაბი):
+// ეს ფუნქცია ადრე '/api/reviews/seller/:id'-ს ეძახდა და ვარსკვლავებს
+// შემდეგნაირად აგებდა: `${''.repeat(r.rating)}${'☆'.repeat(5-r.rating)}`
+// — შეამჩნიეთ პირველი ნაწილი: ცარიელი სტრინგის (''.repeat) გამეორება
+// ყოველთვის ცარიელს იძლევა, ანუ შევსებული ვარსკვლავი (★) არასდროს
+// ჩანდა, მხოლოდ ცარიელი ვარსკვლავები (☆). ცალკე, backend-ის endpoint
+// საერთოდ არ იყო ამ ფაილების ნაწილი (ცალკე reviews.js router, რომელიც
+// ატვირთულებში არ იყო), ამიტომ საიმედოდ ვერ დავადასტურე აბრუნებდა თუ
+// არა comment/rating ველებს სწორად — ეს ხსნიდა იმასაც, თუ რატომ
+// ჩანდა მხოლოდ სახელი+თარიღი კომენტარის გარეშე.
+//
+// გამოსწორება: ვარსკვლავი ახლა სწორადაა აგებული ('★'.repeat), და
+// მთლიანი მონაცემი ახლა მოდის GET /api/users/:id-დან (users.js) —
+// ეს endpoint სრულად ჩემს კონტროლშია და ახლა ცალსახად აბრუნებს
+// rating/comment/created_at + reviewer-ის პროფილის ინფოს ერთ JOIN-ში
+// (იხ. users.js). ამავე endpoint-ს იყენებენ openSellerProfile() და
+// loadSellerReviewsForListing()-იც, რომ ერთი, სანდო წყარო იყოს ყველგან.
+// ══════════════════════════════════════════════════════════
 async function loadMyReviews() {
   if (!currentUser) return;
   const el = document.getElementById('reviews-list');
   if (!el) return;
   el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">⏳ იტვირთება...</div>';
   try {
-    const reviews = await api('/api/reviews/seller/' + currentUser.id);
-    if (!reviews || !reviews.length) {
+    const profile = await api('/api/users/' + currentUser.id);
+    const reviews = profile.reviews || [];
+    if (!reviews.length) {
       el.innerHTML = '<div class="empty"><div class="empty-ico"><svg class="ic ic-fill" viewBox="0 0 24 24"><path d="M12 2.5 15 9l7 1-5.2 5 1.3 7-6.1-3.4L5.9 22l1.3-7L2 10l7-1Z"/></svg></div><div class="empty-t">შეფასებები ჯერ არ არის</div></div>';
       return;
     }
     el.innerHTML = reviews.map(r => `
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;margin-bottom:10px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-          <div style="display:flex;align-items:center;gap:8px">
-            <img src="${r.reviewer_avatar || 'https://api.dicebear.com/7.x/identicon/svg?seed=' + r.reviewer_username}"
-                 style="width:26px;height:26px;border-radius:50%;object-fit:cover">
-            <span style="font-size:12px;font-weight:600">${escHtml(r.reviewer_username || 'მომხმარებელი')}</span>
+      <div class="rv-card">
+        <div class="rv-h">
+          <div class="rv-u">
+            <img class="rv-ava" src="${r.reviewer_avatar ? imgUrl(r.reviewer_avatar) : 'https://api.dicebear.com/7.x/identicon/svg?seed=' + encodeURIComponent(r.reviewer_username || 'user')}" alt="">
+            <span>${escHtml(r.reviewer_display_name || r.reviewer_username || 'მომხმარებელი')}</span>
           </div>
-          <span style="font-size:11px;color:var(--muted)">${fmtDate(r.created_at)}</span>
+          <span class="rv-stars">${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</span>
         </div>
-        <div style="color:var(--gold);font-size:14px;margin-bottom:4px">${''.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</div>
-        ${r.comment ? `<div style="font-size:12px;color:var(--muted)">${escHtml(r.comment)}</div>` : ''}
+        ${r.comment ? `<div class="rv-txt">${escHtml(r.comment)}</div>` : ''}
+        <div class="rv-date">${fmtDate(r.created_at)}</div>
       </div>
     `).join('');
   } catch (e) {

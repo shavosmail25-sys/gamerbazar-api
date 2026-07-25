@@ -468,7 +468,7 @@ router.put('/:id', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'forbidden' });
     }
 
-    const { title, description, tags, price_gel, platform, region, account_security } = req.body;
+    const { title, description, tags, price_gel, platform, region, account_security, category, game } = req.body;
     let { status } = req.body;
 
     if (platform && !VALID_PLATFORMS.includes(platform)) {
@@ -479,6 +479,23 @@ router.put('/:id', requireAuth, async (req, res) => {
     }
     if (account_security && !VALID_SECURITY.includes(account_security)) {
       return res.status(400).json({ error: 'invalid_account_security', allowed: VALID_SECURITY });
+    }
+    // ── Category & Subcategory რედაქტირება — Listing Edit Modal-ის ახალი
+    // ველები. კატეგორია იგივე whitelist-ით მოწმდება, რაც POST /-ს აქვს
+    // (categories ცხრილი, მხოლოდ is_active=TRUE), რომ არასდროს ჩაიწეროს
+    // წაშლილი/გათიშული კატეგორია. `game` (subcategory) თავისუფალი ტექსტია,
+    // ისევე როგორც შექმნისას — frontend-ის SUBCATEGORIES chip-ებიდან მოდის,
+    // მაგრამ ბექენდი მას ზუსტად ისე ინახავს, როგორც POST /-ზეც ხდება. ──
+    if (category !== undefined && category !== null && category !== '') {
+      const { rows: catRows } = await db.query(
+        'SELECT 1 FROM categories WHERE slug=$1 AND is_active=TRUE', [category]
+      );
+      if (!catRows.length) {
+        return res.status(400).json({ error: 'invalid_category' });
+      }
+    }
+    if (game !== undefined && game !== null && String(game).trim() === '') {
+      return res.status(400).json({ error: 'invalid_game', message: 'თამაში/სერვისი ცარიელი ვერ იქნება' });
     }
     // ── ფასის ვალიდაცია — მანამდე ეს endpoint საერთოდ არ ამოწმებდა
     // price_gel-ს, ანუ რედაქტირებისას Escrow-ის "1 ₾" ხარვეზის გვერდის
@@ -512,7 +529,10 @@ router.put('/:id', requireAuth, async (req, res) => {
       if (!allowedResubmit) status = undefined;
     }
 
-    const params = [title, description, tagsArr, price_gel, status, platform, region, account_security, req.params.id];
+    const params = [
+      title, description, tagsArr, price_gel, status, platform, region, account_security,
+      category || null, game || null, req.params.id,
+    ];
     const { rows } = await db.query(`
       UPDATE listings SET
         title       = COALESCE($1, title),
@@ -523,9 +543,11 @@ router.put('/:id', requireAuth, async (req, res) => {
         platform    = COALESCE($6, platform),
         region      = COALESCE($7, region),
         account_security = COALESCE($8, account_security),
+        category    = COALESCE($9, category),
+        game        = COALESCE($10, game),
         rejection_reason = CASE WHEN $5 = 'pending' THEN NULL ELSE rejection_reason END,
         updated_at  = NOW()
-      WHERE id=$9
+      WHERE id=$11
       RETURNING *
     `, params);
 

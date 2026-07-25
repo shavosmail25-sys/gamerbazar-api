@@ -42,37 +42,94 @@ const upload = multer({
   },
 });
 
+// ── Cover Banner Upload config ──────────────────────────────────
+// იგივე memoryStorage → Cloudinary პატერნი, რაც ავატარს აქვს, უბრალოდ
+// ცალკე ლიმიტით — ბანერები ჩვეულებრივ ავატარებზე მსხვილი სურათებია
+// (განიერი 16:5-სთვის მოსახერხებელი ფაილები), ამიტომ ცალკე,
+// უფრო დიდი ზომის ლიმიტი აქვს (default 5MB ვიდრე ავატარის 2MB).
+const coverUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: (Number(process.env.MAX_COVER_SIZE_MB) || 5) * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ok = /image\/(jpeg|png|webp|gif)/.test(file.mimetype);
+    cb(ok ? null : new Error('only_images'), ok);
+  },
+});
+
+// ── ონლაინ სტატუსის "ცოცხალი" ფანჯარა — ამ ხნის განმავლობაში ბოლო
+// აქტივობის შემდეგ მომხმარებელი ჯერ კიდევ "ონლაინად" ითვლება
+// (last_seen_at heartbeat-ს frontend-ი ავტ. ანახლებს გვერდზე ყოფნისას) ──
+const ONLINE_WINDOW_MINUTES = 5;
+
 // GET /api/users/:id  — საჯარო პროფილი
+//
+// ⚠️ REVIEWS BUG FIX: წინა ვერსია საერთოდ არ აბრუნებდა ინდივიდუალურ
+// შეფასებებს — მხოლოდ სააგრეგაციო avg_rating/review_count-ს
+// (seller_stats view-დან). Reviews ტაბს frontend-ი ცალკე endpoint-ს
+// ეძახდა, საიდანაც rating/comment ველები ან საერთოდ არ ბრუნდებოდა,
+// ან frontend-ის ვარსკვლავების რენდერში იყო ბაგი — ორივე მიზეზით
+// ტაბზე მხოლოდ სახელი+თარიღი ჩანდა. ახლა ეს ერთადერთი, სანდო წყაროა:
+// ქვემოთ პარალელურად მოაქვს რეალური მწკრივები (r.rating, r.comment,
+// r.created_at) + შემფასებლის პროფილის ინფო ერთი JOIN-ით — frontend
+// (loadMyReviews/openSellerProfile/loadSellerReviewsForListing) ახლა
+// ყველგან ამ ერთი, სრული პასუხიდან იღებს `reviews`-ს. ──
 router.get('/:id', async (req, res) => {
   try {
-    const { rows } = await db.query(`
-      SELECT
-        u.id, u.username, u.display_name, u.bio, u.avatar_url,
-        u.is_verified_seller, u.created_at,
-        -- is_vip დროშას ვამოწმებთ ვადასთან ერთად — cron ყოველ საათში
-        -- ასუფთავებს ვადაგასულებს, მაგრამ ეს defense-in-depth ხდის
-        -- პასუხს სწორს იმ საათამდეც, სანამ cron არ ჩაირთვება
-        (u.is_vip AND u.vip_expires_at IS NOT NULL AND u.vip_expires_at > NOW()) AS is_vip,
-        u.vip_expires_at,
-        u.total_sales_gel,
-        COALESCE(ss.avg_rating, 0)        AS avg_rating,
-        COALESCE(ss.review_count, 0)      AS review_count,
-        COALESCE(ss.completed_orders, 0)  AS completed_orders
-      FROM users u
-      LEFT JOIN seller_stats ss ON ss.seller_id=u.id
-      WHERE u.id=$1 AND u.profile_public=TRUE AND u.role!='banned'
-    `, [req.params.id]);
-    if (!rows.length) return res.status(404).json({ error: 'not_found' });
+    const [userRes, listingsRes, reviewsRes] = await Promise.all([
+      db.query(`
+        SELECT
+          u.id, u.username, u.display_name, u.bio, u.avatar_url, u.cover_url,
+          u.is_verified_seller, u.created_at,
+          -- is_vip დროშას ვამოწმებთ ვადასთან ერთად — cron ყოველ საათში
+          -- ასუფთავებს ვადაგასულებს, მაგრამ ეს defense-in-depth ხდის
+          -- პასუხს სწორს იმ საათამდეც, სანამ cron არ ჩაირთვება
+          (u.is_vip AND u.vip_expires_at IS NOT NULL AND u.vip_expires_at > NOW()) AS is_vip,
+          u.vip_expires_at,
+          u.total_sales_gel,
+          -- ონლაინ სტატუსის ინდიკატორი — მხოლოდ თუ მომხმარებელს ჩართული
+          -- აქვს "ონლაინ სტატუსი" (show_online, იხ. edit-გვ. toggle) და
+          -- ბოლო აქტივობა ბოლო ONLINE_WINDOW_MINUTES წუთშია. show_online=FALSE
+          -- იმალავს ინდიკატორს მთლიანად (ხდება "offline" საჯაროდ) — last_seen_at-ს
+          -- საერთოდ არ ვაბრუნებთ საჯაროდ, კონფიდენციალურობისთვის.
+          (u.show_online AND u.last_seen_at IS NOT NULL
+            AND u.last_seen_at > NOW() - INTERVAL '${ONLINE_WINDOW_MINUTES} minutes') AS is_online,
+          COALESCE(ss.avg_rating, 0)        AS avg_rating,
+          COALESCE(ss.review_count, 0)      AS review_count,
+          COALESCE(ss.completed_orders, 0)  AS completed_orders
+        FROM users u
+        LEFT JOIN seller_stats ss ON ss.seller_id=u.id
+        WHERE u.id=$1 AND u.profile_public=TRUE AND u.role!='banned'
+      `, [req.params.id]),
 
-    // განცხადებები
-    const { rows: listings } = await db.query(`
-      SELECT id,title,game,listing_type,price_gel,is_vip,created_at
-      FROM listings WHERE seller_id=$1 AND status='active'
-      ORDER BY is_vip DESC, created_at DESC LIMIT 12
-    `, [req.params.id]);
+      // განცხადებები
+      db.query(`
+        SELECT id,title,game,listing_type,price_gel,is_vip,created_at
+        FROM listings WHERE seller_id=$1 AND status='active'
+        ORDER BY is_vip DESC, created_at DESC LIMIT 12
+      `, [req.params.id]),
 
-    res.json({ ...rows[0], listings });
+      // ── შეფასებები — rating/comment/created_at + შემფასებლის
+      // (reviewer) საჯარო პროფილის ინფო ერთი JOIN-ით. ბოლო 30 —
+      // Reviews ტაბს/სელერ-მოდალს ესმის "ბოლოდან"; მეტი საჭიროებისას
+      // მარტივად შეიცვლება pagination-ად. ──
+      db.query(`
+        SELECT
+          r.id, r.rating, r.comment, r.created_at,
+          ru.id AS reviewer_id, ru.username AS reviewer_username,
+          ru.display_name AS reviewer_display_name, ru.avatar_url AS reviewer_avatar
+        FROM reviews r
+        JOIN users ru ON ru.id = r.reviewer_id
+        WHERE r.seller_id = $1
+        ORDER BY r.created_at DESC
+        LIMIT 30
+      `, [req.params.id]),
+    ]);
+
+    if (!userRes.rows.length) return res.status(404).json({ error: 'not_found' });
+
+    res.json({ ...userRes.rows[0], listings: listingsRes.rows, reviews: reviewsRes.rows });
   } catch (err) {
+    console.error('user profile error:', err.message);
     res.status(500).json({ error: 'server_error' });
   }
 });
@@ -100,6 +157,56 @@ router.post('/me/avatar', requireAuth, upload.single('avatar'), async (req, res)
     if (err.message === 'only_images')
       return res.status(400).json({ error: 'only_images_allowed' });
     console.error('avatar upload:', err.message);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// POST /api/users/me/cover  — პროფილის ქავერ ბანერის ატვირთვა (Cloudinary)
+// ══════════════════════════════════════════════════════════════
+router.post('/me/cover', requireAuth, coverUpload.single('cover'), async (req, res) => {
+  try {
+    if (!cloudinary.isConfigured())
+      return res.status(503).json({ error: 'image_upload_not_configured' });
+    if (!req.file) return res.status(400).json({ error: 'no_file' });
+
+    // public_id მუდმივად იგივეა ამ მომხ-სთვის — ახალი ატვირთვა overwrite-ავს
+    // ძველს Cloudinary-ში, ცალკე disk cleanup აღარ სჭირდება (იგივე პატერნი,
+    // რაც ავატარის ატვირთვას აქვს ზემოთ).
+    const result = await cloudinary.uploadBuffer(req.file.buffer, {
+      folder: 'gamerbazar/covers',
+      public_id: `cover_${req.user.id}`,
+      overwrite: true,
+      invalidate: true,
+      resource_type: 'image',
+    });
+
+    await db.query('UPDATE users SET cover_url=$1 WHERE id=$2', [result.secure_url, req.user.id]);
+    res.json({ cover_url: result.secure_url });
+  } catch (err) {
+    if (err.message === 'only_images')
+      return res.status(400).json({ error: 'only_images_allowed' });
+    if (err.code === 'LIMIT_FILE_SIZE')
+      return res.status(400).json({ error: 'file_too_large', max_mb: process.env.MAX_COVER_SIZE_MB || 5 });
+    console.error('cover upload:', err.message);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// DELETE /api/users/me/cover  — ქავერ ბანერის მოხსნა (default გრადიენტზე დაბრუნება)
+router.delete('/me/cover', requireAuth, async (req, res) => {
+  try {
+    const { rows } = await db.query('SELECT cover_url FROM users WHERE id=$1', [req.user.id]);
+    const oldUrl = rows[0]?.cover_url;
+
+    await db.query('UPDATE users SET cover_url=NULL WHERE id=$1', [req.user.id]);
+
+    if (oldUrl && oldUrl.includes('res.cloudinary.com')) {
+      cloudinary.destroyByUrl(oldUrl).catch(() => {});
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('cover delete:', err.message);
     res.status(500).json({ error: 'server_error' });
   }
 });

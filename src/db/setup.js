@@ -496,6 +496,14 @@ async function setupDatabase() {
         PRIMARY KEY (visit_date, visitor_key)
       )`,
       `CREATE INDEX IF NOT EXISTS idx_site_visits_date ON site_visits(visit_date)`,
+      // ── PROFILE COVER BANNER — პროფილის რედიზაინის ნაწილი. ცალკე
+      //    სვეტია (არა avatar_url-ის მსგავსად ერთი "ფოტო" ველი), რომ
+      //    ავატარი და ქავერ ბანერი დამოუკიდებლად იცვლებოდეს. NULL-ის
+      //    შემთხვევაში frontend დეფოლტ გრადიენტს ხატავს (იხ.
+      //    loadMyProfile() → .prof-cover). ატვირთვა: POST
+      //    /api/users/me/cover (users.js), იგივე Cloudinary-ის
+      //    memoryStorage პატერნით, რაც ავატარს აქვს. ──
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS cover_url VARCHAR(500)`,
     ];
     for (const sql of migrations) {
       try { await client.query(sql); } catch (e) { /* უკვე არსებობს */ }
