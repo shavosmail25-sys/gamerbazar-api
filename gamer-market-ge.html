@@ -1856,7 +1856,7 @@ select.form-i{appearance:none;-webkit-appearance:none;background-image:url("data
 
             <label class="chk-agree" id="ld-video-proof-row">
               <input type="checkbox" id="ld-video-proof-checkbox" onchange="document.getElementById('ld-video-proof-row').classList.remove('needs-check')">
-              <span>ვეთანხმები, რომ სქრინ-ჩავიწერო <strong>მთელი პროცესი</strong> — მონაცემების ნახვიდან ანგარიშზე შესვლამდე. <strong>დაუმონტაჟებელი ვიდეო მტკიცებულების გარეშე თანხა არ დაბრუნდება.</strong></span>
+              <span>ვიღებ ვალდებულებას, რომ ეკრანის ჩამწერით დავაფიქსირებ <strong>მთლიან პროცესს</strong> — მონაცემების ნახვიდან ანგარიშზე ავტორიზაციამდე. <strong>უწყვეტი და დაუმონტაჟებელი ვიდეოჩანაწერის გარეშე თანხა არ დაექვემდებარება დაბრუნებას.</strong></span>
             </label>
 
             <div id="ld-actions">
@@ -8247,7 +8247,7 @@ async function loadHomeStats() {
     const heroTxt  = document.getElementById('hero-live-text');
     if (heroPill && heroTxt) {
       if (visitorsToday > 0) {
-        heroTxt.textContent = visitorsToday + ' დღეს საიტზე';
+        heroTxt.textContent = visitorsToday + ' ვიზიტორები (დღეს)';
         heroPill.style.display = 'inline-flex';
       } else {
         heroPill.style.display = 'none';
@@ -8257,7 +8257,7 @@ async function loadHomeStats() {
     const gcLiveCount = document.getElementById('gc-live-count');
     if (gcLivePill && gcLiveCount) {
       if (visitorsToday > 0) {
-        gcLiveCount.textContent = visitorsToday + ' დღეს საიტზე';
+        gcLiveCount.textContent = visitorsToday + ' ვიზიტორები (დღეს)';
         gcLivePill.style.display = 'inline-flex';
       } else {
         gcLivePill.style.display = 'none';
