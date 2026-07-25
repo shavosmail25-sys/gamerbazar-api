@@ -10,7 +10,6 @@ const push    = require('../utils/push');
 const ledger  = require('../utils/ledger');
 const referral = require('../utils/referral');
 const chat    = require('./chat');
-const { checkAndSyncVerifiedSeller } = require('../utils/verifiedSeller');
 const router  = express.Router();
 
 // ── სუპერ-ადმინის Email ──────────────────────────────────────────
@@ -112,109 +111,16 @@ router.get('/disputes', async (req, res) => {
 });
 
 // ══════════════════════════════════════════════════════════════
-// PUT /api/admin/disputes/:id/resolve  — დავის გადაწყვეტა
+// ⚠️ REMOVED — PUT /api/admin/disputes/:id/resolve
 //
-// ⚠️ DEPRECATED — ჩანაცვლებულია disputes.js-ის PUT /api/disputes/:id/resolve
-// route-ით, რომელიც dispute/order row-ebს FOR UPDATE-ით კეტავს
-// ტრანზაქციაში (race/double-resolve დაცვა) და ატომურად ამოწმებს
-// idempotency-ს — აქ ეს დაცვა არ არსებობს (SELECT და შემდგომი UPDATE
-// ცალკეა, ისევე როგორც resolution-ის ხელახლა-გაშვების შემთხვევაში
-// ფულის ორმაგად დარიცხვის რისკი რჩება). ადმინის პანელი (admin.html)
-// ამიერიდან აღარ იძახებს ამ route-ს — გადავიდა /api/disputes/:id/resolve-ზე.
-// ეს ძველი route კოდში დარჩა მხოლოდ უკუთავსებადობისთვის (შემთხვევით
-// გარე დამოკიდებულების შემთხვევაში), მაგრამ ახალი ინტეგრაციებისთვის
-// არ უნდა იქნას გამოყენებული — გამოიყენე disputes.js-ის ვერსია.
+// ეს იყო ძველი, დუბლირებული დავის-გადაწყვეტის route, FOR UPDATE
+// ლოქის გარეშე (SELECT და შემდგომი UPDATE ცალკე ხდებოდა) — ორმაგი
+// გამოძახება (double-click/network retry) ორმაგად დაერიცხებოდა ან
+// დაუბრუნებდა escrow-ს. სრულად ჩანაცვლებულია disputes.js-ის
+// PUT /api/disputes/:id/resolve-ით, რომელიც dispute/order row-ებს
+// ტრანზაქციაში FOR UPDATE-ით კეტავს და ატომურად ამოწმებს
+// idempotency-ს. admin.html უკვე მხოლოდ იმ route-ს იძახებს.
 // ══════════════════════════════════════════════════════════════
-router.put('/disputes/:id/resolve', async (req, res) => {
-  try {
-    const { resolution, admin_note } = req.body;
-    if (!['release', 'refund'].includes(resolution))
-      return res.status(400).json({ error: 'resolution must be release or refund' });
-
-    const { rows: d } = await db.query('SELECT * FROM disputes WHERE id=$1', [req.params.id]);
-    if (!d.length) return res.status(404).json({ error: 'not_found' });
-    if (d[0].status === 'resolved') return res.status(409).json({ error: 'already_resolved' });
-
-    const { rows: o } = await db.query('SELECT * FROM orders WHERE id=$1', [d[0].order_id]);
-    if (!o.length) return res.status(404).json({ error: 'order_not_found' });
-    const order = o[0];
-
-    await db.transaction(async (client) => {
-      if (resolution === 'release') {
-        const fee = Number(order.amount_gel) - Number(order.seller_receives);
-        await ledger.creditSellerWithHold(client, {
-          sellerId:  order.seller_id,
-          orderId:   order.id,
-          amountGel: order.seller_receives,
-          source:    'dispute_release',
-        });
-        await ledger.recordPlatformFee(client, fee);
-        await client.query(
-          'UPDATE users SET escrow_hold_gel=escrow_hold_gel-$1 WHERE id=$2',
-          [order.amount_gel, order.buyer_id]
-        );
-        await client.query(
-          "UPDATE orders SET escrow_status='released',status='completed',completed_at=NOW() WHERE id=$1",
-          [order.id]
-        );
-        await client.query(
-          "INSERT INTO transactions(user_id,order_id,type,amount_gel,description) VALUES($1,$2,'sale_income',$3,'დავის გადაწყვ. — გამყ-ზე გადახდა (48სთ hold)')",
-          [order.seller_id, order.id, order.seller_receives]
-        );
-        // ── ვერიფიც. გამყიდველის ავტ. სტატუსის სინქრონიზაცია — დავის
-        // "release" გადაწყვ.-იც დასრულებულ გაყიდვად ითვლება ──
-        await checkAndSyncVerifiedSeller(client, order.seller_id);
-      } else {
-        await client.query(
-          'UPDATE users SET balance_gel=balance_gel+$1, escrow_hold_gel=escrow_hold_gel-$1 WHERE id=$2',
-          [order.amount_gel, order.buyer_id]
-        );
-        await client.query(
-          "UPDATE orders SET escrow_status='refunded',status='cancelled',cancelled_at=NOW() WHERE id=$1",
-          [order.id]
-        );
-        await client.query(
-          "INSERT INTO transactions(user_id,order_id,type,amount_gel,description) VALUES($1,$2,'escrow_refund',$3,'დავის გადაწყვ. — მყიდვ-ს დაბრუნება')",
-          [order.buyer_id, order.id, order.amount_gel]
-        );
-      }
-      await client.query(`
-        UPDATE disputes SET
-          status='resolved', resolution=$1, admin_note=$2,
-          resolved_by=$3, resolved_at=NOW()
-        WHERE id=$4
-      `, [resolution, admin_note || '', req.user.id, req.params.id]);
-    });
-
-    res.json({ ok: true, resolution });
-
-    // შეტყობ. — მყიდველი + გამყიდველი
-    (async () => {
-      try {
-        const { rows: listingRows } = await db.query('SELECT title FROM listings WHERE id=$1', [order.listing_id]);
-        const listing = listingRows[0] || { title: 'განცხადება' };
-        const dispute = { ...d[0], resolution, admin_note: admin_note || '' };
-
-        const { rows: parties } = await db.query(
-          'SELECT id, email, notif_email FROM users WHERE id=$1 OR id=$2',
-          [order.buyer_id, order.seller_id]
-        );
-        for (const recipient of parties) {
-          await mailer.sendDisputeResolvedEmail(recipient, dispute, order, listing, resolution);
-          await push.sendToUser(recipient.id, {
-            title: '🛡️ დავა გადაწყდა',
-            body: `${listing.title} — ${resolution === 'release' ? 'თანხა გამყიდველს' : 'თანხა მყიდველს'}`,
-            url: `/?order=${order.id}`,
-            tag: `dispute-${dispute.id}-resolved`,
-          });
-        }
-      } catch (e) { console.error('admin dispute resolve notify error:', e.message); }
-    })();
-  } catch (err) {
-    console.error('admin dispute resolve error:', err.message);
-    res.status(500).json({ error: 'server_error' });
-  }
-});
 
 // ══════════════════════════════════════════════════════════════
 // GET /api/admin/users  — მომხმარებლების სია (ძებნა + ფილტრი)
@@ -564,52 +470,86 @@ router.get('/deposits', requireAuth, requireAdmin, async (req, res) => {
 // POST /api/admin/deposits/:id/confirm  — deposit დადასტ.
 router.post('/deposits/:id/confirm', requireAuth, requireAdmin, async (req, res) => {
   try {
-    // Join users, რომ email/username ერთი მოთხოვნით მოგვქონდეს —
-    // საჭიროა დადასტურების დეტალური წერილისთვის (mailer.sendDepositApprovedEmail).
-    const { rows: tx } = await db.query(
-      `SELECT t.*, u.email, u.username, u.notif_email
-       FROM transactions t JOIN users u ON u.id = t.user_id
-       WHERE t.id=$1 AND t.type='deposit' AND t.status='pending'`,
-      [req.params.id]
-    );
-    if (!tx.length) return res.status(404).json({ error: 'not_found' });
+    // ══════════════════════════════════════════════════════════════
+    // ⚠️ FIX (HIGH — TOCTOU race condition): status='pending' შემოწმება
+    // აქამდე ხდებოდა ტრანზაქციის *დაწყებამდე*, ცალკე db.query()-ში.
+    // ადმინის ორმაგმა დაწკაპუნებამ ან network retry-მ ორივე request
+    // შეეძლო წაეკითხა row ჯერ კიდევ 'pending' სტატუსით, სანამ პირველი
+    // UPDATE დასრულდებოდა — შედეგად ბალანსზე ორჯერ დაერიცხებოდა
+    // იგივე თანხა.
+    //
+    // ფიქსი: SELECT ... FOR UPDATE OF t ტრანზაქციის შიგნით ჯერ ბლოკავს
+    // ამ transaction row-ს, მხოლოდ ᲛᲔᲠᲔ ხელახლა ამოწმებს status='pending'-ს.
+    // მეორე პარალელური request ლოქზე დაელოდება პირველის commit-ს და
+    // შემდეგ უკვე ხედავს status='completed'-ს — 404-ით ჩერდება, ორმაგი
+    // დარიცხვის გარეშე.
+    // ══════════════════════════════════════════════════════════════
+    let txRow, gross, referralResult = { granted: false };
+    try {
+      await db.transaction(async (client) => {
+        // Join users, რომ email/username ერთი მოთხოვნით მოგვქონდეს —
+        // საჭიროა დადასტურების დეტალური წერილისთვის (mailer.sendDepositApprovedEmail).
+        // FOR UPDATE OF t — მხოლოდ transactions row იბლოკება (users
+        // row-ს აქ მხოლოდ წაკითხვა სჭირდება).
+        const { rows: tx } = await client.query(
+          `SELECT t.*, u.email, u.username, u.notif_email
+           FROM transactions t JOIN users u ON u.id = t.user_id
+           WHERE t.id=$1 AND t.type='deposit'
+           FOR UPDATE OF t`,
+          [req.params.id]
+        );
+        if (!tx.length) {
+          const notFoundErr = new Error('not_found');
+          notFoundErr.code = 'NOT_FOUND';
+          throw notFoundErr;
+        }
+        // ── ლოქის ᲨᲘᲒᲜᲘᲗ ხელახალი, ატომური სტატუსის შემოწმება ──
+        if (tx[0].status !== 'pending') {
+          const notPendingErr = new Error('not_pending');
+          notPendingErr.code = 'NOT_FOUND'; // მომხმ-სთვის იგივე 404 — არ ავლენს რომ უკვე დამუშავდა
+          throw notPendingErr;
+        }
 
-    // ⚠️ დეპოზიტზე საკომისიო არ არის აღებული (0%) — გადაწყვეტილება:
-    // თანხის შემოტანა თავისთავად ღირებულების შექმნა არაა (ინდუსტრიის
-    // სტანდარტი — Steam Market/G2G/Eldorado არც ერთი არ იღებს deposit fee-ს).
-    // 5%-იანი საკომისია რჩება მხოლოდ იქ, სადაც რეალურად აქტიური ტრანზაქციაა:
-    // გაყიდვა (orders.js), გამოტანა (wallet.js), VIP (listings.js).
-    const gross = Number(tx[0].amount_gel);
+        txRow = tx[0];
 
-    // ── REFERRAL: "პირველი დეპოზიტი" ჯილდოს ტრიგერი ზუსტად აქ ცხადდება —
-    // ეს არის ის ერთადერთი წერტილი, სადაც დეპოზიტის ფული რეალურად შედის
-    // მომხმარებლის ბალანსზე (ადმინის მიერ დადასტურებული ბანკის გადარიცხვა).
-    // wallet.js-ის POST /deposit მხოლოდ 'pending' მოთხოვნას ქმნის და
-    // არასდროს არ უნდა გაააქტიუროს ბონუსი. ──
-    let referralResult = { granted: false };
+        // ⚠️ დეპოზიტზე საკომისიო არ არის აღებული (0%) — გადაწყვეტილება:
+        // თანხის შემოტანა თავისთავად ღირებულების შექმნა არაა (ინდუსტრიის
+        // სტანდარტი — Steam Market/G2G/Eldorado არც ერთი არ იღებს deposit fee-ს).
+        // 5%-იანი საკომისია რჩება მხოლოდ იქ, სადაც რეალურად აქტიური ტრანზაქციაა:
+        // გაყიდვა (orders.js), გამოტანა (wallet.js), VIP (listings.js).
+        gross = Number(txRow.amount_gel);
 
-    await db.transaction(async (client) => {
-      await client.query(
-        `UPDATE transactions SET
-           status='completed',
-           net_amount_gel=$2, commission_fee_gel=0, gross_amount_gel=$3
-         WHERE id=$1`,
-        [req.params.id, gross, gross]
-      );
-      await client.query(
-        'UPDATE users SET balance_gel=balance_gel+$1 WHERE id=$2',
-        [gross, tx[0].user_id]
-      );
+        await client.query(
+          `UPDATE transactions SET
+             status='completed',
+             net_amount_gel=$2, commission_fee_gel=0, gross_amount_gel=$3
+           WHERE id=$1`,
+          [req.params.id, gross, gross]
+        );
+        await client.query(
+          'UPDATE users SET balance_gel=balance_gel+$1 WHERE id=$2',
+          [gross, txRow.user_id]
+        );
 
-      // ── ₾10-ის ზღვარი (DEPOSIT_REWARD_THRESHOLD_GEL) მოწმდება
-      // referral.js-ის შიგნით — აქ უბრალოდ ვაწვდით რეალურ დადასტ.
-      // თანხას (gross), რომ ფუნქციამ თავად გადაწყვიტოს კვალიფიც. ──
-      referralResult = await referral.triggerReferralReward(client, tx[0].user_id, 'deposit', gross);
-    });
+        // ── REFERRAL: "პირველი დეპოზიტი" ჯილდოს ტრიგერი ზუსტად აქ ცხადდება —
+        // ეს არის ის ერთადერთი წერტილი, სადაც დეპოზიტის ფული რეალურად შედის
+        // მომხმარებლის ბალანსზე (ადმინის მიერ დადასტურებული ბანკის გადარიცხვა).
+        // wallet.js-ის POST /deposit მხოლოდ 'pending' მოთხოვნას ქმნის და
+        // არასდროს არ უნდა გაააქტიუროს ბონუსი.
+        //
+        // ── ₾10-ის ზღვარი (DEPOSIT_REWARD_THRESHOLD_GEL) მოწმდება
+        // referral.js-ის შიგნით — აქ უბრალოდ ვაწვდით რეალურ დადასტ.
+        // თანხას (gross), რომ ფუნქციამ თავად გადაწყვიტოს კვალიფიც. ──
+        referralResult = await referral.triggerReferralReward(client, txRow.user_id, 'deposit', gross);
+      });
+    } catch (txErr) {
+      if (txErr.code === 'NOT_FOUND') return res.status(404).json({ error: 'not_found' });
+      throw txErr;
+    }
 
     // push notification მომხმარებელს
     const push = require('../utils/push');
-    await push.sendToUser(tx[0].user_id, {
+    await push.sendToUser(txRow.user_id, {
       title: '✅ ბალანსი შეივსო',
       body: `₾${gross.toFixed(2)} დაემატა შენს ბალანსზე`,
       url: '/?page=wallet',
@@ -622,14 +562,14 @@ router.post('/deposits/:id/confirm', requireAuth, requireAdmin, async (req, res)
         title: '🎉 რეფერალური ბონუსი',
         body: `მოწვეულმა მეგობარმა პირველი დეპოზიტი შეავსო — ₾${referral.REWARD_AMOUNT_GEL.toFixed(2)} დაგერიცხა`,
         url: '/?page=profile',
-        tag: `referral-deposit-${tx[0].user_id}`,
+        tag: `referral-deposit-${txRow.user_id}`,
       }).catch(e => console.error('referral push (deposit) error:', e.message));
     }
 
     // დეტალური დადასტურების წერილი — UI-ში (საფულის ტრანზაქციების
     // ისტორია) მხოლოდ სუფთა "დამტკიცებულია" ბეჯი ჩანს (იხ. frontend
     // loadTransactions()), დეტალები კი პირდაპირ ელ-ფოსტაზე იგზავნება.
-    mailer.sendDepositApprovedEmail(tx[0], gross, tx[0].external_ref)
+    mailer.sendDepositApprovedEmail(txRow, gross, txRow.external_ref)
       .catch(e => console.error('deposit approved email:', e.message));
 
     res.json({ ok: true });
@@ -702,38 +642,63 @@ router.get('/withdrawals', requireAuth, requireAdmin, async (req, res) => {
 // POST /api/admin/withdrawals/:id/confirm  — გამოტანა დადასტ.
 router.post('/withdrawals/:id/confirm', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const { rows: tx } = await db.query(
-      `SELECT t.*, u.email, u.username, u.notif_email
-       FROM transactions t JOIN users u ON u.id = t.user_id
-       WHERE t.id=$1 AND t.type='withdrawal' AND t.status='pending'`,
-      [req.params.id]
-    );
-    if (!tx.length) return res.status(404).json({ error: 'not_found' });
+    // ══════════════════════════════════════════════════════════════
+    // ⚠️ FIX (HIGH — TOCTOU race condition): იგივე პრობლემა და იგივე
+    // ფიქსი, რაც deposits/:id/confirm-ში ზემოთ — status='pending'
+    // შემოწმება გადატანილია ტრანზაქციის შიგნით, FOR UPDATE OF t ლოქის
+    // ᲨᲘᲒᲜᲘᲗ, რომ ორმაგი დაწკაპუნება/request-ის გამეორება ორჯერ ვერ
+    // ჩაითვალოს გამოტანა platform-ის საკომისიოში.
+    // ══════════════════════════════════════════════════════════════
+    let txRow, fee, net;
+    try {
+      await db.transaction(async (client) => {
+        const { rows: tx } = await client.query(
+          `SELECT t.*, u.email, u.username, u.notif_email
+           FROM transactions t JOIN users u ON u.id = t.user_id
+           WHERE t.id=$1 AND t.type='withdrawal'
+           FOR UPDATE OF t`,
+          [req.params.id]
+        );
+        if (!tx.length) {
+          const notFoundErr = new Error('not_found');
+          notFoundErr.code = 'NOT_FOUND';
+          throw notFoundErr;
+        }
+        if (tx[0].status !== 'pending') {
+          const notPendingErr = new Error('not_pending');
+          notPendingErr.code = 'NOT_FOUND';
+          throw notPendingErr;
+        }
 
-    // საკომისიო უკვე გამოთვლილია მოთხოვნის დროს (wallet.js) და შენახულია
-    // commission_fee_gel-ში — აქ მხოლოდ ვაქტ. ვხდით პლატფორმის შემოსავალში,
-    // რომ უარყოფის შემთხვევაში (reject) არასდროს დარჩეს "ბრჭყალებში" საკომისიო.
-    const fee = Number(tx[0].commission_fee_gel) || 0;
-    const net = tx[0].net_amount_gel != null
-      ? Number(tx[0].net_amount_gel)
-      : Math.abs(Number(tx[0].amount_gel));
+        txRow = tx[0];
 
-    await db.transaction(async (client) => {
-      await client.query(
-        "UPDATE transactions SET status='completed' WHERE id=$1", [req.params.id]
-      );
-      if (fee > 0) await ledger.recordPlatformFee(client, fee);
-    });
+        // საკომისიო უკვე გამოთვლილია მოთხოვნის დროს (wallet.js) და შენახულია
+        // commission_fee_gel-ში — აქ მხოლოდ ვაქტ. ვხდით პლატფორმის შემოსავალში,
+        // რომ უარყოფის შემთხვევაში (reject) არასდროს დარჩეს "ბრჭყალებში" საკომისიო.
+        fee = Number(txRow.commission_fee_gel) || 0;
+        net = txRow.net_amount_gel != null
+          ? Number(txRow.net_amount_gel)
+          : Math.abs(Number(txRow.amount_gel));
+
+        await client.query(
+          "UPDATE transactions SET status='completed' WHERE id=$1", [req.params.id]
+        );
+        if (fee > 0) await ledger.recordPlatformFee(client, fee);
+      });
+    } catch (txErr) {
+      if (txErr.code === 'NOT_FOUND') return res.status(404).json({ error: 'not_found' });
+      throw txErr;
+    }
 
     const push = require('../utils/push');
-    await push.sendToUser(tx[0].user_id, {
+    await push.sendToUser(txRow.user_id, {
       title: '✅ გამოტანა დადასტ.',
       body: `₾${net.toFixed(2)} გაიგზავნა შენს ანგარიშზე`,
       url: '/?page=wallet',
       tag: `withdrawal-${req.params.id}`,
     });
 
-    mailer.sendWithdrawApprovedEmail(tx[0], net)
+    mailer.sendWithdrawApprovedEmail(txRow, net)
       .catch(e => console.error('withdrawal approved email:', e.message));
 
     res.json({ ok: true });

@@ -369,7 +369,9 @@ router.post('/withdraw', requireAuth, async (req, res) => {
 
     const amt = Number(amount);
 
-    // ── ᲗᲐᲜᲮᲘᲡ ᲚᲘᲛᲘᲢᲔᲑᲘ — მინ. ₾20 / მაქს. ₾200 თითო მოთხოვნაზე ──
+    // ── ᲗᲐᲜᲮᲘᲡ ᲚᲘᲛᲘᲢᲔᲑᲘ — მინ. ₾20 / მაქს. ₾200 თითო მოთხოვნაზე. ეს
+    // წმენდა (input-ის ვალიდაცია) DB-სთან შეხებას არ საჭიროებს და TOCTOU
+    // რისკს არ ქმნის, ამიტომ ტრანზაქციის გარეთ დარჩენა უსაფრთხოა ──
     if (!amt || amt < WITHDRAW_MIN_GEL || amt > WITHDRAW_MAX_GEL) {
       return res.status(400).json({
         error: 'invalid_withdraw_amount',
@@ -378,62 +380,103 @@ router.post('/withdraw', requireAuth, async (req, res) => {
       });
     }
 
-    // ── ᲡᲘᲮᲨᲘᲠᲘᲡ ᲚᲘᲛᲘᲢᲘ — მაქს. 1 მოთხოვნა 24 საათში. ვამოწმებთ ბოლო
-    // withdrawal ტიპის ტრანზაქციის დროს, სტატუსის მიუხედავად (pending/
-    // completed/failed) — ეს ისეთივე rate-limit-ია, როგორც ნებისმ.
-    // request-level abuse-დაცვა: მოთხოვნის თვითონ გაკეთება იზღუდება,
-    // არა მისი საბოლოო შედეგი (წინააღმდეგ შემთხვევაში სწრაფად
-    // უარყოფილი მოთხოვნებით შეიძლებოდა ლიმიტის უსასრულოდ გვერდის ავლა). ──
-    const { rows: recentWithdrawals } = await db.query(
-      `SELECT created_at FROM transactions
-       WHERE user_id=$1 AND type='withdrawal'
-         AND created_at > NOW() - ($2 * INTERVAL '1 hour')
-       ORDER BY created_at DESC LIMIT 1`,
-      [req.user.id, WITHDRAW_COOLDOWN_HOURS]
-    );
-    if (recentWithdrawals.length) {
-      const nextAllowedAt = new Date(
-        new Date(recentWithdrawals[0].created_at).getTime() + WITHDRAW_COOLDOWN_HOURS * 3600000
-      );
-      return res.status(429).json({
-        error: 'withdraw_rate_limit',
-        message: 'თქვენ უკვე გააკეთეთ გამოტანის მოთხოვნა დღეს. სცადეთ 24 საათის შემდეგ.',
-        next_allowed_at: nextAllowedAt,
-      });
-    }
-
-    const { rows } = await db.query(
-      'SELECT balance_gel, hold_balance_gel FROM users WHERE id=$1', [req.user.id]
-    );
-    const b = rows[0];
-
-    // შენიშვნა: 48სთ hold-ის თანხა hold_balance_gel-შია, არა balance_gel-ში —
-    // ანუ balance_gel უკვე მხოლოდ თავისუფლად გასატან თანხას ასახავს, დამატებითი
-    // ბლოკირება საჭირო აღარაა (იხ. src/utils/ledger.js).
-
     // გლობალური 5%-იანი საკომისიო (ledger.js) — ბალანსიდან იკლება ზუსტად
     // მოთხოვნილი თანხა (gross), ხოლო ადმინმა ხელზე უნდა გასცეს მხოლოდ
     // net (95%) — fee ჩაითვლება პლატფორმის შემოსავალში მხოლოდ მას შემდეგ,
     // რაც ადმინი მოთხოვნას რეალურად დაადასტურებს (admin.js /confirm).
     const { gross, fee, net } = ledger.splitCommission(amt);
 
-    if (Number(b.balance_gel) < gross)
-      return res.status(402).json({ error: 'insufficient_balance', available: b.balance_gel });
+    // ══════════════════════════════════════════════════════════════
+    // ⚠️ FIX (HIGH — TOCTOU race condition): აქამდე cooldown-ის და
+    // ბალანსის შემოწმება ხდებოდა ტრანზაქციის *გარეთ*, ორ ცალკე,
+    // დაუბლოკავ db.query()-ში. ორი პარალელური withdraw request-ისთვის
+    // ორივეს შეეძლო წაეკითხა ჯერ კიდევ ძველი (განახლებამდელი) balance/
+    // cooldown მდგომარეობა და ორივეს გაევლო შემოწმება, სანამ არცერთს
+    // ჯერ არაფერი დაექლო/ჩაეწერა — შედეგად ბალანსი უარყოფითში
+    // გადაიხრებოდა და 24სთ ლიმიტიც გვერდის ავლილი იქნებოდა.
+    //
+    // ფიქსი: ერთი ატომური db.transaction — user row-ს ჯერ ვბლოკავთ
+    // `SELECT ... FOR UPDATE`-ით, შემდეგ იმავე ლოქის ქვეშ ხელახლა
+    // ვამოწმებთ ორივეს (cooldown + balance), და მხოლოდ მერე ვაკლებთ
+    // ბალანსს და ვქმნით withdrawal ჩანაწერს. მეორე პარალელური request
+    // FOR UPDATE-ზე უბრალოდ დაელოდება პირველის commit/rollback-ს და
+    // შემდეგ უკვე განახლებულ მდგომარეობას ხედავს — race აღარ არსებობს.
+    // ══════════════════════════════════════════════════════════════
+    let result;
+    try {
+      result = await db.transaction(async (client) => {
+        // ── ROW LOCK — user-ის row იბლოკება ტრანზაქციის დასრულებამდე ──
+        const { rows: userRows } = await client.query(
+          'SELECT balance_gel, hold_balance_gel FROM users WHERE id=$1 FOR UPDATE',
+          [req.user.id]
+        );
+        const b = userRows[0];
 
-    await db.transaction(async (client) => {
-      await client.query(
-        'UPDATE users SET balance_gel=balance_gel-$1 WHERE id=$2', [gross, req.user.id]
-      );
-      await client.query(
-        `INSERT INTO transactions
-           (user_id,type,amount_gel,gross_amount_gel,net_amount_gel,commission_fee_gel,status,payment_method,description)
-         VALUES($1,'withdrawal',$2,$3,$4,$5,'pending','bank',$6)`,
-        [req.user.id, -gross, gross, net, fee,
-         `გამოტ. IBAN: ${iban.slice(-4)} · ხელზე გაცემა: ₾${net} (საკომ. 5% — ₾${fee})`]
-      );
-    });
+        // ── ᲡᲘᲮᲨᲘᲠᲘᲡ ᲚᲘᲛᲘᲢᲘ — მაქს. 1 მოთხოვნა 24 საათში, ხელახლა
+        // შემოწმებული ლოქის ᲨᲘᲒᲜᲘᲗ (არა მანამდე). ვამოწმებთ ბოლო
+        // withdrawal ტიპის ტრანზაქციის დროს, სტატუსის მიუხედავად (pending/
+        // completed/failed) — მოთხოვნის თვითონ გაკეთება იზღუდება, არა
+        // მისი საბოლოო შედეგი. ──
+        const { rows: recentWithdrawals } = await client.query(
+          `SELECT created_at FROM transactions
+           WHERE user_id=$1 AND type='withdrawal'
+             AND created_at > NOW() - ($2 * INTERVAL '1 hour')
+           ORDER BY created_at DESC LIMIT 1`,
+          [req.user.id, WITHDRAW_COOLDOWN_HOURS]
+        );
+        if (recentWithdrawals.length) {
+          const nextAllowedAt = new Date(
+            new Date(recentWithdrawals[0].created_at).getTime() + WITHDRAW_COOLDOWN_HOURS * 3600000
+          );
+          const rateLimitErr = new Error('withdraw_rate_limit');
+          rateLimitErr.code = 'WITHDRAW_RATE_LIMIT';
+          rateLimitErr.nextAllowedAt = nextAllowedAt;
+          throw rateLimitErr;
+        }
 
-    res.json({ ok: true, amount: gross, commission: fee, net_payout: net, eta: '1-2 სამ. დღე' });
+        // ── ბალანსის ხელახალი შემოწმება, ლოქის ᲨᲘᲒᲜᲘᲗ. შენიშვნა: 48სთ
+        // hold-ის თანხა hold_balance_gel-შია, არა balance_gel-ში — ანუ
+        // balance_gel უკვე მხოლოდ თავისუფლად გასატან თანხას ასახავს,
+        // დამატებითი ბლოკირება საჭირო აღარაა (იხ. src/utils/ledger.js). ──
+        if (Number(b.balance_gel) < gross) {
+          const insufficientErr = new Error('insufficient_balance');
+          insufficientErr.code = 'INSUFFICIENT_BALANCE';
+          insufficientErr.available = b.balance_gel;
+          throw insufficientErr;
+        }
+
+        await client.query(
+          'UPDATE users SET balance_gel=balance_gel-$1 WHERE id=$2', [gross, req.user.id]
+        );
+        await client.query(
+          `INSERT INTO transactions
+             (user_id,type,amount_gel,gross_amount_gel,net_amount_gel,commission_fee_gel,status,payment_method,description)
+           VALUES($1,'withdrawal',$2,$3,$4,$5,'pending','bank',$6)`,
+          [req.user.id, -gross, gross, net, fee,
+           `გამოტ. IBAN: ${iban.slice(-4)} · ხელზე გაცემა: ₾${net} (საკომ. 5% — ₾${fee})`]
+        );
+
+        return { gross, fee, net };
+      });
+    } catch (txErr) {
+      // ტრანზაქციის შიგნით ნასროლი კონტროლირებადი შეცდომები (rate-limit /
+      // insufficient-balance) გარეთ გამოაქვს ROLLBACK-ის შემდეგ, სწორი
+      // HTTP სტატუსით — დანარჩენი (მოულოდნელი DB შეცდომები) გარეთა
+      // catch-ს გადაეცემა და 500-ად ბრუნდება, ისე როგორც აქამდე. ──
+      if (txErr.code === 'WITHDRAW_RATE_LIMIT') {
+        return res.status(429).json({
+          error: 'withdraw_rate_limit',
+          message: 'თქვენ უკვე გააკეთეთ გამოტანის მოთხოვნა დღეს. სცადეთ 24 საათის შემდეგ.',
+          next_allowed_at: txErr.nextAllowedAt,
+        });
+      }
+      if (txErr.code === 'INSUFFICIENT_BALANCE') {
+        return res.status(402).json({ error: 'insufficient_balance', available: txErr.available });
+      }
+      throw txErr;
+    }
+
+    res.json({ ok: true, amount: result.gross, commission: result.fee, net_payout: result.net, eta: '1-2 სამ. დღე' });
 
     // ადმინს email — async
     (async () => {
