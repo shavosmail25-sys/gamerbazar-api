@@ -37,6 +37,34 @@ const VALID_SECURITY  = [
   'apple_linked', 'phone_linked', 'no_link',
 ];
 
+// ══════════════════════════════════════════════════════════════
+// SECURITY FIX — Stored XSS defense-in-depth (title / game / tags)
+//
+// The frontend already HTML-escapes these fields on output (esc()
+// in gamer-market-ge.html / admin.html), but relying on output-encoding
+// alone means EVERY current and future consumer of this data (other
+// pages, admin exports, emails, a future mobile client, a raw DB dump
+// viewed in a spreadsheet, etc.) has to remember to escape correctly —
+// one missed spot anywhere is a stored-XSS hole. These fields are all
+// plain, short, human-typed text (a listing title, a game name, a
+// tag) with zero legitimate use for HTML/script markup, so we strip
+// it at write time as well. This is defense-in-depth ON TOP OF
+// output-escaping, not a replacement for it — never remove the esc()
+// calls on the frontend.
+// ══════════════════════════════════════════════════════════════
+function sanitizeText(input, maxLen) {
+  if (input === undefined || input === null) return input;
+  let s = String(input);
+  // Strip complete HTML tags, then any stray angle brackets that
+  // didn't form a full tag (defeats truncated/broken-tag payloads
+  // like "<img src=x onerror=..." with no closing '>').
+  s = s.replace(/<[^>]*>/g, '').replace(/[<>]/g, '');
+  // Collapse control/whitespace noise and trim.
+  s = s.replace(/\s+/g, ' ').trim();
+  if (maxLen) s = s.slice(0, maxLen);
+  return s;
+}
+
 // ── ფასის დასაშვები დიაპაზონი — მინ. ₾5 (Escrow-ის ბოროტად გამოყენების
 // თავიდან ასაცილებლად: ზოგი მომხმარებელი განზრახ დებდა "1 ₾" სიმბოლურ
 // ფასს, "მოვილაპარაკოთო", მაგრამ Escrow-ის გამო მყიდველს შეეძლო
@@ -154,10 +182,14 @@ router.get('/', optionalAuth, async (req, res) => {
     } = req.query;
 
     // მთავარ გვერდზე მხოლოდ active, profile-ზე ყველა სტატუსი
+    // ── 'in_escrow' — SECURITY FIX (overselling race, see orders.js POST /):
+    // a listing atomically leaves 'active' and enters 'in_escrow' the moment
+    // an order reserves it, so it must stay visible on the seller's own
+    // listings view even though it no longer shows in the public feed below. ──
     const statusFilter = seller_id
       ? (include_sold === 'true'
-          ? "l.status IN ('active','sold','pending','inactive','rejected')"
-          : "l.status IN ('active','pending','inactive','rejected')")
+          ? "l.status IN ('active','sold','pending','inactive','rejected','in_escrow')"
+          : "l.status IN ('active','pending','inactive','rejected','in_escrow')")
       : "l.status = 'active'";
 
     const conditions = [statusFilter];
@@ -317,10 +349,15 @@ router.get('/:id', optionalAuth, async (req, res) => {
 // ══════════════════════════════════════════════════════════════
 router.post('/', requireAuth, checkVipStatus, imgUpload.array('images', 5), async (req, res) => {
   try {
-    const {
+    let {
       category, game, listing_type, title, description, tags, price_gel,
       platform, region, account_security, clean_email_confirmed,
     } = req.body;
+
+    // ── SECURITY FIX: stored XSS — strip HTML from user-supplied free-text
+    // fields before they ever reach the database. See sanitizeText() above. ──
+    title = sanitizeText(title, 200);
+    game  = sanitizeText(game, 100);
 
     // ── ANTI-SCAM: "Clean Email" პოლიტიკის სავალდებულო დათანხმება ──
     // multipart/form-data-ზე checkbox მოდის string-ად ('true'/'false'
@@ -402,8 +439,8 @@ router.post('/', requireAuth, checkVipStatus, imgUpload.array('images', 5), asyn
     // გამეორებული, მაშინ მოვა array). ორივე ვარიანტს ვამუშავებთ, რომ
     // TEXT[] სვეტში ყოველთვის სუფთა JS array ჩავწეროთ. ──
     let tagsArr = [];
-    if (Array.isArray(tags)) tagsArr = tags.map(t => String(t).trim()).filter(Boolean);
-    else if (typeof tags === 'string' && tags.trim()) tagsArr = [tags.trim()];
+    if (Array.isArray(tags)) tagsArr = tags.map(t => sanitizeText(t, 40)).filter(Boolean);
+    else if (typeof tags === 'string' && tags.trim()) tagsArr = [sanitizeText(tags, 40)].filter(Boolean);
 
     if (String(game).trim().toUpperCase() === 'SA-MP') {
       const sampTag = tagsArr[0];
@@ -468,8 +505,14 @@ router.put('/:id', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'forbidden' });
     }
 
-    const { title, description, tags, price_gel, platform, region, account_security, category, game } = req.body;
+    let { title, game } = req.body;
+    const { description, tags, price_gel, platform, region, account_security, category } = req.body;
     let { status } = req.body;
+
+    // ── SECURITY FIX: stored XSS — strip HTML from user-supplied free-text
+    // fields before they ever reach the database. See sanitizeText() above. ──
+    if (title !== undefined && title !== null) title = sanitizeText(title, 200);
+    if (game  !== undefined && game  !== null) game  = sanitizeText(game, 100);
 
     if (platform && !VALID_PLATFORMS.includes(platform)) {
       return res.status(400).json({ error: 'invalid_platform', allowed: VALID_PLATFORMS });
@@ -514,8 +557,8 @@ router.put('/:id', requireAuth, async (req, res) => {
     // ვტოვებთ, თუ საერთოდ არ მოსულა (COALESCE-მა ძველი მნიშვნელობა
     // შეინარჩუნოს), მაგრამ თუ მოსულა, ყოველთვის სუფთა array-დ ვაქცევთ ──
     let tagsArr;
-    if (Array.isArray(tags)) tagsArr = tags.map(t => String(t).trim()).filter(Boolean);
-    else if (typeof tags === 'string' && tags.trim()) tagsArr = [tags.trim()];
+    if (Array.isArray(tags)) tagsArr = tags.map(t => sanitizeText(t, 40)).filter(Boolean);
+    else if (typeof tags === 'string' && tags.trim()) tagsArr = [sanitizeText(tags, 40)].filter(Boolean);
     else tagsArr = undefined;
 
     // ⚠️ უსაფრთხოების გასწორება: ჩვეულებრივ გამყიდველს (არა admin/moderator)

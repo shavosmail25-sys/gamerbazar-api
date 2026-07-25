@@ -78,23 +78,96 @@ router.post('/', requireAuth, async (req, res) => {
       });
     }
 
-    const { rows: ls } = await db.query(
-      "SELECT * FROM listings WHERE id=$1 AND status='active'", [listing_id]
-    );
+    // ── Fast, NON-authoritative existence check ─────────────────────────
+    // This just gives a quick, cheap 404 for the common "listing doesn't
+    // exist" case without opening a transaction. It must NOT be relied on
+    // for availability or ownership decisions — see the SECURITY FIX block
+    // inside the transaction below, which re-checks everything atomically.
+    const { rows: ls } = await db.query('SELECT seller_id FROM listings WHERE id=$1', [listing_id]);
     if (!ls.length) return res.status(404).json({ error: 'listing_not_found' });
-    const listing = ls[0];
-
-    if (listing.seller_id === req.user.id)
+    if (ls[0].seller_id === req.user.id)
       return res.status(400).json({ error: 'cannot_buy_own' });
 
-    const { rows: u } = await db.query(
-      'SELECT balance_gel FROM users WHERE id=$1', [req.user.id]
-    );
-    if (Number(u[0].balance_gel) < Number(listing.price_gel))
-      return res.status(402).json({ error: 'insufficient_balance', needed: listing.price_gel });
-
     let order;
+    let listing;
     await db.transaction(async (client) => {
+      // ══════════════════════════════════════════════════════════════
+      // SECURITY FIX — Overselling race condition
+      //
+      // Before: the listing was only ever read with a plain SELECT
+      // ("...WHERE status='active'") and its status was never changed at
+      // order-creation time — it stayed 'active' all the way through
+      // delivery and the 48h confirm window. That left a wide window
+      // during which any number of buyers could pass the exact same
+      // SELECT and each create their own order for the same listing
+      // (overselling — the seller only has one account to hand over).
+      //
+      // After: a single atomic "UPDATE ... WHERE status='active' RETURNING"
+      // is both the availability check AND the reservation. Postgres takes
+      // a row lock the instant this UPDATE runs, so if two requests race
+      // for the same listing, the second one blocks until the first
+      // commits or rolls back, then re-evaluates "WHERE status='active'"
+      // against the now-committed row. Only the winner ever gets a row
+      // back; the loser gets zero rows and the order is rejected.
+      // (Cancelling an order — see POST /:id/cancel below — flips the
+      // listing back to 'active' so it can be purchased again.)
+      // ══════════════════════════════════════════════════════════════
+      const { rows: reserved } = await client.query(
+        `UPDATE listings SET status='in_escrow', updated_at=NOW()
+         WHERE id=$1 AND status='active'
+         RETURNING *`,
+        [listing_id]
+      );
+      if (!reserved.length) {
+        const err = new Error('listing_not_available');
+        err.httpStatus = 409;
+        err.payload = {
+          error: 'listing_not_available',
+          message: 'ეს განცხადება უკვე გაყიდულია ან აღარ არის ხელმისაწვდომი',
+        };
+        throw err;
+      }
+      listing = reserved[0];
+
+      // Re-check ownership against the freshly-locked row too (defense in
+      // depth — the fast pre-check above already covers the common case).
+      if (listing.seller_id === req.user.id) {
+        const err = new Error('cannot_buy_own');
+        err.httpStatus = 400;
+        err.payload = { error: 'cannot_buy_own' };
+        throw err;
+      }
+
+      // ══════════════════════════════════════════════════════════════
+      // SECURITY FIX — Double-spend / balance race condition
+      //
+      // Before: the balance check was a plain SELECT run BEFORE this
+      // transaction even opened. Two concurrent POST /api/orders from the
+      // same buyer (two tabs, a scripted double-click, a replayed request)
+      // could both read a sufficient balance_gel before either request's
+      // debit was applied, both pass the check, and both debit — driving
+      // the balance negative (a double-spend).
+      //
+      // After: the check and the debit are ONE atomic statement —
+      // "UPDATE ... WHERE balance_gel >= $amount". Just like the listing
+      // reservation above, the WHERE clause is re-evaluated against the
+      // live, row-locked balance, so a second concurrent order from the
+      // same buyer only succeeds if enough balance genuinely remains
+      // after the first one has committed.
+      // ══════════════════════════════════════════════════════════════
+      const { rows: debited } = await client.query(
+        `UPDATE users SET balance_gel=balance_gel-$1, escrow_hold_gel=escrow_hold_gel+$1
+         WHERE id=$2 AND balance_gel >= $1
+         RETURNING balance_gel`,
+        [listing.price_gel, req.user.id]
+      );
+      if (!debited.length) {
+        const err = new Error('insufficient_balance');
+        err.httpStatus = 402;
+        err.payload = { error: 'insufficient_balance', needed: listing.price_gel };
+        throw err;
+      }
+
       const fee      = Number(listing.price_gel) * 0.05;
       const receives = Number(listing.price_gel) - fee;
 
@@ -107,11 +180,6 @@ router.post('/', requireAuth, async (req, res) => {
       `, [listing_id, req.user.id, listing.seller_id, listing.price_gel, receives]);
       order = o[0];
 
-      // ბალანსიდან Escrow-ში
-      await client.query(
-        'UPDATE users SET balance_gel=balance_gel-$1, escrow_hold_gel=escrow_hold_gel+$1 WHERE id=$2',
-        [listing.price_gel, req.user.id]
-      );
       await client.query(
         "INSERT INTO transactions(user_id,order_id,type,amount_gel,description) VALUES($1,$2,'escrow_hold',$3,'Escrow გაყინვა')",
         [req.user.id, order.id, -Number(listing.price_gel)]
@@ -154,6 +222,12 @@ router.post('/', requireAuth, async (req, res) => {
       } catch (e) { console.error('order notify error:', e.message); }
     })();
   } catch (err) {
+    // Domain errors thrown inside the transaction above (listing_not_available,
+    // cannot_buy_own, insufficient_balance) carry their intended HTTP status —
+    // honor it instead of falling through to a generic 500.
+    if (err.httpStatus && err.payload) {
+      return res.status(err.httpStatus).json(err.payload);
+    }
     console.error('order create:', err.message);
     res.status(500).json({ error: 'server_error' });
   }
@@ -632,7 +706,11 @@ router.post('/:id/confirm', requireAuth, async (req, res) => {
         "INSERT INTO transactions(user_id,order_id,type,amount_gel,description) VALUES($1,$2,'platform_fee',$3,'პლატფ. კომ.')",
         [order.seller_id, order.id, -fee]
       );
-      await client.query("UPDATE listings SET status='sold' WHERE id=$1", [order.listing_id]);
+      // Completes the reservation made in POST / above ('in_escrow' → 'sold').
+      await client.query(
+        "UPDATE listings SET status='sold' WHERE id=$1 AND status='in_escrow'",
+        [order.listing_id]
+      );
 
       // ── ვერიფიც. გამყიდველის ავტ. სტატუსის სინქრონიზაცია — ეს
       // შეკვეთა completed_orders რიცხვს ზრდის, შესაძლოა ზღვარს გადააჭარბოს ──
@@ -728,7 +806,15 @@ router.post('/:id/cancel', requireAuth, async (req, res) => {
         UPDATE orders SET escrow_status='refunded', status='cancelled',
           cancelled_at=NOW(), cancel_reason=$1, updated_at=NOW() WHERE id=$2
       `, [reason, order.id]);
-      await client.query("UPDATE listings SET status='active' WHERE id=$1", [order.listing_id]);
+      // ── Releases the reservation made in POST / above (status flip to
+      // 'in_escrow') back to 'active' so the listing can be bought again.
+      // Scoped to WHERE status='in_escrow' so this can't accidentally
+      // resurrect a listing an admin deleted/blocked while the order was
+      // outstanding. ──
+      await client.query(
+        "UPDATE listings SET status='active' WHERE id=$1 AND status='in_escrow'",
+        [order.listing_id]
+      );
     });
 
     res.json({ ok: true, refunded: order.amount_gel });

@@ -1525,7 +1525,9 @@ async function loadListings() {
       document.getElementById('listings-pagination').innerHTML = '';
       return;
     }
-    const statusTag = { active: 'tag-ok', blocked: 'tag-crit', sold: 'tag-blue', deleted: 'tag-neutral', pending: 'tag-warn', inactive: 'tag-neutral' };
+    // 'in_escrow' — SECURITY FIX (overselling race, see orders.js POST /):
+    // a listing sits here between order creation and confirm/cancel.
+    const statusTag = { active: 'tag-ok', blocked: 'tag-crit', sold: 'tag-blue', deleted: 'tag-neutral', pending: 'tag-warn', inactive: 'tag-neutral', in_escrow: 'tag-blue' };
     list.innerHTML = listingsData.map(l => {
       const photoCount = (l.images || []).length;
       const photosOk = photoCount >= 2;
@@ -1749,7 +1751,10 @@ function openReasonModal(mode, listingId, prefillText) {
   const err   = document.getElementById('reason-modal-err');
 
   const l = listingsData.find(x => x.id === listingId);
-  const listingLabel = l ? `„${l.title}“` : 'ამ განცხადების';
+  // ── SECURITY FIX (stored XSS): this string goes into sub.innerHTML below —
+  // it must be HTML-escaped, same as every other listing field rendered on
+  // this page. ──
+  const listingLabel = l ? `„${esc(l.title)}“` : 'ამ განცხადების';
 
   if (mode === 'reject') {
     icon.textContent  = '❌';

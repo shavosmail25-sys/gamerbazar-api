@@ -4339,6 +4339,9 @@ async function loadMyListings(filter) {
       rejected: { txt: '✕ უარყოფილია',         bg: '#ff5f6d25', col: '#ff5f6d' },
       sold:     { txt: '✓ გაყიდულია',          bg: '#60a5fa25', col: '#60a5fa' },
       blocked:  { txt: '⛔ დაბლოკილია',         bg: '#ff5f6d25', col: '#ff5f6d' },
+      // 'in_escrow' — SECURITY FIX (overselling race): a listing sits here
+      // between order creation and confirm/cancel (see orders.js POST /).
+      in_escrow:{ txt: '🔒 შესყიდვის პროცესშია', bg: '#a78bfa25', col: '#a78bfa' },
     };
     // Edit modal ახლა 'rejected' სტატუსსაც უჭერს მხარს — resubmit-to-
     // moderation ნაკადით (იხ. openEditListingModal → eml-status-rejected-block)
@@ -4994,12 +4997,21 @@ function buildCard(l, isMob) {
   // შეცდომაში მომხმარებელს.
   const showPlatformBadges = isGamingCategory(l.cat);
   const hotBadge = l.hot ? `<div class="lcard-hot-badge">${t('hot_badge')}</div>` : '';
-  return `<div class="lcard${l.vip ? ' vip' : ''}" onclick="openListing('${lid}','${(l.title||'').replace(/'/g,"\'")}',${l.price})">
+  // ── SECURITY FIX (stored XSS): openListing() ignores the title/price
+  // args it's called with — it always re-fetches the listing by id — so
+  // there was never a reason to interpolate raw, attacker-controlled
+  // title text into this onclick attribute in the first place. The old
+  // code's `.replace(/'/g,"\'")` was also a no-op (that replacement
+  // string is just a literal quote, not an escaped one), so a title
+  // containing a `"` could break out of the attribute entirely. Passing
+  // only the id removes the injection point outright. Title/game/tags
+  // below are now run through esc() before going into innerHTML. ──
+  return `<div class="lcard${l.vip ? ' vip' : ''}" onclick="openListing('${lid}')">
     <div class="lcard-img">${imgBlock}${hotBadge}</div>
     <div class="lcard-body">
-      <div class="lcard-game">${l.game} · ${l.type}</div>
-      <div class="lcard-title">${l.title}</div>
-      <div class="lcard-tags">${showPlatformBadges && l.platform ? `<span class="tag">${PLATFORM_LABELS[l.platform] || l.platform}</span>` : ''}${showPlatformBadges && l.region ? `<span class="tag">${REGION_LABELS[l.region] || l.region}</span>` : ''}${(l.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+      <div class="lcard-game">${esc(l.game)} · ${esc(l.type)}</div>
+      <div class="lcard-title">${esc(l.title)}</div>
+      <div class="lcard-tags">${showPlatformBadges && l.platform ? `<span class="tag">${esc(PLATFORM_LABELS[l.platform] || l.platform)}</span>` : ''}${showPlatformBadges && l.region ? `<span class="tag">${esc(REGION_LABELS[l.region] || l.region)}</span>` : ''}${(l.tags||[]).map(tg=>`<span class="tag">${esc(tg)}</span>`).join('')}</div>
       <div class="lcard-foot">
         <div class="lcard-seller"><div class="s-ava" style="color:${l.sc}">${l.si}</div>
         <div><div class="s-name">${esc(l.seller)}${verifiedBadge(l.verified)}</div><div class="s-rat">★${l.r}(${l.rc})</div></div></div>
@@ -5443,10 +5455,10 @@ async function openSellerProfile() {
     if (listEl && profile.listings && profile.listings.length) {
       listEl.innerHTML = profile.listings.map(l => `
         <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border-radius:7px;padding:9px 12px;cursor:pointer"
-             onclick="closeM('sellerModal');openListing('${l.id}','${(l.title||'').replace(/'/g,"\'")}',${l.price_gel})">
+             onclick="closeM('sellerModal');openListing('${l.id}')">
           <div>
-            <div style="font-size:12px;font-weight:600">${l.title}</div>
-            <div style="font-size:10px;color:var(--muted)">${l.game} · ${l.listing_type}</div>
+            <div style="font-size:12px;font-weight:600">${esc(l.title)}</div>
+            <div style="font-size:10px;color:var(--muted)">${esc(l.game)} · ${esc(l.listing_type)}</div>
           </div>
           <div style="font-family:var(--mono);font-size:14px;font-weight:700;color:var(--accent)">₾${Number(l.price_gel).toFixed(0)}</div>
         </div>
