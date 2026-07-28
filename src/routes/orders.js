@@ -36,7 +36,7 @@ const ORDER_SAFE_COLUMNS = `
 // UI-ში იცვლება მინიშნება, და ეს ვადა disputes.js-ის მეშვეობით
 // ადმინისთვისაც ჩანს დავის განხილვისას. env-ით რეგულირებადია, რომ
 // production-ში მარტივად შეიცვალოს კოდის დეპლოის გარეშე.
-const ACCESS_CONFIRM_WINDOW_MINUTES = Number(process.env.ACCESS_CONFIRM_WINDOW_MINUTES) || 45;
+const ACCESS_CONFIRM_WINDOW_HOURS = Number(process.env.ACCESS_CONFIRM_WINDOW_HOURS) || 45;
 
 // ── NO-CACHE — შეკვეთის სტატუსი (pending/completed/disputed) რეალურ
 // დროში იცვლება; ვუკრძალავთ ბრაუზერს/პროქსის დაკეშვას.
@@ -567,7 +567,7 @@ router.post('/:id/credentials/reveal', requireAuth, async (req, res) => {
     if (isFirstView) {
       // Confirm-Access ვადა მხოლოდ პირველ ნახვაზე ერთხელ ითვლება —
       // ხელახალი გახსნები (ქვემოთ) აღარ არყევს/ახანგრძლივებს მას.
-      const deadline = new Date(Date.now() + ACCESS_CONFIRM_WINDOW_MINUTES * 60 * 1000);
+      const deadline = new Date(Date.now() + ACCESS_CONFIRM_WINDOW_HOURS * 60 * 60 * 1000);
       const { rows: updated } = await db.query(`
         UPDATE orders SET
           credentials_viewed_at     = NOW(),
