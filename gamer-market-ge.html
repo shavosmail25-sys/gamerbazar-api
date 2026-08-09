@@ -595,7 +595,14 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 .ld-meta-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 .ld-meta-val{font-size:13px;font-weight:600}
 
-.ld-buy-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:20px;margin-bottom:14px;position:sticky;top:70px;z-index:1}
+.ld-buy-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:20px;margin-bottom:14px}
+/* ── sticky მთელ მარჯვ. სვეტზეა (ბაიქარდი + სელერქარდი + დაკავშირების
+   ღილაკი ერთად "ეკვრება" ეკრანს) — ადრე მხოლოდ .ld-buy-card-ზე იყო
+   sticky, რის გამოც ის სქროლვისას თავის და-ძმა ელემენტებს ("Xნახვა",
+   seller card, "დაკავშირების" ღილაკი) ეფარებოდა, ვინაიდან ისინი მის
+   ქვეშ ჩვეულებრივი flow-ით სქროლავდნენ, sticky ბლოკი კი adგილზე
+   ჩერდებოდა z-index:1-ით. ──────────────────────────────────────── */
+.ld-side{position:sticky;top:70px;z-index:1}
 .ld-game-tag{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
 .ld-title{font-size:18px;font-weight:700;line-height:1.35;margin-bottom:9px}
 .ld-tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px}
@@ -631,7 +638,7 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 
 @media(max-width:800px){
   .ld-layout{grid-template-columns:1fr}
-  .ld-buy-card{position:static}
+  .ld-side{position:static}
   .ld-gallery-main{height:240px;font-size:54px}
 }
 
@@ -1092,7 +1099,7 @@ select.form-i{appearance:none;-webkit-appearance:none;background-image:url("data
   .hero-inner{grid-template-columns:1fr}.hero-visual{display:none}
   h1{font-size:30px}
   .w-stats{grid-template-columns:1fr 1fr}.wrap{padding:14px}
-  .ld-layout{grid-template-columns:1fr}.ld-buy-card{position:static}
+  .ld-layout{grid-template-columns:1fr}.ld-side{position:static}
   .ld-gallery-main{height:240px;font-size:54px}
 
   /* CHAT — mobile-ze sidebar collapse */
