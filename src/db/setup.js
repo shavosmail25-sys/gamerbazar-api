@@ -504,6 +504,35 @@ async function setupDatabase() {
       //    /api/users/me/cover (users.js), იგივე Cloudinary-ის
       //    memoryStorage პატერნით, რაც ავატარს აქვს. ──
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS cover_url VARCHAR(500)`,
+      // ── PRE-PURCHASE CHAT (Buyer → Seller, listing-scoped) ─────────────
+      // chat_rooms.listing_id: ახალი ველი "ყიდვამდე კითხვების" ოთახებისთვის —
+      // ეს ოთახები order-ზე დამოკ. არაა (order_id რჩება NULL), მაგრამ მაინც
+      // კონკრეტულ განცხადებას უკავშირდება (order-ისგან განსხვ., admin_notice
+      // ოთახებისგანაც — ეს უკანასკნელნი listing_id-საც NULL ტოვებენ).
+      // getOrCreateAdminRoom-ის query-ს (chat.js) დამატებით 'AND listing_id
+      // IS NULL' ემატება, რომ ორივე ტიპი აღარ ერიოს ერთმანეთში.
+      `ALTER TABLE chat_rooms ADD COLUMN IF NOT EXISTS listing_id UUID REFERENCES listings(id) ON DELETE SET NULL`,
+      `CREATE INDEX IF NOT EXISTS idx_chat_rooms_listing ON chat_rooms(listing_id) WHERE listing_id IS NOT NULL`,
+      // ── ANTI-SCAM MESSAGE MODERATION — regex-ზე დაფუძნებული ავტ.
+      // მოდერაცია (იხ. src/utils/moderation.js). is_flagged სვეტი
+      // საშუალებას აძლევს ადმინს სწრაფად გაფილტროს/იპოვოს ჩატის ის
+      // შეტყობინებები, სადაც გარე ბმული/ტელეფონი/საეჭვო საკვანძო სიტყვა
+      // იქნა აღმოჩენილი და დაფარული. message_flags ცხრილში ვინახავთ
+      // მხოლოდ უკვე დაფარულ (redacted) მოკლე ამონარიდს აუდიტისთვის —
+      // ორიგინალი, დაუფარავი ტექსტი (ნომერი/ბმული) DB-ში საერთოდ არ ჩაიწერება.
+      `ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_flagged BOOLEAN NOT NULL DEFAULT FALSE`,
+      `CREATE INDEX IF NOT EXISTS idx_messages_flagged ON messages(is_flagged) WHERE is_flagged = TRUE`,
+      `CREATE TABLE IF NOT EXISTS message_flags (
+        id                UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+        message_id        UUID        NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+        room_id           UUID        NOT NULL REFERENCES chat_rooms(id) ON DELETE CASCADE,
+        sender_id         UUID        NOT NULL REFERENCES users(id),
+        categories        TEXT[]      NOT NULL,
+        redacted_snippet  TEXT,
+        created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_message_flags_created ON message_flags(created_at DESC)`,
+      `CREATE INDEX IF NOT EXISTS idx_message_flags_sender  ON message_flags(sender_id, created_at DESC)`,
     ];
     for (const sql of migrations) {
       try { await client.query(sql); } catch (e) { /* უკვე არსებობს */ }

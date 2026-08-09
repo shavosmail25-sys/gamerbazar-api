@@ -941,4 +941,127 @@ router.delete('/announcements/:id', async (req, res) => {
   }
 });
 
+// ══════════════════════════════════════════════════════════════
+// GET /api/admin/referrals/leaderboard  — Admin-Only Referral Leaderboard
+//
+// ⚠️ ეს route უკვე დაცულია admin-ით — router.use(requireAuth,
+// requireAdmin) ფაილის თავშია განსაზღვრული (ხაზი ~30) და ყველა
+// admin.js-ის route-ზე მოქმედებს. ცალკე middleware აქ არ სჭირდება,
+// მაგრამ ვინც ცალკე გაიტანს ამ route-ს სხვა ფაილში, აუცილებლად
+// უნდა შემოხვიოს იმავე ორი middleware-ით — ეს პანელი არასდროს
+// არ უნდა იყოს public-ად ხელმისაწვდომი.
+//
+// კოდის/ბმულის გენერაცია თავად უკვე არსებობს (src/utils/referral.js:
+// ensureReferralCode) და ჩართულია რეგისტრაციის ორივე ნაკადში
+// (auth.js POST /verify-otp და GET /google/callback) — თითო
+// მომხმარებელს აქვს უნიკალური `REF-XXXXXX` კოდი, ბმული frontend-ზე
+// შედგება როგორც `${FRONTEND_URL}/?ref=${referral_code}`. აქ მხოლოდ
+// რანჟირების/სტატისტიკის ნაწილია დამატებული.
+//
+// რანჟირება: მხოლოდ ის მომხმარებლები ჩნდებიან, ვისაც ერთი მოწვეული
+// მაინც ჰყავს (INNER JOIN). "წარმატებული რეგისტრაცია" == users.referred_by
+// მიბმულია (ეს მხოლოდ წარმატებული OTP-verify/Google callback-ის დროს
+// ხდება — იხ. auth.js — ანუ ნახევრადშესრულებული/გაუქმებული
+// რეგისტრაცია საერთოდ ვერასდროს "ითვლება"). ოფციური `since` query
+// param საშუალებას აძლევს ადმინს დაინახოს მხოლოდ კონკრეტული პერიოდის
+// (მაგ. ამ თვის) მოწვევები — countered date is the *referred user's*
+// registration date, არა რეფერერის.
+// ══════════════════════════════════════════════════════════════
+router.get('/referrals/leaderboard', async (req, res) => {
+  try {
+    const { page = 1, limit = 25, since } = req.query;
+    const offset = (Number(page) - 1) * Number(limit);
+
+    const params = [];
+    let dateFilter = '';
+    if (since) {
+      params.push(since);
+      dateFilter = `AND ru.created_at >= $${params.length}`;
+    }
+    params.push(Number(limit), offset);
+    const limitIdx  = params.length - 1;
+    const offsetIdx = params.length;
+
+    const { rows } = await db.query(`
+      SELECT
+        u.id, u.username, u.display_name, u.avatar_url, u.email,
+        u.referral_code, u.referral_earnings_gel, u.created_at AS joined_at,
+        COUNT(ru.id) AS total_referrals,
+        COUNT(ru.id) FILTER (
+          WHERE ru.has_triggered_first_deposit_reward
+             OR ru.has_triggered_first_purchase_reward
+        ) AS converted_referrals,
+        RANK() OVER (ORDER BY COUNT(ru.id) DESC) AS rank
+      FROM users u
+      JOIN users ru ON ru.referred_by = u.id ${dateFilter}
+      GROUP BY u.id
+      ORDER BY total_referrals DESC, u.referral_earnings_gel DESC
+      LIMIT $${limitIdx} OFFSET $${offsetIdx}
+    `, params);
+
+    const { rows: cnt } = await db.query(
+      `SELECT COUNT(DISTINCT referred_by) AS n FROM users WHERE referred_by IS NOT NULL`
+    );
+
+    res.json({
+      leaderboard: rows,
+      total_referrers: Number(cnt[0].n),
+      page: Number(page),
+      pages: Math.ceil(Number(cnt[0].n) / Number(limit)) || 1,
+    });
+  } catch (err) {
+    console.error('admin referral leaderboard error:', err.message);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// GET /api/admin/chat/flags  — Anti-Scam ავტ.-მოდერაციის ჟურნალი
+// (ბმულების/ტელეფონების/bypass საკვანძო სიტყვების ავტ. დაფარვის
+// შემთხვევები pre-purchase/order ჩატში — იხ. src/utils/moderation.js
+// და src/routes/chat.js). Watchtower-ს აძლევს სწრაფ ვიზუალურ
+// წვდომას, ვინ ცდილობს ვაჭრობის Escrow-ს გვერდის ავლას.
+// ══════════════════════════════════════════════════════════════
+router.get('/chat/flags', async (req, res) => {
+  try {
+    const { page = 1, limit = 30, sender_id } = req.query;
+    const offset = (Number(page) - 1) * Number(limit);
+
+    const conditions = [];
+    const params = [];
+    let p = 1;
+    if (sender_id) { conditions.push(`f.sender_id = $${p++}`); params.push(sender_id); }
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    const countParams = params.slice();
+    params.push(Number(limit), offset);
+
+    const { rows } = await db.query(`
+      SELECT
+        f.id, f.categories, f.redacted_snippet, f.created_at,
+        f.room_id, f.message_id, f.sender_id,
+        u.username AS sender_username, u.display_name AS sender_display_name,
+        u.role AS sender_role
+      FROM message_flags f
+      JOIN users u ON u.id = f.sender_id
+      ${where}
+      ORDER BY f.created_at DESC
+      LIMIT $${p++} OFFSET $${p++}
+    `, params);
+
+    const { rows: cnt } = await db.query(
+      `SELECT COUNT(*) AS n FROM message_flags f ${where}`, countParams
+    );
+
+    res.json({
+      flags: rows,
+      total: Number(cnt[0].n),
+      page: Number(page),
+      pages: Math.ceil(Number(cnt[0].n) / Number(limit)) || 1,
+    });
+  } catch (err) {
+    console.error('admin chat flags error:', err.message);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
 module.exports = router;

@@ -5,6 +5,7 @@ const express = require('express');
 const db      = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const push    = require('../utils/push');
+const moderation = require('../utils/moderation');
 const router  = express.Router();
 
 // ── NO-CACHE — ჩატის შეტყობინებები რეალურ დროში იცვლება; ბრაუზერს/
@@ -24,15 +25,29 @@ router.get('/rooms', requireAuth, async (req, res) => {
     // ⚠️ order-ზე JOIN → LEFT JOIN გახდა: ადმინის სისტ. შეტყობინებების
     // ოთახებს (იხ. sendAdminNotice ქვემოთ) order_id არ გააჩნია — INNER
     // JOIN-ით ეს ოთახები საერთოდ არ გამოჩნდებოდა სიაში.
+    //
+    // ⚠️ room_type ახლა სამ მდგომარეობას განასხვავებს (ადრე მხოლოდ ორს —
+    // 'order' თუ order_id არსებობდა, სხვა ყველაფერი 'admin_notice'-ად
+    // ითვლებოდა). Pre-Purchase ჩატის დამატებით (chat_rooms.listing_id,
+    // იხ. getOrCreateListingRoom ქვემოთ) ეს ორი ტიპი — "ადმინის შეტყ."
+    // და "ყიდვამდე კითხვა გამყიდველთან" — ორივე order_id IS NULL-ია,
+    // ამიტომ listing_id-ითაც უნდა გაირჩეს, თორემ pre-purchase ოთახები
+    // frontend-ში მცდარად "მხარდაჭერა/ადმინი"-ად გამოჩნდებოდა.
+    // l2/listing_title2 — პირდაპ. r.listing_id-ზე JOIN (order-ის გარეშეც
+    // ხელმისაწვდომი), რომ ჩატის სიაში კონკრეტული განცხადების სათაური ჩანდეს.
     const { rows } = await db.query(`
       SELECT
         r.*,
-        CASE WHEN r.order_id IS NULL THEN 'admin_notice' ELSE 'order' END AS room_type,
+        CASE
+          WHEN r.order_id   IS NOT NULL THEN 'order'
+          WHEN r.listing_id IS NOT NULL THEN 'listing_inquiry'
+          ELSE 'admin_notice'
+        END AS room_type,
         o.status        AS order_status,
         o.amount_gel,
         o.escrow_status,
-        COALESCE(l.title, 'ადმინისტრაციის შეტყობინებები') AS listing_title,
-        l.game,
+        COALESCE(l.title, l2.title, 'ადმინისტრაციის შეტყობინებები') AS listing_title,
+        COALESCE(l.game, l2.game)   AS game,
         ua.username     AS participant_a_name,
         ua.avatar_url   AS participant_a_avatar,
         ua.is_verified_seller AS participant_a_verified,
@@ -46,8 +61,9 @@ router.get('/rooms', requireAuth, async (req, res) => {
         (SELECT COUNT(*) FROM messages m
          WHERE m.room_id=r.id AND m.sender_id!=$1 AND m.is_read=FALSE) AS unread_count
       FROM chat_rooms r
-      LEFT JOIN orders o   ON o.id=r.order_id
-      LEFT JOIN listings l ON l.id=o.listing_id
+      LEFT JOIN orders o    ON o.id=r.order_id
+      LEFT JOIN listings l  ON l.id=o.listing_id
+      LEFT JOIN listings l2 ON l2.id=r.listing_id
       JOIN users ua   ON ua.id=r.participant_a
       JOIN users ub   ON ub.id=r.participant_b
       WHERE r.participant_a=$1 OR r.participant_b=$1
@@ -134,6 +150,47 @@ router.get('/support', requireAuth, async (req, res) => {
 });
 
 // ══════════════════════════════════════════════════════════════
+// POST /api/chat/listing/:listingId/start  — "გამყიდველთან დაკავშირება"
+//
+// ყიდვამდე კითხვების ჩატი — მყიდველს შეუძლია გამყიდველს ჰკითხოს
+// კონკრეტულ განცხადებაზე (მიბმული სოც. ქსელები, ჯერ კიდევ ხელმისაწვდომია
+// თუ არა და ა.შ.), სანამ შეკვეთას/Escrow-ს საერთოდ გახსნის. ოთახი
+// order-ზე დამოკ. არაა (order_id რჩება NULL), მაგრამ listing_id-ზეა
+// მიბმული — ჩატის კონტექსტში კონკრეტული განცხადების სათაური ავტ. ჩანს
+// (იხ. GET /rooms ზემოთ, room_type='listing_inquiry').
+//
+// იდემპოტენტური — იმავე მყიდველ+განცხადებაზე მეორედ დაჭერა იმავე
+// ოთახს აბრუნებს ახლის შექმნის ნაცვლად (იხ. getOrCreateListingRoom-ის
+// race-safe ლოგიკა ქვემოთ, sendAdminNotice-ის იგივე პატერნით).
+// ══════════════════════════════════════════════════════════════
+router.post('/listing/:listingId/start', requireAuth, async (req, res) => {
+  try {
+    const { rows: listingRows } = await db.query(
+      'SELECT id, seller_id, title, status FROM listings WHERE id=$1',
+      [req.params.listingId]
+    );
+    if (!listingRows.length) return res.status(404).json({ error: 'listing_not_found' });
+    const listing = listingRows[0];
+
+    if (listing.seller_id === req.user.id) {
+      return res.status(400).json({ error: 'cannot_contact_self', message: 'საკუთარ განცხადებაზე ჩატის გახსნა შეუძლებელია' });
+    }
+
+    const room = await getOrCreateListingRoom(listing.id, listing.seller_id, req.user.id);
+
+    res.status(201).json({
+      room_id:       room.id,
+      listing_id:    listing.id,
+      listing_title: listing.title,
+      seller_id:     listing.seller_id,
+    });
+  } catch (err) {
+    console.error('listing contact start error:', err.message);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
 // POST /api/chat/rooms/:id/messages  — HTTP fallback (WS-ის გარდა)
 // ══════════════════════════════════════════════════════════════
 router.post('/rooms/:id/messages', requireAuth, async (req, res) => {
@@ -150,18 +207,31 @@ router.post('/rooms/:id/messages', requireAuth, async (req, res) => {
     if (r.participant_a !== req.user.id && r.participant_b !== req.user.id)
       return res.status(403).json({ error: 'forbidden' });
 
+    // ── ANTI-SCAM FILTER — გარე ბმულების/ტელეფონის/გვერდის ავლის
+    // საკვანძო სიტყვების დაფარვა, სანამ ბაზაში საერთოდ ჩაიწერება.
+    // ორიგინალი (დაუფარავი) ტექსტი არსად ინახება. ──
+    const { clean, flagged, categories } = moderation.moderateMessage(content.trim());
+
     const { rows } = await db.query(`
-      INSERT INTO messages(room_id,sender_id,content)
-      VALUES($1,$2,$3)
+      INSERT INTO messages(room_id,sender_id,content,is_flagged)
+      VALUES($1,$2,$3,$4)
       RETURNING *
-    `, [req.params.id, req.user.id, content.trim()]);
+    `, [req.params.id, req.user.id, clean, flagged]);
+
+    if (flagged) {
+      db.query(
+        `INSERT INTO message_flags(message_id, room_id, sender_id, categories, redacted_snippet)
+         VALUES ($1,$2,$3,$4,$5)`,
+        [rows[0].id, req.params.id, req.user.id, categories, moderation.buildSnippet(clean)]
+      ).catch(e => console.error('message_flags insert error:', e.message));
+    }
 
     // WS-ით დაკავშირებულ მხარეებს რეალურ დროში გაგზავნა (თუ ვინმე online-ია)
     broadcastMessageToRoom(req.params.id, rows[0]);
 
     // push შეტყობ. — მეორე მონაწილეს, თუ ოთახში online არაა
     const recipientId = r.participant_a === req.user.id ? r.participant_b : r.participant_a;
-    notifyChatMessage(req.params.id, recipientId, req.user, content.trim()).catch(() => {});
+    notifyChatMessage(req.params.id, recipientId, req.user, clean).catch(() => {});
 
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -366,12 +436,25 @@ function setupWebSocket(server) {
           return;
         }
 
+        // ── ANTI-SCAM FILTER — იგივე მასკირება, რაც HTTP fallback-ში
+        // (POST /rooms/:id/messages) — WS არხზეც არ უნდა იყოს
+        // შემოვლადი. ორიგინალი ტექსტი ბაზაში არ ინახება. ──
+        const { clean, flagged, categories } = moderation.moderateMessage(content.trim());
+
         // DB-ში შენ.
         const { rows } = await db.query(
-          'INSERT INTO messages(room_id,sender_id,content) VALUES($1,$2,$3) RETURNING *',
-          [roomId, userId, content.trim()]
+          'INSERT INTO messages(room_id,sender_id,content,is_flagged) VALUES($1,$2,$3,$4) RETURNING *',
+          [roomId, userId, clean, flagged]
         );
         const msg = rows[0];
+
+        if (flagged) {
+          db.query(
+            `INSERT INTO message_flags(message_id, room_id, sender_id, categories, redacted_snippet)
+             VALUES ($1,$2,$3,$4,$5)`,
+            [msg.id, roomId, userId, categories, moderation.buildSnippet(clean)]
+          ).catch(e => console.error('message_flags insert error:', e.message));
+        }
 
         // ყველა ოთახის წევრს გაგ.
         broadcastMessageToRoom(roomId, msg);
@@ -417,6 +500,7 @@ function broadcastMessageToRoom(roomId, messageRow) {
     sender_id:    messageRow.sender_id,
     content:      messageRow.content,
     content_type: messageRow.content_type || 'text',
+    is_flagged:   !!messageRow.is_flagged,
     created_at:   messageRow.created_at,
   });
   conns.forEach(c => { if (c.ws.readyState === 1) c.ws.send(payload); });
@@ -476,9 +560,14 @@ async function getOrCreateAdminRoom(sellerId) {
     // ოთახის ძებნას/შექმნას — ეს გამორიცხავს check-then-insert race-ს. ──
     await client.query('SELECT pg_advisory_xact_lock(hashtext($1)::bigint)', [sellerId]);
 
+    // ⚠️ 'AND listing_id IS NULL' დამატებულია Pre-Purchase Chat-ის
+    // შემოღების შემდეგ (იხ. getOrCreateListingRoom ქვემოთ) — ორივე
+    // ტიპის ოთახს order_id IS NULL აქვს, ამიტომ listing_id-ის გარეშე
+    // ეს query შემთხვევით "დაიჭერდა" მყიდველის listing-inquiry ოთახსაც
+    // და Admin Support-ის მაგივრად მას დააბრუნებდა.
     const { rows: existing } = await client.query(
       `SELECT id, participant_a, participant_b FROM chat_rooms
-       WHERE order_id IS NULL AND (participant_a=$1 OR participant_b=$1)
+       WHERE order_id IS NULL AND listing_id IS NULL AND (participant_a=$1 OR participant_b=$1)
        LIMIT 1`,
       [sellerId]
     );
@@ -494,10 +583,44 @@ async function getOrCreateAdminRoom(sellerId) {
     const adminId = adminRows[0].id;
 
     const { rows: created } = await client.query(
-      `INSERT INTO chat_rooms(order_id, participant_a, participant_b, status)
-       VALUES (NULL, $1, $2, 'open')
+      `INSERT INTO chat_rooms(order_id, listing_id, participant_a, participant_b, status)
+       VALUES (NULL, NULL, $1, $2, 'open')
        RETURNING id, participant_a, participant_b`,
       [sellerId, adminId]
+    );
+    return created[0];
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+// Pre-Purchase Chat — "გამყიდველთან დაკავშირება" ღილაკიდან ოთახის
+// მოძებნა/შექმნა. იგივე race-safe check-then-insert-in-one-transaction
+// პატერნი, რაც getOrCreateAdminRoom-ს აქვს ზემოთ, უბრალოდ keyed არა
+// მხოლოდ sellerId-ზე, არამედ (listingId, buyerId) წყვილზე — ერთ
+// მყიდველს ერთი და იმავე განცხადებაზე ერთი მუდმ. thread ჰქონდეს,
+// მაგრამ იმავე გამყიდველთან სხვა განცხადებაზე კითხვამ ცალკე ოთახი
+// გახსნას (განსხვ. admin-ის "ერთი მუდმ. ოთახი თითო seller-ზე" წესისგან).
+// ══════════════════════════════════════════════════════════════
+async function getOrCreateListingRoom(listingId, sellerId, buyerId) {
+  return db.transaction(async (client) => {
+    await client.query(
+      'SELECT pg_advisory_xact_lock(hashtext($1)::bigint)',
+      [`listing_room:${listingId}:${buyerId}`]
+    );
+
+    const { rows: existing } = await client.query(
+      `SELECT id, participant_a, participant_b FROM chat_rooms
+       WHERE listing_id=$1 AND (participant_a=$2 OR participant_b=$2)
+       LIMIT 1`,
+      [listingId, buyerId]
+    );
+    if (existing.length) return existing[0];
+
+    const { rows: created } = await client.query(
+      `INSERT INTO chat_rooms(order_id, listing_id, participant_a, participant_b, status)
+       VALUES (NULL, $1, $2, $3, 'open')
+       RETURNING id, participant_a, participant_b`,
+      [listingId, buyerId, sellerId]
     );
     return created[0];
   });
@@ -531,4 +654,5 @@ module.exports.broadcastMessageToRoom = broadcastMessageToRoom;
 module.exports.broadcastEventToRoom   = broadcastEventToRoom;
 module.exports.broadcastGlobalMessage = broadcastGlobalMessage;
 module.exports.getOrCreateAdminRoom   = getOrCreateAdminRoom;
+module.exports.getOrCreateListingRoom = getOrCreateListingRoom;
 module.exports.sendAdminNotice        = sendAdminNotice;

@@ -675,6 +675,8 @@ h1 .hl{background:var(--grad-accent);-webkit-background-clip:text;background-cli
 .ci-u{width:16px;height:16px;border-radius:50%;background:var(--accent);color:#08090d;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center}
 .chat-main{display:flex;flex-direction:column;overflow:hidden}
 .chat-h{padding:11px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--bg2);flex-shrink:0}
+.chat-safety-banner{display:flex;align-items:flex-start;gap:8px;background:var(--gd);border-bottom:1px solid var(--gd2);color:var(--gold);padding:8px 14px;font-size:10.5px;line-height:1.45;flex-shrink:0}
+.chat-safety-banner .ic{width:15px;height:15px;margin-top:1px}
 .chat-h-l{display:flex;align-items:center;gap:9px}
 .odot{width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;margin-right:3px}
 .order-pill{display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px 9px;font-size:11px}
@@ -1247,6 +1249,7 @@ select.form-i{appearance:none;-webkit-appearance:none;background-image:url("data
   .ci-n{font-size:11.5px}
   .ci-l{font-size:10px}
   .chat-h{padding:9px 12px}
+  .chat-safety-banner{padding:7px 12px;font-size:10px}
   .chat-h-l gap{gap:7px}
   .chat-msgs{padding:10px 10px;gap:6px}
   .msg{max-width:84%}
@@ -1883,6 +1886,11 @@ select.form-i{appearance:none;-webkit-appearance:none;background-image:url("data
             </div>
             <div class="ld-seller-arrow">→</div>
           </div>
+
+          <button class="btn btn-g" id="ld-contact-btn" style="width:100%;margin-top:10px;display:none" onclick="event.stopPropagation();contactSeller()">
+            <svg class="ic" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            გამყიდველთან დაკავშირება — შეკითხვა ყიდვამდე
+          </button>
         </div>
       </div>
 
@@ -1939,6 +1947,14 @@ select.form-i{appearance:none;-webkit-appearance:none;background-image:url("data
             <button class="btn btn-g btn-sm" id="chat-dispute-btn" onclick="disputeCurrentOrder()" style="margin-left:4px;display:none"><svg class="ic" viewBox="0 0 24 24"><path d="M5 21V4"/><path d="M5 4.5c1.6-1 4-1 6 0s4.4 1 6 0v9c-1.6 1-4 1-6 0s-4.4-1-6 0Z"/></svg> დავა</button>
           </div>
         </div>
+      </div>
+      <!-- ═══════════ ANTI-SCAM SAFETY BANNER — მუდმივი გაფრთხილება, ჩანს
+           ორივე მხარისთვის (მყიდველი/გამყიდველი) ნებისმ. buyer↔seller
+           ჩატში (order ან pre-purchase listing-inquiry). Admin Support
+           ოთახში იმალება — იხ. openChatRoom(). ═══════════ -->
+      <div class="chat-safety-banner" id="chat-safety-banner" style="display:none">
+        <svg class="ic" viewBox="0 0 24 24" style="flex-shrink:0"><path d="M12 2 3 6v6c0 5 3.8 9.4 9 10 5.2-.6 9-5 9-10V6z"/><path d="M12 8v5"/><circle cx="12" cy="16.3" r=".4" fill="currentColor"/></svg>
+        <span>თქვენი უსაფრთხოებისთვის და Escrow გარიგების გარანტიისთვის, არასდროს გაუზიაროთ გარე ბმულები, სოციალური მედია ან პირადი ტელეფონის ნომერი. პლატფორმის გარეთ ვაჭრობა გამოიწვევს დაბლოკვას.</span>
       </div>
       <!-- Credentials Vault — ANTI-SCAM: მხოლოდ 'account' ტიპის შეკვეთის
            ჩატში ჩნდება, დინამიურად ივსება renderCredsPanel()-ით -->
@@ -5204,6 +5220,15 @@ function renderListingDetail(l) {
     if (vpRow) vpRow.style.display = 'flex';
   }
 
+  // "გამყიდველთან დაკავშირება" — ყიდვამდე კითხვების ღილაკი (Pre-Purchase Chat).
+  // ჩანს ნებისმ. სტუმარს/მომხმარებელს, გარდა თავად გამყიდველისა (საკუთარ
+  // განცხადებაზე თავისთვის წერა აზრს მოკლებულია). სტუმარზე დაჭერისას
+  // contactSeller() თავად აჩვენებს login მოდალს, ისევე როგორც "ყიდვა".
+  const contactBtn = document.getElementById('ld-contact-btn');
+  if (contactBtn) {
+    contactBtn.style.display = (currentUser && l.seller_id === currentUser.id) ? 'none' : 'block';
+  }
+
   // seller
   const sellerName  = document.getElementById('ld-seller-name');
   const sellerStats = document.getElementById('ld-seller-stats');
@@ -5403,6 +5428,36 @@ async function buyListingDetail() {
     showToast(e.message || 'შეკვეთა ვერ შეიქმნა', 'err');
   } finally {
     if (btn) { btn.textContent = 'ყიდვა — ₾' + price.toFixed(2); btn.disabled = false; }
+  }
+}
+
+// ── "გამყიდველთან დაკავშირება" — Pre-Purchase Chat (ყიდვამდე კითხვები) ──
+// მყიდველს შეუძლია გამყიდველს დაუსვას შეკითხვა (მიბმული სოც. ქსელები,
+// ხელმისაწვდომობა და ა.შ.) იმ კონკრეტულ განცხადებაზე, სანამ საერთოდ
+// შეკვეთას/Escrow-ს გახსნის. POST /api/chat/listing/:id/start ან
+// აბრუნებს არსებულ thread-ს (თუ მყიდველმა ამ განცხადებაზე ადრეც
+// დაწერა), ან ქმნის ახალს — ორივე შემთხვევაში პასუხში room_id მოდის,
+// რომლითაც პირდაპ. ვხსნით Chat გვერდზე შესაბამის საუბარს.
+async function contactSeller() {
+  if (!currentUser) { openM('loginModal'); return; }
+  if (!currentListing) return;
+  if (currentListing.seller_id === currentUser.id) return; // საკუთარ განცხადებაზე ღილაკი დამალულია, დამატ. დაცვა
+
+  const btn = document.getElementById('ld-contact-btn');
+  if (btn) { btn.disabled = true; }
+
+  try {
+    const res = await api(`/api/chat/listing/${currentListing.id}/start`, { method: 'POST' });
+
+    pg('chat'); act(document.querySelectorAll('.nl')[2]);
+    await loadChatRooms();
+
+    const roomEl = document.querySelector(`.ci[data-room="${res.room_id}"]`);
+    if (roomEl) openChatRoom(roomEl);
+  } catch (e) {
+    showToast(e.message || 'ჩატის გახსნა ვერ მოხერხდა', 'err');
+  } finally {
+    if (btn) { btn.disabled = false; }
   }
 }
 
@@ -6058,7 +6113,7 @@ async function loadChatRooms() {
         : '';
       const active   = r.id === currentRoomId ? ' on' : '';
 
-      return `<div class="ci${active}${isSupport ? ' ci-support' : ''}" data-room="${r.id}" data-order="${r.order_id || ''}" data-amount="${r.amount_gel || 0}" data-escrow="${r.escrow_status || ''}" data-partner="${esc(partner)}" data-partner-verified="${partnerVerified ? 1 : 0}" onclick="openChatRoom(this)">
+      return `<div class="ci${active}${isSupport ? ' ci-support' : ''}" data-room="${r.id}" data-room-type="${r.room_type}" data-order="${r.order_id || ''}" data-amount="${r.amount_gel || 0}" data-escrow="${r.escrow_status || ''}" data-listing-title="${esc(r.listing_title || '')}" data-partner="${esc(partner)}" data-partner-verified="${partnerVerified ? 1 : 0}" onclick="openChatRoom(this)">
         <div class="ci-av" style="${isSupport ? 'background:var(--ad);color:var(--accent);font-size:18px' : 'color:var(--blue)'}">${initials}</div>
         <div class="ci-inf">
           <div class="ci-n">${isSupport ? 'მხარდაჭერა' : (esc(partner) || '?') + verifiedBadge(partnerVerified)}</div>
@@ -6101,12 +6156,15 @@ async function openChatRoom(el) {
   el.classList.add('on');
 
   const roomId   = el.dataset.room;
+  const roomType = el.dataset.roomType || (el.classList.contains('ci-support') ? 'admin_notice' : 'order');
   const orderId  = el.dataset.order;
   const amount   = el.dataset.amount;
   const escrow   = el.dataset.escrow;
+  const listingTitle = el.dataset.listingTitle || '';
   const partner  = el.dataset.partner;
   const partnerVerified = el.dataset.partnerVerified === '1';
   const isSupportRoom = el.classList.contains('ci-support');
+  const isListingInquiry = roomType === 'listing_inquiry';
 
   currentRoomId  = roomId;
   currentOrderId = orderId;
@@ -6118,8 +6176,16 @@ async function openChatRoom(el) {
   const infoEl  = document.getElementById('chat-order-info');
   const avaEl   = document.getElementById('chat-partner-ava');
   if (nameEl)  nameEl.innerHTML   = isSupportRoom ? 'მხარდაჭერა' : ((esc(partner) + verifiedBadge(partnerVerified)) || '?');
-  if (infoEl)  infoEl.textContent  = isSupportRoom ? 'ადმინისტრაცია · 24/7' : `ორდ. · ₾${Number(amount).toFixed(2)}`;
+  if (infoEl)  infoEl.textContent  = isSupportRoom
+    ? 'ადმინისტრაცია · 24/7'
+    : (isListingInquiry ? `🛈 კითხვა: ${listingTitle || 'განცხადება'}` : `ორდ. · ₾${Number(amount).toFixed(2)}`);
   if (avaEl)   avaEl.textContent   = isSupportRoom ? '' : (partner||'?').slice(0,2).toUpperCase();
+
+  // ── Anti-Scam Safety Banner — მუდმივი გაფრთხილება ორივე მხარისთვის
+  // ნებისმ. buyer↔seller ჩატში (order-ზე მიბმულიც და pre-purchase
+  // listing-inquiry-ც). Admin Support-ის ოთახში არ სჭირდება. ──
+  const safetyBanner = document.getElementById('chat-safety-banner');
+  if (safetyBanner) safetyBanner.style.display = isSupportRoom ? 'none' : 'flex';
 
   // ── ორდერის სრული დეტალის ერთხელ fetch — escrow pill-ისთვისაც და
   // Credentials Vault პანელისთვისაც ვიყენებთ იმავე მოთხოვნას (აღარ

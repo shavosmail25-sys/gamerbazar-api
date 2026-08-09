@@ -379,6 +379,14 @@ input,select,textarea{font-family:var(--sans)}
         <span class="sb-item-ico">🎧</span>მხარდაჭერა
         <span class="sb-item-count" id="nav-support-count">0</span>
       </div>
+      <div class="sb-item" data-view="chatflags" onclick="switchView('chatflags')">
+        <span class="sb-item-ico">🛡</span>ჩატის მოდერაცია
+      </div>
+
+      <div class="sb-section-label">Growth</div>
+      <div class="sb-item" data-view="referrals" onclick="switchView('referrals')">
+        <span class="sb-item-ico">🏆</span>რეფერალების ლიდერბორდი
+      </div>
 
       <div class="sb-section-label">Population</div>
       <div class="sb-item" data-view="users" onclick="switchView('users')">
@@ -475,6 +483,35 @@ input,select,textarea{font-family:var(--sans)}
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- ═══════════ CHAT MODERATION (Anti-Scam flags) ═══════════
+           regex-ზე დაფუძნებული ავტ.-მოდერაციის ჟურნალი (src/utils/moderation.js) —
+           ვინ ცდილობდა გარე ბმულის/ტელეფონის/bypass საკვანძო სიტყვის გაზიარებას
+           pre-purchase ან order ჩატში. იხ. GET /api/admin/chat/flags -->
+      <div class="view" id="view-chatflags">
+        <div class="view-head">
+          <div><div class="view-title">ჩატის ანტი-სკამ მოდერაცია</div><div class="view-sub">ავტ. დაფარული გარე ბმულები / ტელეფონები / bypass საკვანძო სიტყვები</div></div>
+          <button class="btn btn-ghost" onclick="loadChatFlags()">↺ განახლება</button>
+        </div>
+        <div class="list" id="chatflags-list"><div class="loading">სკანირება</div></div>
+        <div class="pagination" id="chatflags-pagination"></div>
+      </div>
+
+      <!-- ═══════════ REFERRAL LEADERBOARD (Admin-Only) ═══════════
+           იხ. GET /api/admin/referrals/leaderboard — მოქმედი referral_code-ის
+           გენერაცია/მიბმა უკვე src/utils/referral.js + auth.js-შია; აქ მხოლოდ
+           რანჟირება/სტატისტიკაა. ეს გვერდი მხოლოდ ადმინისთვისაა ხილული —
+           ჩვეულ მომხმარებელს (პროფილში) მხოლოდ თავისი საკუთარი
+           referral_earnings_gel/referral_invited_count უჩანს, არასდროს
+           მთლიანი რანჟირება. -->
+      <div class="view" id="view-referrals">
+        <div class="view-head">
+          <div><div class="view-title">რეფერალების ლიდერბორდი</div><div class="view-sub">ვინ მოიწვია ყველაზე მეტი წარმატებით დარეგისტრირებული მომხმარებელი</div></div>
+          <button class="btn btn-ghost" onclick="loadReferralLeaderboard()">↺ განახლება</button>
+        </div>
+        <div class="list" id="referrals-list"><div class="loading">სკანირება</div></div>
+        <div class="pagination" id="referrals-pagination"></div>
       </div>
 
       <!-- ═══════════ USERS ═══════════ -->
@@ -906,6 +943,8 @@ function switchView(view) {
   if (view === 'overview') loadOverview();
   if (view === 'disputes') loadDisputes();
   if (view === 'support')  loadSupportRooms();
+  if (view === 'chatflags') loadChatFlags();
+  if (view === 'referrals') loadReferralLeaderboard();
   if (view === 'users')    loadUsers();
   if (view === 'listings') loadListings();
   if (view === 'wallet')   loadWalletRequests();
@@ -1368,6 +1407,95 @@ async function sendSupportReply() {
   } finally {
     ta.disabled = false;
     ta.focus();
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// CHAT MODERATION — Anti-Scam flags (src/utils/moderation.js)
+// ══════════════════════════════════════════════════════════
+let chatFlagsPage = 1;
+
+async function loadChatFlags() {
+  const list = document.getElementById('chatflags-list');
+  list.innerHTML = '<div class="loading">სკანირება</div>';
+  try {
+    const params = new URLSearchParams({ limit: 25, page: chatFlagsPage });
+    const data = await api(`/api/admin/chat/flags?${params}`);
+    if (!data.flags.length) {
+      list.innerHTML = '<div class="empty"><div class="empty-ico">🛡</div><div class="empty-t">ჯერ არაფერია დაფარული — სუფთაა</div></div>';
+      document.getElementById('chatflags-pagination').innerHTML = '';
+      return;
+    }
+    const catLabel = { link: 'ბმული', social_handle: 'სოც./მესენჯერი', phone: 'ტელეფონი', bypass_keyword: 'Bypass ფრაზა' };
+    list.innerHTML = data.flags.map(f => `
+      <div class="row">
+        <div class="row-main">
+          <div class="row-title">
+            @${esc(f.sender_username)}
+            ${(f.categories || []).map(c => `<span class="tag tag-crit">${esc(catLabel[c] || c)}</span>`).join(' ')}
+          </div>
+          <div class="row-meta"><span>${esc(f.redacted_snippet || '')}</span></div>
+          <div class="row-meta" style="margin-top:3px">
+            <span><b>ოთახი</b> ${f.room_id}</span>
+            <span><b>დრო</b> ${fmtDate(f.created_at)}</span>
+          </div>
+        </div>
+        <div class="row-actions">
+          <button class="btn btn-ghost" onclick="openUserDetail('${f.sender_id}')">🔍 ავტორი</button>
+        </div>
+      </div>
+    `).join('');
+    renderPagination('chatflags-pagination', data.pages || 1, data.page || 1, (p) => { chatFlagsPage = p; loadChatFlags(); });
+  } catch (e) {
+    console.error('chat flags:', e);
+    list.innerHTML = '<div style="padding:12px;text-align:center;font-size:11px;color:var(--muted)">ჩატვირთვა ვერ მოხდა</div>';
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// REFERRAL LEADERBOARD (Admin-Only)
+// ══════════════════════════════════════════════════════════
+let referralsPage = 1;
+
+async function loadReferralLeaderboard() {
+  const list = document.getElementById('referrals-list');
+  list.innerHTML = '<div class="loading">სკანირება</div>';
+  try {
+    const params = new URLSearchParams({ limit: 25, page: referralsPage });
+    const data = await api(`/api/admin/referrals/leaderboard?${params}`);
+    if (!data.leaderboard.length) {
+      list.innerHTML = '<div class="empty"><div class="empty-ico">🏆</div><div class="empty-t">ჯერ არავის მოუწვევია მეგობარი</div></div>';
+      document.getElementById('referrals-pagination').innerHTML = '';
+      return;
+    }
+    const medal = { 1: '🥇', 2: '🥈', 3: '🥉' };
+    list.innerHTML = data.leaderboard.map(r => `
+      <div class="row">
+        <div class="row-main">
+          <div class="row-title">
+            ${medal[r.rank] || '#' + r.rank} ${esc(r.display_name || r.username)}
+            <span class="tag tag-blue">${r.total_referrals} მოწვევა</span>
+            ${r.converted_referrals > 0 ? `<span class="tag tag-ok">${r.converted_referrals} კონვერტ.</span>` : ''}
+          </div>
+          <div class="row-meta">
+            <span><b>@${esc(r.username)}</b></span>
+            <span>${esc(r.email)}</span>
+            <span><b>კოდი</b> ${esc(r.referral_code || '—')}</span>
+          </div>
+          <div class="row-meta" style="margin-top:3px">
+            <span><b>გამომუშ. ბონუსი</b> ${fmtMoney(r.referral_earnings_gel)}</span>
+            <span><b>შემოუერთდა</b> ${fmtDate(r.joined_at)}</span>
+          </div>
+        </div>
+        <div class="row-actions">
+          <button class="btn btn-ghost" onclick="openUserDetail('${r.id}')">🔍 დეტალები</button>
+        </div>
+      </div>
+    `).join('');
+    renderPagination('referrals-pagination', data.pages || 1, data.page || 1, (p) => { referralsPage = p; loadReferralLeaderboard(); });
+  } catch (e) {
+    console.error('referral leaderboard:', e);
+    list.innerHTML = '<div style="padding:12px;text-align:center;font-size:11px;color:var(--muted)">ჩატვირთვა ვერ მოხდა</div>';
   }
 }
 
