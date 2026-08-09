@@ -77,17 +77,65 @@ const MAX_LISTING_PRICE_GEL = 50000;
 // სავალდებულო) და POST /:id/images (მოგვიანებით დამატებისას). Render-ის
 // filesystem ephemeral-ია — დისკზე აღარ ვინახავთ, ფაილი მეხსიერებიდან
 // (multer memoryStorage) პირდაპირ Cloudinary-ში იტვირთება.
+//
+// ⚠️ BUGFIX (client sees "Load failed" / "Failed to fetch" on photo upload):
+// ორი ცალკე მიზეზი ერთად ერთდებოდა:
+//   1) fileFilter მხოლოდ jpeg/png/webp-ს უშვებდა — iPhone-ის კამერა
+//      default-ად HEIC ფორმატში (image/heic, ზოგჯერ image/heif) იღებს
+//      ფოტოებს, ასე რომ ნებისმ. iOS მომხმარებელს, ვინც პირდაპ. Camera
+//      Roll-იდან ატვირთავდა ფოტოს (Georgia-ში ეს umravlesobaa), ეს ფაილი
+//      ავტ. ეცემოდა.
+//   2) fileSize ლიმიტი default-ად მხოლოდ 3MB იყო — თანამედროვე ტელეფონის
+//      ფოტო ხშირად 4-12MB-ია.
+// ორივე შემთხვევაში, multer-ის fileFilter/fileSize error-ი მოთხოვნის
+// stream parsing-ს შუაში წყვეტს — თუ ეს არ დაიჭირება ცალკე (callback-ის
+// მეშვეობით, იხ. handleImgUpload ქვემოთ), server-მა შეიძლება client-ის
+// upload-ის დასრულებამდე დახუროს კავშირი, რაც browser-ში სუფთა JSON
+// error response-ის ნაცვლად უბრალოდ raw network failure-დ ჩანს
+// (Safari: "Load failed", Chrome: "Failed to fetch") — ანუ ზუსტად ის,
+// რასაც მომხმარებელი ხედავს, mesqidan raise-ული HTTP error code-ის
+// გარეშე. ორივე root cause-ი გასწორებულია ქვემოთ + frontend-ზეც
+// ემატება ფოტოს კომპრესია ატვირთვამდე (იხ. compressImageFile()
+// gamer-market-ge.html-ში) — ეს არის მთავარი ფიქსი, სერვერის მხარეც
+// მხოლოდ safety net-ია.
 const imgUpload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: (Number(process.env.MAX_FILE_SIZE_MB) || 3) * 1024 * 1024,
+    fileSize: (Number(process.env.MAX_FILE_SIZE_MB) || 8) * 1024 * 1024,
     files: 5,
   },
   fileFilter: (req, file, cb) => {
-    const ok = /image\/(jpeg|png|webp)/.test(file.mimetype);
+    const ok = /image\/(jpeg|png|webp|heic|heif)/.test(file.mimetype);
     cb(ok ? null : new Error('only_images'), ok);
   },
 });
+
+// multer-ის middleware-ს ხელით ვიძახებთ (router-ის chain-ში ჩასმის
+// ნაცვლად), რომ მისი callback-ის error-ი აქვე დავიჭიროთ და ყოველთვის
+// სუფთა, გასაგები JSON პასუხი დავაბრუნოთ — ნაცვლად იმისა, რომ
+// unhandled multer error-მა კავშირი "ჩაახშოს" client-ის upload-ის
+// დასრულებამდე (რაც ზუსტად "Load failed"/"Failed to fetch"-ს იწვევს).
+function handleImgUpload(req, res, next) {
+  imgUpload.array('images', 5)(req, res, (err) => {
+    if (!err) return next();
+
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      const maxMb = Number(process.env.MAX_FILE_SIZE_MB) || 8;
+      return res.status(413).json({
+        error: 'file_too_large',
+        message: `ერთ-ერთი ფოტოს ზომა აღემატება მაქს. დასაშვებს (${maxMb}MB). სცადე დაპატარავებული ფოტო.`,
+      });
+    }
+    if (err.code === 'LIMIT_FILE_COUNT' || err.code === 'LIMIT_UNEXPECTED_FILE') {
+      return res.status(400).json({ error: 'too_many_files', message: 'მაქსიმუმ 5 ფოტოს ატვირთვაა შესაძლებელი' });
+    }
+    if (err.message === 'only_images') {
+      return res.status(400).json({ error: 'invalid_file_type', message: 'დაშვებულია მხოლოდ JPEG, PNG, WebP ან HEIC ფორმატის სურათები' });
+    }
+    console.error('image upload error:', err.message);
+    return res.status(400).json({ error: 'upload_error', message: 'ფოტოს ატვირთვა ვერ მოხერხდა' });
+  });
+}
 
 // ვადაგასული VIP სტატუსის საათური cron-ი — ერთხელ, მოდულის პირველ
 // ჩატვირთვაზე (იგივე პატერნი, რაც orders.js-ში ledger.startHoldsScheduler()-ს აქვს)
@@ -347,7 +395,7 @@ router.get('/:id', optionalAuth, async (req, res) => {
 // და მხოლოდ წარმატების შემთხვევაში იქმნება ბაზაში მწკრივი. თუ
 // სურათების ვალიდაცია/ატვირთვა ჩაიშლება — listing საერთოდ არ იქმნება.
 // ══════════════════════════════════════════════════════════════
-router.post('/', requireAuth, checkVipStatus, imgUpload.array('images', 5), async (req, res) => {
+router.post('/', requireAuth, checkVipStatus, handleImgUpload, async (req, res) => {
   try {
     let {
       category, game, listing_type, title, description, tags, price_gel,
@@ -639,7 +687,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
 // POST / handler-ში ატომურად — ეს endpoint მხოლოდ დამატებით
 // სურათებს ან ძველი (migration-ის წინა) ჩანაწერების შევსებას ემსახურება.
 // ══════════════════════════════════════════════════════════════
-router.post('/:id/images', requireAuth, imgUpload.array('images', 5), async (req, res) => {
+router.post('/:id/images', requireAuth, handleImgUpload, async (req, res) => {
   try {
     if (!cloudinary.isConfigured())
       return res.status(503).json({ error: 'image_upload_not_configured' });
